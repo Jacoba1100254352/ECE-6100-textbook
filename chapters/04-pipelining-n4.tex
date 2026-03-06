@@ -1,0 +1,164 @@
+\chapter{Pipelining}\label{ch:auto-005}
+
+\section{Pipeline Motivation}\label{sec:auto-034}
+Pipelining improves throughput by overlapping instruction execution stages in time.
+Instead of waiting for one instruction to complete all work before starting the next, the processor places stage registers between major datapath functions and allows multiple instructions to be in flight simultaneously.
+The key gain is not that one instruction becomes instantly shorter in latency, but that completed instructions per unit time rise after the pipeline fills.
+
+\section{Five-Stage Example Pipeline}\label{sec:auto-035}
+The canonical integer pipeline has five stages (Eq.~\eqref{eq:auto-035}):
+\begin{equation}\label{eq:auto-035}
+IF \rightarrow ID \rightarrow EX \rightarrow MEM \rightarrow WB.
+\end{equation}
+Instruction Fetch (IF) reads the instruction from the instruction memory hierarchy and advances the PC\@.
+Instruction Decode (ID) decodes opcode and operands and reads source registers.
+Execute (EX) performs ALU work and effective-address calculation.
+Memory (MEM) performs data-memory access for loads and stores.
+Write Back (WB) writes results to the architectural register file.
+
+Even instructions that do not logically need memory often still occupy the MEM stage in a basic in-order five-stage design so that all instructions remain aligned in a uniform stage progression.
+This simplifies control and preserves in-order retirement semantics.
+
+\section{Pipeline Speedup Calculation}\label{sec:auto-036}
+Suppose an unpipelined design executes one instruction in $N$ stage-equivalent delays, each of delay $T_s$.
+Its instruction time is approximately $N T_s$.
+A pipelined design with stage registers has clock (Eq.~\eqref{eq:auto-036}):
+\begin{equation}\label{eq:auto-036}
+T_{clk,pipe} \approx T_s + T_{reg},
+\end{equation}
+where $T_{reg}$ is latch/flip-flop overhead.
+For a long stream, ideal CPI approaches 1, so time per instruction approaches $T_{clk,pipe}$ and ideal speedup becomes (Eq.~\eqref{eq:auto-037}):
+\begin{equation}\label{eq:auto-037}
+S_{ideal} \approx \frac{N T_s}{T_s + T_{reg}}.
+\end{equation}
+If $T_{reg}$ were zero, this approaches $N$.
+In practice, register overhead and stalls reduce realized speedup.
+
+\paragraph{Finite-length form}\label{par:auto-022}
+For $M$ instructions in an $N$-stage pipeline (ignoring hazards), total cycles are $N+M-1$, so (Eq.~\eqref{eq:auto-038}):
+\begin{equation}\label{eq:auto-038}
+T_{pipe} \approx (N+M-1)T_{clk,pipe}, \qquad
+T_{unpiped} \approx MNT_s.
+\end{equation}
+This shows fill and drain overhead is more visible for short instruction sequences.
+
+\section{CPI Model and Stall Accounting}\label{sec:auto-037}
+In steady state without hazards, ideal CPI is 1 (Eq.~\eqref{eq:auto-039}):
+\begin{equation}\label{eq:auto-039}
+CPI_{ideal}=1.
+\end{equation}
+With hazards, the practical model is (Eq.~\eqref{eq:auto-040}):
+\begin{equation}\label{eq:auto-040}
+CPI = 1 + \text{stalls}_{avg},
+\end{equation}
+where $\text{stalls}_{avg}$ is average stall cycles per instruction.
+This form is central in Chapter 4: almost every pipeline optimization is either reducing stall frequency, reducing stall duration, or both.
+
+\section{Program Characteristics Plus Hazards Produce Stalls}\label{sec:auto-038}
+Hardware hazards are potential conflicts.
+A stall occurs only when the running program triggers that conflict.
+This yields a guiding principle (Eq.~\eqref{eq:auto-041}):
+\begin{equation}\label{eq:auto-041}
+\text{Program characteristics} + \text{pipeline hazards} \Rightarrow \text{stalls}.
+\end{equation}
+For example, a branch hazard matters only when branches occur in the dynamic instruction stream.
+A structural hazard from a shared memory port matters only when fetch and data access overlap in a conflicting cycle.
+
+\section{Structural Hazards}\label{sec:auto-039}
+\textit{Structural hazards} arise from insufficient hardware resources.
+A classic example is a single-ported memory system that must serve both IF and MEM stages.
+If one instruction needs data memory while another needs instruction fetch in the same cycle, one must wait, causing a stall.
+
+Common avoidance strategies are straightforward architectural provisioning: split L1 into separate instruction and data caches, add ports, duplicate critical units, or schedule around known bottlenecks.
+In modern designs, many obvious structural hazards are eliminated in hardware because their stall cost is predictable and severe.
+
+\section{Data Hazards}\label{sec:auto-040}
+\textit{Data hazards} occur when the pipeline changes the order of read/write accesses to operands so that the order differs from the order in the original sequential program.
+
+\paragraph{RAW (Read After Write)}\label{par:auto-023}
+A \textit{RAW hazard} occurs when an instruction refers to a result that has not yet been calculated or stored by a preceding instruction.
+This is the most common hazard in the classic 5-stage pipeline.
+\begin{equation}\label{eq:auto-042}
+\texttt{I1: ADD R1, R2, R3} \qquad \texttt{I2: SUB R4, R1, R5}
+\end{equation}
+In this case, \texttt{I2} needs \texttt{R1} in its ID/EX stage, but \texttt{I1} does not write \texttt{R1} until its WB stage.
+Without intervention, \texttt{I2} would read a stale value.
+
+\paragraph{WAR and WAW}\label{par:auto-024}
+\textit{WAR} (Write After Read) and \textit{WAW} (Write After Write) hazards do not typically occur in the simple 5-stage in-order pipeline because instructions read early (ID) and write late (WB) in a fixed order.
+However, they become critical in out-of-order execution or pipelines with multiple completion units of varying latencies.
+
+\subsection{Forwarding (Bypassing)}\label{subsec:auto-005}
+\textit{Forwarding} allows a result to be used as an input to a subsequent instruction before it is written to the register file.
+If the result is already available in a pipeline register (such as EX/MEM or MEM/WB), hardware can forward it directly to the ALU inputs.
+This eliminates many RAW stalls.
+
+\subsection{Load-Use Stalls}\label{subsec:auto-006}
+Forwarding cannot solve every RAW hazard.
+If a load instruction is followed immediately by an instruction that uses the loaded value, the data is not available until the end of the MEM stage, which is too late for the EX stage of the following instruction.
+\begin{equation}\label{eq:auto-043}
+\texttt{I1: LW R1, 0(R2)} \qquad \texttt{I2: ADD R3, R1, R4}
+\end{equation}
+This case requires a one-cycle load-use stall even with forwarding.
+Compilers attempt to schedule independent instructions into these ``load-delay'' slots to maintain performance.
+
+\section{Control Hazards}\label{sec:auto-041}
+\textit{Control hazards} occur because the fetch stream does not immediately know the correct next PC for branches and jumps.
+The branch creates uncertainty in both target and direction (taken/not taken), and the pipeline may fetch wrong-path instructions that must later be squashed.
+
+\paragraph{CPI impact example}\label{par:auto-025}
+If branches occur every five instructions on average (branch frequency $=0.2$) and each branch introduces one average stall cycle in a simple pipeline, then
+\begin{equation}\label{eq:auto-044}
+CPI = 1 + 0.2\times 1 = 1.2.
+\end{equation}
+This simple calculation captures why even modest branch penalties have visible throughput cost.
+
+\subsection{Delay Slots}\label{subsec:auto-007}
+A \textit{delay slot} ISA semantic says that one or more instructions after a branch execute before control transfer takes effect.
+The compiler tries to fill these slots with useful independent work.
+This can reduce explicit branch stalls when suitable instructions exist, but becomes increasingly difficult as pipelines deepen and dependence constraints tighten.
+
+\subsection{Squash Slots with Likely Bits}\label{subsec:auto-008}
+Some designs expose \textit{squash-slot} behavior via branch-likely style semantics.
+The compiler places a candidate instruction near the branch and encodes likely behavior.
+Hardware keeps or squashes that instruction based on actual branch resolution and likely-bit policy.
+This improves performance when heuristics are good but complicates ISA semantics and compiler scheduling.
+
+\section{Branch Target Buffer (BTB)}\label{sec:auto-042}
+The \textit{BTB} predicts where a branch goes (target prediction) early enough to guide fetch.
+
+\subsection{BTB with Tags}\label{subsec:auto-009}
+A tagged BTB stores branch PC tags and associated targets.
+On fetch, the BTB is indexed and tag-compared; a valid tag hit yields a predicted target.
+Tagging eliminates \textit{aliasing}, where two unrelated branches share an entry, ensuring higher prediction accuracy at the cost of significantly more hardware area and longer lookup time.
+
+\subsection{BTB without Tags}\label{subsec:auto-010}
+A tagless BTB behaves like a hashed direct lookup table from index to target metadata.
+It is fast and compact but prone to \textit{aliasing}: unrelated branches may map to the same entry and pollute each other's predictions.
+This can still be acceptable if the table is sized well and collision rate is low for target workloads, trading accuracy for substantial area savings.
+
+\subsection{Hardware Return Address Stack}\label{subsec:auto-011}
+Function returns are indirect branches whose targets are difficult for generic BTB logic.
+A small hardware \textit{return-address stack (RAS)} records call return PCs and pops on return, producing very high return-target accuracy in common call/return patterns.
+This is one of the most cost-effective branch-target optimizations.
+
+\section{Whether-To Branch: Direction Prediction}\label{sec:auto-043}
+Target prediction answers where a branch goes.
+\textit{Direction prediction} answers whether it is taken.
+A simple static method is software heuristics, especially \textit{backward taken / forward not taken (BTFNT)}: loop back-edges are often taken, many forward conditionals are often not taken.
+Compilers can also use profile-guided statistics to set likely-direction metadata (for example branch-likely annotations).
+
+Dynamic predictors improve further by learning runtime behavior (for example saturating counters and history-based schemes).
+The essential Chapter 4 lesson is that deeper pipelines require higher direction accuracy because misprediction penalty grows with the number of in-flight wrong-path stages.
+
+\section{Timing-Diagram Interpretation (Appendix Reference)}\label{sec:auto-044}
+A full checklist for reading 5-stage timing diagrams is provided in Appendix~\ref{ch:timing-diagram-checklist}.
+That appendix covers structural, data, control, and memory cues, plus CPI and stall-attribution methods for worked traces.
+
+\section{Chapter 4 Summary}\label{sec:auto-045}
+Chapter 4 frames pipelining as throughput engineering with explicit hazard management.
+The five-stage model clarifies stage roles (IF, ID, EX, MEM, WB), while speedup equations show why ideal gains are reduced by latch overhead and stalls.
+CPI is modeled as $1+\text{stalls}_{avg}$, with stalls explained by the interaction of program behavior and hazard structure.
+Structural hazards are reduced through resource provisioning; control hazards are addressed through delay/squash semantics and prediction structures.
+BTBs predict branch targets, RAS handles returns efficiently, and direction prediction determines whether control transfer occurs, with software heuristics like backward taken/forward not taken providing a baseline.
+Together these ideas define practical pipeline performance analysis and design.

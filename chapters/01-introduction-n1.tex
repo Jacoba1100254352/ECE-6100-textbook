@@ -1,0 +1,120 @@
+\chapter{Introduction}\label{ch:auto-002}
+
+\section{What Computer Architecture Is}\label{sec:auto-003}
+Computer architecture is the discipline of designing computing systems that execute real workloads efficiently under practical constraints.
+In this course context, architecture means deciding how a processor and memory system should be organized so that useful work is completed quickly, reliably, and within power and cost limits.
+It is important to separate this from neighboring fields.
+Architecture is not transistor fabrication, circuit layout, or process chemistry, even though those influence what architects can build.
+
+Every architectural decision is a tradeoff among competing goals.
+A design that minimizes latency for one task may reduce throughput for a server-style workload.
+A design that aggressively improves performance may consume more energy or require expensive cooling.
+A design that is elegant on paper may be too costly in area or too difficult to verify at scale.
+For this reason, architecture is best treated as constrained optimization: choose structures and policies that best match the target application while respecting implementation limits.
+
+\section{Core Methods: Parallelism, Speculation, and Prediction}\label{sec:auto-004}
+Most performance techniques in modern processors can be traced to three closely linked ideas: \textit{parallelism}, \textit{speculation}, and \textit{prediction}.
+\textit{Parallelism} increases performance by doing multiple useful operations at the same time.
+\textit{Speculation} increases performance by doing work early, before the machine is fully certain that this work will be needed.
+\textit{Prediction} estimates uncertain future behavior (for example branch direction or branch target) so speculative work is directed toward the most likely path.
+Prediction is not a third independent speedup method; it is a tool that makes speculation more selective and efficient.
+
+\subsection{Speculation Without Prediction}\label{subsec:auto-001}
+Speculation does not require a learned predictor.
+A processor can speculate by optimistic overlap: continue execution under the assumption that an operation will complete normally, and recover only if that assumption fails.
+This is useful because waiting for every operation to retire before moving on would underutilize the pipeline.
+
+\paragraph{Example: write buffer}\label{par:auto-006}
+A write buffer is a standard example.
+When the core executes a store, it can enqueue the write and continue with subsequent instructions before that store reaches the lower memory hierarchy.
+If the store later encounters a fault condition, architectural recovery and exception handling restore correctness.
+The processor did not predict branch direction or data values in this case; it simply advanced optimistically to avoid stalling.
+
+\subsection{Speculation With Prediction}\label{subsec:auto-002}
+When prediction is added, speculation becomes more selective and usually more efficient.
+The processor estimates likely future behavior, executes along the estimated path, and commits the work only if the estimate is correct.
+
+\paragraph{Example: branch prediction}\label{par:auto-007}
+Branch prediction is the canonical case.
+If the predictor guesses that a branch is taken, instruction fetch and decode proceed down the predicted target path immediately.
+A correct guess keeps the front end busy and reduces control-hazard stalls.
+An incorrect guess forces the machine to squash the speculative instructions and restart on the correct path, which introduces a misprediction penalty.
+The basic tradeoff is straightforward: high prediction accuracy yields high performance; low accuracy can erase the benefit of speculation.
+
+\section{Parallelism by Grain Size}\label{sec:auto-005}
+Parallelism is best understood by \textit{grain size}, meaning the amount of work grouped into one concurrent unit.
+At the smallest scale, bit-level parallelism appears in wide datapaths and arithmetic logic that operate on many bit positions at once.
+A 64-bit adder, for example, processes far more state per cycle than an 8-bit design because the hardware width itself exposes more fine-grained parallel work.
+
+At \textit{instruction-level parallelism (ILP)}, the machine overlaps independent instructions within a thread.
+Superscalar issue, out-of-order scheduling, and pipelining all exploit ILP\@.
+Consider two arithmetic instructions: \texttt{R1=R2+R3} and \texttt{R4=R5+R6}.
+Because neither depends on the other, a dual-issue machine can dispatch them together.
+In contrast, \texttt{R1=R2+R3} followed by \texttt{R4=R1+R6} introduces a data dependence that limits overlap.
+This illustrates the central ILP limitation: dependencies, control hazards, and hardware resource conflicts bound achievable parallel speedup.
+
+At \textit{thread-level parallelism (TLP)}, multiple threads execute concurrently on multithreaded or multicore hardware.
+TLP can provide substantial throughput gains, but only if the workload contains enough independent work and synchronization overhead remains controlled.
+Inter-program parallelism is the coarsest common level, where independent processes run simultaneously under an operating system scheduler.
+This is the dominant form in desktop multitasking and cloud services, where many programs share the same physical platform.
+
+\section{Flynn's Taxonomy}\label{sec:auto-006}
+Flynn's taxonomy classifies parallel machines by counting instruction streams and data streams.
+In \textit{SISD} (single instruction, single data), one instruction stream acts on one data stream, matching the traditional scalar uniprocessor model.
+In \textit{SIMD} (single instruction, multiple data), one instruction stream is applied across many data elements in lockstep, which is highly effective for dense data-parallel computations such as vector math, image processing, and many GPU kernels.
+
+In \textit{MIMD} (multiple instruction, multiple data), multiple processing elements execute different instruction streams on different data streams.
+This is the dominant model for modern multicore CPUs, distributed servers, and cluster systems because it supports general-purpose, irregular workloads.
+\textit{MISD} (multiple instruction, single data) exists mostly in specialized contexts, such as certain fault-tolerant designs, and is uncommon in mainstream systems.
+
+\subsection{SIMD vs. MIMD}\label{subsec:auto-003}
+SIMD and MIMD solve different problems.
+SIMD is efficient when the same operation must be applied repeatedly to large collections of data.
+Its lockstep execution naturally provides synchronization across lanes, which reduces control overhead.
+MIMD is more flexible because each processor can follow its own control path, but this flexibility introduces synchronization and communication costs that must be managed explicitly by hardware and software.
+
+Modern GPUs often use a hybrid model sometimes called \textit{SIMT} (Single Instruction, Multiple Threads).
+SIMT provides a SIMD-like execution efficiency for the hardware while allowing a MIMD-like programming model where each thread appears to have its own scalar program counter.
+The hardware manages the divergence and convergence of these threads, grouping those on the same path into SIMD-style execution units.
+
+\subsection{Where pipelining fits}\label{subsec:auto-004}
+Pipelining is orthogonal to Flynn's taxonomy.
+It is a temporal form of parallelism in which different stages operate on different instructions concurrently.
+Because pipeline structure is an internal execution organization, pipelining can appear inside SISD cores, SIMD engines, and MIMD processors alike.
+
+\section{Vectors: Packed-Word SIMD vs. Pipelined Vector Units}\label{sec:auto-007}
+Packed-word SIMD and classic vector pipelines both exploit data parallelism, but they do so with different execution structures.
+Packed-word SIMD divides a fixed-width register into lanes (for example, four 32-bit lanes in 128 bits) and applies one instruction across all lanes in lockstep.
+An operation such as \texttt{ADD\_PACKED} performs multiple elementwise additions per instruction, and lane boundaries isolate carries so one lane's overflow does not spill into neighboring lanes.
+This style underlies CPU SIMD extensions such as SSE, AVX, and NEON\@.
+
+Vector pipelines, in contrast, stream long vectors through deep arithmetic pipelines.
+A floating-point multiply can be viewed conceptually as operand preparation, multiply, and result normalization/writeback stages.
+If a pipeline has $k$ stages and processes $n$ elements, a serial implementation needs $nk$ cycles, while a pipelined implementation needs approximately $k+n-1$ cycles after fill effects are accounted for (Eq.~\eqref{eq:auto-001}):
+\begin{equation}\label{eq:auto-001}
+\text{serial cycles} = nk,\qquad
+\text{pipeline cycles} \approx k+n-1.
+\end{equation}
+The result is substantial throughput gain for long vectors even though single-element latency is not eliminated.
+
+\paragraph{Chaining}\label{par:auto-008}
+Vector chaining improves this further.
+If a second vector operation consumes results from a first operation, the hardware can forward early produced elements directly into the consumer pipeline instead of waiting for the full vector to complete.
+Chaining reduces producer-consumer delay and improves sustained throughput in vectorized loops.
+
+\section{Common Chapter 1 Pitfalls}\label{sec:auto-008}
+Students often conflate speculation with prediction.
+The correct view is that prediction is one way to make speculation more effective, not the definition of speculation itself.
+Another recurring error is to assume that additional cores guarantee proportional speedup; real speedup is limited by dependencies, communication, and serial regions of code.
+It is also common to treat SIMD and MIMD as interchangeable, even though they target different workload structures and have different programming implications.
+
+A final source of confusion is the difference between packed-word SIMD and long-vector pipelining.
+Both process multiple data elements, but packed SIMD exploits lane-level parallel arithmetic within instruction-width registers, while vector pipelines exploit staged streaming over long element sequences.
+Related to this, pipelining primarily improves throughput rather than the latency of a single operation.
+
+\section{Chapter 1 Summary}\label{sec:auto-009}
+Chapter 1 introduces computer architecture as disciplined performance engineering under practical constraints.
+The chapter frames nearly all speedup mechanisms as forms of parallelism or speculation, then organizes parallelism by grain size from bits through instructions, threads, and entire programs.
+Flynn's taxonomy provides a clean language for distinguishing SISD, SIMD, MISD, and MIMD machines, especially the practical differences between SIMD efficiency and MIMD flexibility.
+Finally, the chapter distinguishes packed-word SIMD from pipelined vector execution and shows why chaining is valuable in vector data paths.
+Together, these ideas form the conceptual base used throughout later note volumes.

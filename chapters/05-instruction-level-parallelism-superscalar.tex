@@ -1,0 +1,90 @@
+\chapter{Instruction-Level Parallelism and Superscalar Architecture}\label{ch:ilp-superscalar}
+
+\section{Why CPI Can Go Below One}\label{sec:ilp-cpi-ipc}
+In basic single-issue pipelines, designers often treat $CPI\approx 1$ as a practical lower bound.
+Superscalar execution challenges that assumption by allowing multiple instructions to make progress in the same cycle.
+The key identity is (Eq.~\eqref{eq:ilp-ipc-cpi}):
+\begin{equation}\label{eq:ilp-ipc-cpi}
+IPC=\frac{1}{CPI}.
+\end{equation}
+So achieving $CPI<1$ is exactly equivalent to achieving $IPC>1$.
+A useful way to view design limits is that sustained retire throughput cannot exceed sustained fetch/dispatch capability (Eq.~\eqref{eq:ilp-throughput-bound}):
+\begin{equation}\label{eq:ilp-throughput-bound}
+IPC_{retire} \le \min\!\left(IPC_{fetch},\ IPC_{dispatch},\ IPC_{execute},\ IPC_{state\ update}\right).
+\end{equation}
+
+\section{Historical Motivation}\label{sec:ilp-history}
+Historically, supercomputer scalar units demonstrated that out-of-order mechanisms could deliver $IPC>1$ long before that became mainstream in commodity processors.
+The core lesson is that pipeline stalls are not eliminated by one trick.
+Instead, they are managed through coordinated fetch, scheduling, execution, and retirement policies.
+Modern superscalar designs revive this idea by combining hazard management with wider issue and stronger speculation.
+
+\section{Superscalar Pipeline View}\label{sec:ilp-pipeline-model}
+A practical superscalar model can be explained with six logical units.
+\paragraph{1. Branch handling and fetch}\label{par:ilp-fetch}
+This unit performs instruction fetch while consulting branch-handling structures such as direction predictors, branch-target mechanisms, and return-address prediction.
+Its goal is to produce multiple candidate instructions per cycle.
+\paragraph{2. Decode and dispatch}\label{par:ilp-dispatch}
+This unit interprets incoming instructions in program order and prepares them for scheduling.
+Dispatch is where architectural intent is still clearly in order, which is important for precise recovery.
+\paragraph{3. Scheduling}\label{par:ilp-schedule}
+Scheduling assigns ready instructions to available function units in time.
+This is where execution can diverge from program order to exploit parallelism.
+\paragraph{4. Execute}\label{par:ilp-execute}
+Function units perform arithmetic, memory, and control operations with operation-specific latencies.
+Multiple function units allow parallel progress.
+\paragraph{5. State update}\label{par:ilp-state-update}
+State update determines which completed results are architecturally accepted.
+This unit supports squash/recovery when speculation is wrong.
+\paragraph{6. Retire (commit)}\label{par:ilp-retire}
+Retirement exposes final results to the architectural state in a precise manner, typically preserving in-order visibility to software.
+
+\section{Dependency Types and Why They Matter}\label{sec:ilp-dependencies}
+Superscalar scheduling must respect three dependency classes.
+\begin{itemize}
+\item \textit{RAW} (read-after-write) is a true flow dependency.
+\item \textit{WAR} (write-after-read) is an anti-dependency.
+\item \textit{WAW} (write-after-write) is an output dependency.
+\end{itemize}
+Only RAW is fundamentally unavoidable.
+WAR and WAW are name dependencies that arise from register reuse and can be reduced or removed by renaming.
+
+\section{Fire/Complete Taxonomy}\label{sec:ilp-fire-complete}
+A compact way to classify designs is by fire order and complete order.
+\begin{itemize}
+\item \textit{FICI}: fire in order, complete in order (classic simple pipeline behavior).
+\item \textit{FICO}: fire in order, complete out of order (simpler superscalar step).
+\item \textit{FOCO}: fire out of order, complete out of order (more aggressive and higher potential ILP).
+\end{itemize}
+FICO is often useful pedagogically because it demonstrates parallel completion while keeping dispatch discipline simple.
+
+\section{Scoreboarding Intuition (FICO Style)}\label{sec:ilp-scoreboard}
+A scoreboard tracks whether sources, destinations, and required function units are currently available.
+A simplified FICO-style fire condition is shown in Eq.~\eqref{eq:ilp-fire-condition}.
+\begin{equation}\label{eq:ilp-fire-condition}
+\text{Fire if }\neg busy(src_1)\ \wedge\ \neg busy(src_2)\ \wedge\ \neg busy(dest)\ \wedge\ \neg busy(FU_{needed}).
+\end{equation}
+When an instruction fires, destination and function-unit busy state are set.
+When the instruction completes, those busy states are cleared according to implementation timing rules.
+The result is correct execution with modest hardware complexity, but some parallel opportunities are still left unused compared with more aggressive out-of-order firing.
+
+\section{Function Units and Latency}\label{sec:ilp-latency}
+Superscalar benefit depends on latency balance and available unit count.
+Common assumptions are short ALU latency, longer multiply latency, and memory latency that depends heavily on cache behavior.
+Designers therefore optimize both unit availability and scheduling policy, not just raw clock frequency.
+
+\section{Register Renaming as the Next Step}\label{sec:ilp-renaming}
+Renaming introduces additional physical register identities so later writes do not falsely block earlier reads or writes.
+Conceptually, renaming transforms many WAR/WAW hazards into non-hazards while preserving program meaning.
+The dependency pressure that remains is primarily RAW, which reflects true data flow.
+
+\section{Speculation Without and With Prediction}\label{sec:ilp-speculation}
+Superscalar pipelines use speculation to keep function units busy.
+Some designs can speculate without high-quality prediction (for example, eager execution ideas), but useful work fraction is then limited.
+High-accuracy branch handling usually gives better effective IPC because fewer speculative instructions are squashed.
+
+\section{Chapter 5 Summary}\label{sec:chapter5-summary-ilp}
+Instruction-level parallelism turns $CPI<1$ from a slogan into a concrete microarchitectural target.
+Superscalar design achieves this by widening the pipeline's effective throughput and managing dependencies, hazards, and speculative state carefully.
+FICO-style scoreboarding illustrates the basic mechanism, while renaming and stronger out-of-order policies push performance further.
+These ideas form the bridge from classic five-stage thinking to modern high-throughput scalar cores.

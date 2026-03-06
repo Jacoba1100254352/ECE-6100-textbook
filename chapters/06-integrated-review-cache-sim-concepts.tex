@@ -1,0 +1,94 @@
+\chapter{Integrated Review and Cache Simulation Concepts}\label{ch:auto-006}
+
+\section{Chapter Purpose}\label{sec:auto-046}
+This chapter integrates the concepts from Chapters 1--5 into a single applied view.
+It connects homework-style reasoning, pipeline practice, and cache simulation abstractions so the material reads as one coherent progression from theory to model-based analysis.
+
+\section{Homework Themes from Chapters 1 and 2}\label{sec:auto-047}
+Core concept clusters include classifying optimizations as parallelism, speculation, or both; distinguishing throughput from runtime and selecting the correct metric; interpreting $\text{CPU time}=\text{IC}\times\text{CPI}\times\text{CT}$ as a tradeoff framework; applying Amdahl's law for fixed-size speedup limits; interpreting Gustafson's law for scaled-size behavior; and using arithmetic means for times versus harmonic means for rates.
+
+\paragraph{Worked check}\label{par:auto-026}
+If an optimization accelerates 30\% of runtime by $2\times$, total speedup is
+\begin{equation}\label{eq:auto-045}
+S=\frac{1}{(1-0.3)+\frac{0.3}{2}}=\frac{1}{0.85}\approx 1.176.
+\end{equation}
+The unaccelerated fraction remains in the denominator and bounds overall speedup.
+
+\section{Homework Themes from Chapter 3}\label{sec:auto-048}
+Core concept clusters include computing sets, ways, and tag/index/offset widths from $(C,B,S)$; interpreting compulsory, conflict, and capacity misses; analyzing replacement and write-policy behavior; applying $AAT=HT+MR\cdot MP$; and relating cache size, block size, and associativity to hit time, miss ratio, and miss penalty.
+
+\paragraph{Worked check}\label{par:auto-027}
+For a cache with $HT=1.8$ ns, $MR=0.06$, and $MP=28$ ns (Eq.~\eqref{eq:auto-046}):
+\begin{equation}\label{eq:auto-046}
+AAT = 1.8 + 0.06\cdot 28 = 3.48\ \text{ns}.
+\end{equation}
+
+\section{Chapter 4 Practice Problems (with Answers)}\label{sec:auto-049}
+\subsection*{Practice One: Pipeline Speedup}\label{subsec:auto-012}
+Assume a 5-stage design where each stage has 250 ps logic delay and pipeline-register overhead is 30 ps.
+Unpipelined instruction time is $5\times250=1250$ ps.
+Pipelined clock is $250+30=280$ ps.
+Ideal long-run speedup is (Eq.~\eqref{eq:auto-047}):
+\begin{equation}\label{eq:auto-047}
+S\approx\frac{1250}{280}\approx 4.46.
+\end{equation}
+This is below 5 because register overhead is non-zero.
+
+\subsection*{Practice Two: CPI with Branch Stalls}\label{subsec:auto-013}
+If branch frequency is 18\% and each branch contributes an average of 1.6 stall cycles (Eq.~\eqref{eq:auto-048}):
+\begin{equation}\label{eq:auto-048}
+CPI = 1 + 0.18\times1.6 = 1.288.
+\end{equation}
+This illustrates how even moderate branch penalties raise CPI above the ideal value of 1.
+
+\section{Cache Simulation Conceptual Model}\label{sec:auto-050}
+The cache simulation framework models hierarchy behavior at the level of addresses, tags, and policy events rather than payload data values.
+A common parameterization is (Eq.~\eqref{eq:auto-049}):
+\begin{equation}\label{eq:auto-049}
+(C_1,B,S_1,C_2,S_2,\{\text{MIP,LIP}\},\{\text{None,+1,Markov,Hybrid}\},r).
+\end{equation}
+In this notation, $C$ controls capacity ($2^C$ bytes), $B$ controls block size ($2^B$ bytes), and $S$ controls associativity ($2^S$ ways).
+
+\section{Hierarchy Semantics in the Model}\label{sec:auto-051}
+\textbf{L1/L2 abstraction:} L1 accesses are modeled independently from L2 internals, and L2 requests are modeled as arriving from an upper-level requester.
+\textbf{Write-strategy contrast:} \textit{WBWA} behavior in L1 emphasizes dirty-state tracking and deferred propagation, while \textit{WTWNA} behavior in L2 emphasizes immediate lower-level visibility and no allocation on write misses.
+
+\textbf{Miss-servicing order effects:} ordering choices in read-miss repair and writeback events influence replacement-state evolution and therefore downstream statistics.
+\textbf{Disabled-level interpretation:} a disabled L2 can be represented as an always-miss transit layer with zero L2 hit time in AAT terms.
+
+\section{Prefetching Concepts}\label{sec:auto-052}
+\textbf{$+1$ prefetching:} predicts the next sequential block ($X+1$) after a demand miss on block $X$.
+
+\textbf{Markov prefetching:}
+represents miss-stream transitions as a finite-state table, associates each source miss block with a bounded set of likely successor blocks and frequencies, and selects a prediction from the highest-frequency successor under a deterministic tie-break rule.
+
+\textbf{Hybrid prefetching:} combines correlation-based prediction with sequential fallback when correlation information is absent.
+
+\textbf{Prefetch usefulness tracking:}
+a prefetch metadata bit distinguishes demand-filled lines from prefetched lines.
+First demand use of a prefetched line contributes to prefetch-hit interpretation, while eviction before demand use contributes to prefetch-miss interpretation.
+
+\section{Statistics and AAT Interpretation}\label{sec:auto-053}
+Typical hierarchy statistics include access counts, hit/miss counts, hit/miss ratios, writeback counts, and prefetch effectiveness counters.
+In two-level analysis (Eq.~\eqref{eq:auto-050}):
+\begin{equation}\label{eq:auto-050}
+AAT_{L1}=HT_{L1}+MR_{L1}\cdot MP_{L1},\qquad MP_{L1}=AAT_{L2}.
+\end{equation}
+\begin{equation}\label{eq:auto-051}
+AAT_{L2}=HT_{L2}+MR_{L2,read}\cdot DRAM\_TIME.
+\end{equation}
+\begin{equation}\label{eq:auto-052}
+DRAM\_TIME = DRAM\_AT + DRAM\_AT\_PER\_WORD\cdot WORDS\_PER\_BLOCK.
+\end{equation}
+This form emphasizes that higher-level penalty is the lower-level average access behavior, not a fixed constant.
+
+\section{Conceptual Tradeoffs Across Parameters}\label{sec:auto-054}
+Increasing $C$ generally reduces capacity misses but tends to raise hit time.
+Increasing $S$ reduces conflict misses but increases lookup complexity.
+Increasing $B$ can exploit spatial locality but may increase pollution and miss penalty.
+More aggressive prefetching can reduce compulsory misses yet increase bandwidth pressure and useless fills.
+
+\section{Chapter 6 Summary}\label{sec:auto-055}
+Homework themes, pipeline analysis, and cache simulation models reinforce the same central idea: architecture performance is governed by measurable tradeoffs among latency, throughput, locality, and prediction quality.
+The simulation concepts provide a concrete way to observe those tradeoffs in controlled workloads.
+A grouped formula index for the full text is provided in Appendix~\ref{ch:formula-compendium}.

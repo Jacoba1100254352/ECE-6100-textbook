@@ -1,0 +1,349 @@
+\chapter{Cache Memories}\label{ch:auto-004}
+
+\section{Memory Technology and the Hierarchy}\label{sec:auto-019}
+Modern cache design begins with a technology reality: fast memory is expensive and dense memory is slower.
+\textit{SRAM} cells use more transistors per bit, provide lower access latency, and do not require refresh, so SRAM is the natural choice for on-chip caches.
+\textit{DRAM} cells are denser and cheaper per bit but slower and refresh-driven, so DRAM is the natural choice for main memory capacity.
+This is why systems are built as hierarchies rather than as one uniform memory.
+
+A useful mental model is that each level trades speed for size as distance from the core increases.
+L1 and often L2 are SRAM-based and optimized for very low hit latency.
+Lower levels and main memory prioritize capacity and cost.
+Architecture work in Chapter 3 is mostly about exploiting this hierarchy so that accesses are absorbed by fast levels as often as possible.
+
+At the circuit level, one practical limiter is wire delay.
+Longer bit lines have higher effective capacitance and resistance, so sense amplifiers need more time to resolve values.
+This is one reason very large single-level caches become slow: making arrays taller increases bit-line delay even if logic depth is unchanged.
+
+\section{Typical Hierarchy Levels}\label{sec:auto-020}
+In mainstream systems, the first level is a small L1 cache optimized for minimum hit time.
+A larger L2 cache is usually next, trading some latency for much lower miss ratio.
+Below L2 sits physical memory (DRAM), which is much larger but much slower.
+Beneath DRAM is virtual-memory backing store (for example SSD), managed by the operating system through paging.
+
+From the CPU perspective, each lower level is accessed only when the upper level misses.
+This staged access is exactly why average-access-time analysis composes recursively across levels.
+
+\section{Locality: Why Caches Work}\label{sec:auto-021}
+Cache behavior is dominated by \textit{locality}.
+\textit{Temporal locality} means that if data is used now, it is likely to be used again soon.
+\textit{Spatial locality} means that if one address is accessed, nearby addresses are likely to follow.
+\textit{Sequential locality} is a common special case of spatial locality in which accesses proceed in order, such as instruction fetch or array traversal.
+
+These properties justify block-based transfer.
+Instead of moving one byte at a time from DRAM, the system moves an entire cache block, betting that adjacent bytes will be useful soon.
+The same properties also justify replacement policies that retain recently used data and evict older candidates.
+
+\section{Cache Geometry and Address Partitioning}\label{sec:auto-022}
+To reason cleanly about cache structure, use the triplet $(C,B,S)$ (Eq.~\eqref{eq:auto-018}):
+\begin{equation}\label{eq:auto-018}
+\text{cache capacity}=2^C\ \text{bytes},\qquad
+\text{block size}=2^B\ \text{bytes},\qquad
+\text{associativity}=2^S\ \text{ways}.
+\end{equation}
+
+\paragraph{Address fields in $(C,B,S)$ notation}\label{par:auto-012}
+In this notation, $S$ is \textbf{not} an extra address field beyond tag/index/offset.
+Instead, $S$ changes the number of sets and therefore the index width.
+\begin{equation}\label{eq:auto-019}
+\text{sets}=\frac{2^C}{2^B\cdot 2^S}=2^{C-B-S}.
+\end{equation}
+Total line count follows directly from sets and ways (Eq.~\eqref{eq:auto-086}):
+\begin{equation}\label{eq:auto-086}
+\text{lines}=\text{sets}\cdot\text{ways}=2^{C-B-S}\cdot 2^S=2^{C-B}.
+\end{equation}
+For direct-mapped caches ($S=0$), $\text{ways}=1$ so $\text{lines}=\text{sets}$.
+For set-associative caches ($S>0$), $\text{lines}>\text{sets}$ because there are multiple ways per set.
+\begin{equation}\label{eq:auto-020}
+|\text{Offset}|=B,\qquad
+|\text{Index}|=\log_2(\text{sets})=C-B-S.
+\end{equation}
+Because index plus offset consume $(C-S)$ low-order bits (Eq.~\eqref{eq:auto-021}):
+\begin{equation}\label{eq:auto-021}
+|\text{Index}|+|\text{Offset}|=(C-B-S)+B=C-S.
+\end{equation}
+For an address width of $AW$ bits (Eq.~\eqref{eq:auto-022}):
+\begin{equation}\label{eq:auto-022}
+|\text{Tag}|=AW-(|\text{Index}|+|\text{Offset}|)=AW-(C-S).
+\end{equation}
+So the split remains (Eq.~\eqref{eq:auto-023}):
+\begin{equation}\label{eq:auto-023}
+\text{Address}=[\text{Tag}\mid\text{Index}\mid\text{Offset}],
+\end{equation}
+with
+\begin{equation}\label{eq:auto-024}
+|\text{Offset}|=B,\qquad |\text{Index}|=C-B-S,\qquad |\text{Tag}|=AW-(C-S).
+\end{equation}
+
+\paragraph{Where the $S$ bits ``go''}\label{par:auto-013}
+Higher associativity means fewer sets, so index width decreases by $S$ relative to a direct-mapped organization with the same $C$ and $B$.
+That is why $S$ appears in index/tag equations but is not carried as an address field.
+
+\paragraph{What selects the way?}\label{par:auto-014}
+The way is selected by hardware after tag comparison, not by an explicit address field:
+\begin{enumerate}
+\item Index selects one set.
+\item Tags for all $2^S$ ways in that set are compared in parallel.
+\item Match logic identifies the hitting way (if any).
+\item Internal way-select control drives the data mux (conceptually an $S$-bit code since $\log_2(2^S)=S$).
+\end{enumerate}
+
+\paragraph{Quick example: 32\,KB, 32\,B blocks, 4-way}\label{par:auto-015}
+With $(C,B,S)=(15,5,2)$ (Eq.~\eqref{eq:auto-025}):
+\begin{equation}\label{eq:auto-025}
+|\text{Index}|=C-B-S=15-5-2=8.
+\end{equation}
+For the same $C,B$ but direct-mapped ($S=0$) (Eq.~\eqref{eq:auto-026}):
+\begin{equation}\label{eq:auto-026}
+|\text{Index}|=15-5-0=10.
+\end{equation}
+So moving to 4-way associativity reduces index width by 2 bits (equivalently reduces sets by $4\times$).
+
+\paragraph{32-bit address specialization}\label{par:auto-016}
+If $AW=32$ (Eq.~\eqref{eq:auto-027}):
+\begin{equation}\label{eq:auto-027}
+|\text{Offset}|=B,\qquad
+|\text{Index}|=C-B-S,\qquad
+|\text{Tag}|=32-(C-S)=32-C+S.
+\end{equation}
+
+\paragraph{Worked example (metadata sizing)}\label{par:auto-017}
+Consider a 64-bit machine with $(C,B,S)=(13,5,0)$, an 8\,KB direct-mapped cache with 32-byte blocks.
+The cache has $2^{13-5}=256$ blocks and $2^{13-5-0}=256$ sets.
+Tag width is $64-(13-0)=51$ bits.
+If each block stores one valid bit and one dirty bit, metadata per block is 53 bits.
+Total tag-store plus metadata is (Eq.~\eqref{eq:auto-028}):
+\begin{equation}\label{eq:auto-028}
+256 \times 53 = 13{,}568\ \text{bits}.
+\end{equation}
+If $B$ is reduced to 3 while $C$ and $S$ are fixed, the number of blocks rises to $2^{10}=1024$, so tag overhead increases to $1024\times53=54{,}272$ bits.
+This illustrates an important Chapter 3 point: smaller blocks can increase tag overhead significantly.
+
+\paragraph{Address partitioning example}\label{par:auto-018}
+Consider the same $(13,5,0)$ 64-bit cache.
+For the virtual address \texttt{0000\_1234\_ABCD\_5678}:
+\textbf{Offset (5 bits):} the lowest 5 bits of \texttt{78} (\texttt{0111\_1000}) are \texttt{11000}, which is \texttt{18} (decimal 24).
+\textbf{Index (8 bits):} bits 5 through 12 come from hex digits \texttt{5}, \texttt{6}, and \texttt{7}.
+In binary these digits are \texttt{0101}, \texttt{0110}, and \texttt{0111}; extracting bits 5--12 yields \texttt{1011\_0011} (binary), which is \texttt{B3}.
+\textbf{Tag (51 bits):} the remaining upper bits are the tag.
+This direct bit-mapping is the fundamental operation performed by hardware on every memory access.
+It illustrates how physical cache structure determines exactly which address bits are used for indexing and comparison.
+
+\section{Direct-Mapped, Set-Associative, and Fully Associative}\label{sec:auto-023}
+A \textit{direct-mapped cache} has one way per set, so each block address maps to exactly one location.
+Lookup is simple and fast, but conflict misses can be severe.
+A \textit{set-associative cache} allows each index to hold multiple candidate blocks; it reduces conflicts at the cost of parallel tag comparisons and a way-select multiplexer.
+A \textit{fully associative cache} removes index constraints entirely and minimizes conflict misses, but hardware search complexity and power become substantial for large capacities.
+
+Under $(C,B,S)$ notation, direct-mapped means $S=0$.
+Fully associative means one set, so $C-B-S=0$ and therefore $S=C-B$.
+This distinction is critical, because confusing these two conditions leads to incorrect address math and wrong simulator behavior.
+
+\paragraph{How each cache is constructed}\label{par:auto-019}
+Direct-mapped construction uses one data line and one tag entry per index.
+The index decoder selects one row, then one tag compare and one word select complete the access.
+A $2^S$-way set-associative cache replicates tag and data entries $2^S$ times per index; all tags in the selected set are compared in parallel, and a way-select mux picks the winning line.
+A fully associative cache has a single set containing all lines, so every access performs an associative search across the entire tag store and relies heavily on replacement metadata.
+
+\section{Hit, Miss, and Average Access Time}\label{sec:auto-024}
+For a cache hit, access latency is the \textit{hit time} $HT$.
+For a miss, the processor first spends hit-time logic discovering the miss, then pays \textit{miss penalty} $MP$ to fetch from the next level.
+The \textit{average access time} is (Eq.~\eqref{eq:auto-029}):
+\begin{equation}\label{eq:auto-029}
+AAT = HT + MR \cdot MP,
+\end{equation}
+where $MR$ is \textit{miss ratio}.
+In Chapter 3 analysis, Eq.~\eqref{eq:auto-029} is the cache analogue of the CPU-time equation in Eq.~\eqref{eq:auto-002}.
+
+Hit time is not a single gate delay.
+It includes row decoding, word-line drive, bit-line sensing, tag comparison, way selection, and word/byte selection.
+Cache-geometry choices alter these terms.
+Taller arrays hurt bit-line delay, wider arrays increase mux and comparator complexity, and higher associativity increases tag-compare and selection cost.
+
+\section{The Three C's of Misses}\label{sec:auto-025}
+Misses are classed as \textit{compulsory}, \textit{capacity}, or \textit{conflict}.
+Compulsory misses are first-touch misses and are unavoidable unless data is brought in before first demand access.
+Capacity misses happen because the working set exceeds what the cache can hold over the reuse interval.
+Conflict misses happen when mapping restrictions force evictions even though total capacity would have been enough under freer placement.
+
+In practice, this taxonomy provides a diagnosis strategy.
+If misses are mainly conflict-driven, associativity or victim structures can help.
+If misses are mainly capacity-driven, larger effective storage or better blocking can help.
+If misses are mainly compulsory, prefetching and layout changes are primary tools.
+
+\section{Replacement Policies and Their Tradeoffs}\label{sec:auto-026}
+When a set is full and a miss occurs, one resident block must be evicted.
+\textit{Belady's optimal policy} is a theoretical lower bound that requires future knowledge and is not implementable directly.
+\textit{LRU} approximates this by evicting the least recently touched entry, and usually performs well under temporal locality.
+\textit{FIFO} ignores reuse and can evict hot lines.
+\textit{Random} is simple and sometimes surprisingly competitive but unpredictable.
+\textit{LFU} tracks frequency but can lag phase changes.
+
+For high associativity, exact LRU state grows costly.
+Practical designs use approximations, tree-based encodings, or hybrid insertion policies.
+A notable policy distinction is insertion behavior: a line can be installed as \textit{MRU} (default in many demand-miss paths) or near LRU (useful for speculative prefetch lines to reduce pollution).
+
+\section{Write Policies}\label{sec:auto-027}
+Write behavior has two independent decisions.
+On a write hit, either update only the cache and defer memory update (\textit{write-back}), or update both cache and memory immediately (\textit{write-through}).
+On a write miss, either fetch the block then write it (\textit{write-allocate}), or write to lower memory without installing in cache (\textit{write-no-allocate}).
+
+Write-back reduces memory traffic when repeated writes target the same line, but requires a dirty bit and careful eviction handling.
+Because dirty data can live in cache before eviction, abrupt power loss can drop recently written values that have not yet reached lower levels.
+Write-through simplifies coherence visibility and durability behavior because lower memory is updated on each write hit, and it does not require dirty metadata at that cache level, but it increases memory bandwidth pressure.
+The common pairings are write-back plus write-allocate for reuse-heavy data paths, and write-through plus write-no-allocate for streaming paths with little read-after-write reuse.
+
+\paragraph{Valid and dirty bits: meaning, need, and size impact}\label{par:auto-020}
+Each cache line typically carries at least one \textit{valid bit}.
+Valid$=1$ means the tag/data entry contains a meaningful memory block; valid$=0$ means the entry must not hit, even if tag bits happen to match after reset or replacement.
+A \textit{dirty bit} is needed when that cache level uses \textit{write-back}: dirty$=1$ means the line was modified in cache and must be written to the next level before eviction; dirty$=0$ means eviction can discard the line without write-back traffic.
+In a pure write-through level, dirty bits are not required because lower memory is updated on every write hit.
+
+If line count is $N_{lines}=2^{C-B}$, valid-bit storage is $N_{lines}$ bits.
+Dirty-bit storage is another $N_{lines}$ bits only when write-back is enabled at that level.
+Relative to data-array size $2^C$ bytes, overhead from these two bits alone is (Eq.~\eqref{eq:auto-030}):
+\begin{equation}\label{eq:auto-030}
+\text{overhead fraction}=\frac{n_v+n_d}{2^{B+3}},
+\end{equation}
+where $n_v=1$ (valid always) and $n_d\in\{0,1\}$ (dirty only for write-back).
+Example: with 32-byte blocks ($B=5$), valid-only overhead is $1/256\approx0.39\%$, and valid+dirty overhead is $2/256\approx0.78\%$ (excluding tag, replacement, and coherence bits).
+
+\section{Reducing Miss Ratio}\label{sec:auto-028}
+The first lever is \textbf{cache size ($C$)}.
+Increasing $C$ reduces capacity misses because more of the working set fits in the hierarchy.
+However, larger caches increase hit time due to longer bit lines and decoder delays, and they consume more area and power.
+
+The second lever is \textbf{associativity ($S$)}.
+Increasing $S$ reduces conflict misses by providing more locations for a given index.
+The benefit is most significant when moving from direct-mapped to 2-way or 4-way, after which returns diminish.
+The cost includes increased hit time (due to the way-select multiplexer and parallel tag comparisons) and increased power consumption.
+
+The third lever is \textbf{block size ($B$)}.
+Increasing $B$ reduces compulsory misses by exploiting spatial locality (fetching more useful data per miss).
+However, if $B$ becomes too large, it can increase conflict misses (by reducing the total number of blocks) and will always increase miss penalty (longer transfer time).
+
+\paragraph{Hardware Prefetching}\label{par:auto-021}
+Hardware prefetching targets compulsory and capacity effects by pulling data before demand.
+A \textit{$+1$ prefetcher} fetches block $i+1$ when block $i$ is accessed.
+A \textit{stride prefetcher} detects constant deltas (for example $i, i+k, i+2k$) and fetches the next predicted address.
+A \textit{Markov prefetcher} uses a correlation table to learn non-linear transitions; if address $A$ is often followed by $B$ then $C$, the predictor learns and issues those future blocks when $A$ appears.
+To prevent \textit{cache pollution} (evicting useful data for speculative data that might not be used), many designs use a \textit{prefetch buffer}.
+This is a small, separate storage area where prefetched lines sit until they are actually demanded by the CPU\@.
+If demanded, they are moved into the main cache.
+
+\section{Reducing Miss Penalty}\label{sec:auto-029}
+Miss penalty is shaped strongly by transfer mechanics.
+If a block has $2^B$ bytes and bus transfer width is $W$ bytes, then the number of sub-block transfers is $N_{sb}=2^B/W$.
+With first-transfer startup latency $T_1$ and per-following transfer time $T_f$, block transfer time is (Eq.~\eqref{eq:auto-031}):
+\begin{equation}\label{eq:auto-031}
+MP_{full} = T_1 + (N_{sb}-1)T_f.
+\end{equation}
+Early restart returns data to the CPU as soon as the requested sub-block arrives rather than after full-block completion.
+If critical-word position is uniformly distributed and transfer order is fixed from sub-block 0 upward, average CPU-visible penalty becomes (Eq.~\eqref{eq:auto-032}):
+\begin{equation}\label{eq:auto-032}
+MP_{ER} \approx T_1 + \frac{N_{sb}-1}{2}T_f.
+\end{equation}
+Critical-word-first improves further by requesting the demanded sub-block first, then wrapping to complete the rest in the background.
+
+Another major lever is adding lower cache levels.
+If L1 misses probe L2 before DRAM, L1 penalty becomes L2 average access time (Eq.~\eqref{eq:auto-033}):
+\begin{equation}\label{eq:auto-033}
+AAT_{L1} = HT_{L1} + MR_{L1}\cdot AAT_{L2}.
+\end{equation}
+This recursive form extends naturally to deeper hierarchies.
+
+Victim caches are also miss-penalty tools.
+A small fully associative buffer captures lines evicted from the primary cache.
+On a later conflict-driven re-reference, data can be swapped back quickly without going to DRAM\@.
+Conceptually, a victim cache provides a small amount of flexible associativity exactly where pressure appears.
+
+Write buffers reduce stalls by decoupling cache writes from lower-memory completion.
+They are especially useful when a following miss would otherwise wait behind pending writes.
+Correct implementation requires forwarding from the newest matching buffered write and careful ordering semantics.
+
+\section{Reducing Hit Time}\label{sec:auto-030}
+Hit-time optimization frequently conflicts with miss-rate optimization.
+Smaller arrays and lower associativity usually improve hit latency.
+However, overly aggressive simplification can raise miss ratio enough to hurt total performance.
+In general, small caches and direct-mapped organizations are fast on the hit path, but they are often unacceptable unless miss ratio remains controlled by workload behavior or lower-level caches.
+
+Address translation complicates this tradeoff.
+A naive \textit{physically indexed, physically tagged} path can serialize translation lookaside buffer (TLB) lookup before cache access, increasing L1 hit latency.
+\textit{Virtually indexed, physically tagged (VIPT)} caches overlap TLB translation with set indexing and preserve physical-tag correctness.
+\paragraph{PIPT vs. VIPT timing view}\label{par:auto-074}
+With virtual memory, the CPU generates a virtual address split into VPN and page offset.
+In a \textit{physically indexed, physically tagged (PIPT)} L1, both index and tag use physical address bits.
+That means the TLB must produce the physical address before cache indexing can begin.
+So a first-order timing model is (Eq.~\eqref{eq:auto-088}):
+\begin{equation}\label{eq:auto-088}
+HT_{L1,\mathrm{PIPT}} \approx T_{TLB}+T_{L1,\mathrm{index+array+tag}}.
+\end{equation}
+In a \textit{VIPT} L1, indexing starts immediately using low-order virtual bits while the TLB is translating in parallel.
+When the physical address arrives, the physical tag compare finalizes hit/miss.
+A first-order model is (Eq.~\eqref{eq:auto-089}):
+\begin{equation}\label{eq:auto-089}
+HT_{L1,\mathrm{VIPT}} \approx \max\!\left(T_{TLB},\,T_{L1,\mathrm{index+array}}\right)+T_{\mathrm{phys\_tag\_compare}}.
+\end{equation}
+The practical effect is that VIPT can hide much of TLB latency on the L1 hit path, while PIPT often exposes it directly.
+\paragraph{Why the VIPT constraint exists}\label{par:auto-075}
+For VIPT to work cleanly, index-plus-offset bits must fit within page-offset bits (Eq.~\eqref{eq:auto-034}):
+\begin{equation}\label{eq:auto-034}
+C-S \le P,
+\end{equation}
+where $P$ is page-offset width in bits.
+If $C-S>P$, then some index bits come from VPN bits.
+Different virtual addresses that map to the same physical page (\textit{synonyms}) can then index different sets, allowing duplicated physical data in L1.
+That creates alias-management problems: writes through one synonym may not immediately update the other cached copy, risking stale reads until extra coherence/synchronization machinery repairs it.
+This constraint often forces minimum associativity for a given L1 size and page size.
+For example, with $P=12$ (4\,KB pages) and $C=15$ (32\,KB L1), one needs $S\ge 3$, i.e., at least 8-way associativity.
+If $S=2$ (4-way), then $C-S=13>12$, so VIPT indexing would extend beyond page offset and synonym risk appears.
+
+Write buffers can also improve effective hit behavior for writes by decoupling write completion from the immediate critical path and by forwarding recent write data when needed.
+This prevents some write-after-read and read-after-write timing stalls from stretching apparent hit latency.
+
+\section{Virtual Memory Technology, Terminology, and Analogy to Caching}\label{sec:auto-031}
+Virtual-memory terminology mirrors cache terminology closely.
+A virtual address is typically split into a \textit{virtual page number (VPN)} and page offset.
+Translation maps VPN to a \textit{physical frame number (PFN)} through a page table.
+A \textit{translation lookaside buffer (TLB)} is a cache of recent translations.
+A missing translation in the TLB causes a page-table walk; if the page is not in DRAM, a page fault triggers OS handling and secondary-storage transfer.
+
+The analogy to caching is direct.
+VPN behaves like a tag, page offset behaves like block offset, and the TLB behaves like a small associative cache of mapping metadata.
+Likewise, DRAM behaves as a cache for backing store, while on-chip caches behave as caches for DRAM\@.
+This layered view is useful because it applies one conceptual framework to both hardware cache hierarchy and OS-managed virtual memory.
+
+\section{Compiler and Data-Layout Techniques}\label{sec:auto-032}
+Software organization strongly affects cache performance.
+\textbf{Compiler layout of instructions} places frequently executed basic blocks close together in memory to improve I-cache hit rate and reduce fetch stalls.
+\textbf{Compiler-directed prefetching} issues non-binding prefetch instructions ahead of use, which is effective for predictable array accesses.
+\textbf{Data-layout choices}, including structure-of-arrays (SoA), field reordering, and padding, can reduce cache-line waste and false sharing.
+
+\textbf{Tiling (blocking)} re-organizes loops to process data in smaller cache-resident regions.
+For example:
+\begin{verbatim}
+// Before tiling:
+for (i=0; i<N; i++) for (j=0; j<N; j++) A[i][j] = B[j][i];
+// After tiling (where b is the tile size):
+for (ii=0; ii<N; ii+=b) for (jj=0; jj<N; jj+=b)
+    for (i=ii; i<ii+b; i++) for (j=jj; j<jj+b; j++) A[i][j] = B[j][i];\label{verb:verbatim}\label{verb:verbatim}\label{verb:verbatim}
+\end{verbatim}
+
+\textbf{Loop fusion} combines independent loops that touch related data to improve temporal locality.
+For example:
+\begin{verbatim}
+for (i=0; i<N; i++) a[i] = b[i] + 1; // loop 1
+for (i=0; i<N; i++) c[i] = a[i] * 2; // loop 2
+// Fused:
+for (i=0; i<N; i++) { a[i] = b[i] + 1; c[i] = a[i] * 2; }\label{verb:verbatim2}\label{verb:verbatim2}\label{verb:verbatim2}
+\end{verbatim}
+
+In practice, these compiler and data-layout techniques frequently determine whether hardware cache features help or saturate.
+
+\section{Chapter 3 Summary}\label{sec:auto-033}
+Chapter 3 develops cache memory from first principles to practical optimization.
+The chapter links SRAM/DRAM technology limits to hierarchical design, formalizes cache geometry with $(C,B,S)$ math, and uses AAT to connect structure to performance.
+Misses are interpreted through the three C's, while replacement and write policies define behavioral tradeoffs.
+Improvement strategies are organized by target term: miss ratio, miss penalty, or hit time.
+Prefetching, victim caches, write buffers, multi-level hierarchies, and VIPT constraints show how modern designs balance speed, capacity, and correctness.
+Finally, compiler and data-layout techniques complete the picture by showing that cache performance is a hardware-software co-design problem.
