@@ -163,35 +163,35 @@ CPI=1+\text{stalls}_{avg}.
 CPI\approx 1+f_{branch}\cdot \text{stall}_{branch,avg}.
 \end{equation}
 
-\section*{Chapter 5 Formula Set (ILP and Superscalar)}\label{sec:ch5-formulas}
-\paragraph{Chapter 5-F1 (IPC and CPI Relationship)}\label{par:ch5-formula-1}
-\begin{equation}\label{eq:ch5-formula-ipc-cpi}
-IPC=\frac{1}{CPI}.
-\end{equation}
-
-\paragraph{Chapter 5-F2 (CPI/IPC Threshold Equivalence)}\label{par:ch5-formula-2}
-\begin{equation}\label{eq:ch5-formula-threshold}
-CPI<1 \iff IPC>1.
-\end{equation}
-
-\paragraph{Chapter 5-F3 (Simplified Scoreboard Fire Condition)}\label{par:ch5-formula-3}
-\begin{equation}\label{eq:ch5-formula-fire}
-\text{Fire if } \neg busy(src_1)\wedge \neg busy(src_2)\wedge \neg busy(dest)\wedge \neg busy(FU_{needed}).
-\end{equation}
-
-\section*{Chapter 6 and Simulation Formula Set}\label{sec:auto-060}
-\paragraph{R-F1 (Two-Level AAT with Explicit L1 Penalty)}\label{par:auto-071}
+\section*{Chapter 5 and Simulation Formula Set}\label{sec:auto-060}
+\paragraph{Chapter 5-F1 (Two-Level AAT with Explicit L1 Penalty)}\label{par:auto-071}
 \begin{equation}\label{eq:auto-083}
 AAT_{L1}=HT_{L1}+MR_{L1}\cdot MP_{L1},\qquad
 MP_{L1}=AAT_{L2}.
 \end{equation}
 
-\paragraph{R-F2 (L2 AAT Model)}\label{par:auto-072}
+\paragraph{Chapter 5-F2 (L2 AAT Model)}\label{par:auto-072}
 \begin{equation}\label{eq:auto-084}
 AAT_{L2}=HT_{L2}+MR_{L2,read}\cdot DRAM\_TIME.
 \end{equation}
 
-\paragraph{R-F3 (DRAM Block Service Model)}\label{par:auto-073}
+\paragraph{Chapter 5-F3 (DRAM Block Service Model)}\label{par:auto-073}
 \begin{equation}\label{eq:auto-085}
 DRAM\_TIME=DRAM\_AT+DRAM\_AT\_PER\_WORD\cdot WORDS\_PER\_BLOCK.
+\end{equation}
+
+\section*{Chapter 6 Formula Set (ILP and Superscalar)}\label{sec:ch6-formulas}
+\paragraph{Chapter 6-F1 (IPC and CPI Relationship)}\label{par:ch6-formula-1}
+\begin{equation}\label{eq:ch5-formula-ipc-cpi}
+IPC=\frac{1}{CPI}.
+\end{equation}
+
+\paragraph{Chapter 6-F2 (CPI/IPC Threshold Equivalence)}\label{par:ch6-formula-2}
+\begin{equation}\label{eq:ch5-formula-threshold}
+CPI<1 \iff IPC>1.
+\end{equation}
+
+\paragraph{Chapter 6-F3 (Simplified Scoreboard Fire Condition)}\label{par:ch6-formula-3}
+\begin{equation}\label{eq:ch5-formula-fire}
+\text{Fire if } \neg busy(src_1)\wedge \neg busy(src_2)\wedge \neg busy(dest)\wedge \neg busy(FU_{needed}).
 \end{equation}
