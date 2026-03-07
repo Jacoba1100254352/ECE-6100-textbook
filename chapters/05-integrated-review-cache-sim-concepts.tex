@@ -1,8 +1,7 @@
 \chapter{Integrated Review and Cache Simulation Concepts}\label{ch:auto-006}
 
 \section{Chapter Purpose}\label{sec:auto-046}
-This chapter integrates the concepts from Chapters 1--5 into a single applied view.
-It connects homework-style reasoning, pipeline practice, and cache simulation abstractions so the material reads as one coherent progression from theory to model-based analysis.
+This chapter integrates the concepts from Chapters 1--4 into a single combined overview.
 
 \section{Homework Themes from Chapters 1 and 2}\label{sec:auto-047}
 Core concept clusters include classifying optimizations as parallelism, speculation, or both; distinguishing throughput from runtime and selecting the correct metric; interpreting $\text{CPU time}=\text{IC}\times\text{CPI}\times\text{CT}$ as a tradeoff framework; applying Amdahl's law for fixed-size speedup limits; interpreting Gustafson's law for scaled-size behavior; and using arithmetic means for times versus harmonic means for rates.
@@ -88,7 +87,7 @@ Increasing $S$ reduces conflict misses but increases lookup complexity.
 Increasing $B$ can exploit spatial locality but may increase pollution and miss penalty.
 More aggressive prefetching can reduce compulsory misses yet increase bandwidth pressure and useless fills.
 
-\section{Chapter 6 Summary}\label{sec:auto-055}
+\section{Chapter 5 Summary}\label{sec:auto-055}
 Homework themes, pipeline analysis, and cache simulation models reinforce the same central idea: architecture performance is governed by measurable tradeoffs among latency, throughput, locality, and prediction quality.
 The simulation concepts provide a concrete way to observe those tradeoffs in controlled workloads.
 A grouped formula index for the full text is provided in Appendix~\ref{ch:formula-compendium}.
