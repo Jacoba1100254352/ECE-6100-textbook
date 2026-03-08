@@ -1,25 +1,34 @@
-\chapter{Instruction-Level Parallelism and Superscalar Architecture}\label{ch:ilp-superscalar}
+\chapter[Instruction-Level Parallelism and Superscalar]{Instruction-Level Parallelism and Superscalar Architecture}\label{ch:ilp-superscalar}
 
 
 \section{Why CPI Can Go Below One}\label{sec:ilp-cpi-ipc}
 In basic single-issue pipelines, designers often treat $CPI\approx 1$ as a practical lower bound.
 Superscalar execution challenges that assumption by allowing multiple instructions to make progress in the same cycle.
-The key identity is (Eq.~\eqref{eq:ilp-ipc-cpi}):
+In this context, it is helpful to consider the inverse relationship (Eq.~\eqref{eq:ilp-ipc-cpi}):
 \begin{equation}\label{eq:ilp-ipc-cpi}
     IPC=\frac{1}{CPI}.
 \end{equation}
 So achieving $CPI<1$ is exactly equivalent to achieving $IPC>1$.
-A useful way to view design limits is that sustained retire throughput cannot exceed sustained fetch/dispatch capability (Eq.~\eqref{eq:ilp-throughput-bound}):
+A useful way to view design limits is that average retire throughput cannot exceed the average throughput of the stages before it (Eq.~\eqref{eq:ilp-throughput-bound}):
 \begin{equation}\label{eq:ilp-throughput-bound}
     IPC_{retire} \le \min\!\left(IPC_{fetch},\ IPC_{dispatch},\ IPC_{execute},\ IPC_{state\ update}\right).
 \end{equation}
+If any major stage can only handle one instruction per cycle on average, then the whole machine cannot retire two instructions per cycle on average, even if another stage is wide enough to do so.
+In other words, the minimum term in Eq.~\eqref{eq:ilp-throughput-bound} is the throughput bottleneck.
+
+Each term corresponds to a different possible limit.
+$IPC_{fetch}$ asks how many useful instructions the front end can supply per cycle.
+$IPC_{dispatch}$ asks how many decoded instructions can be prepared and sent onward.
+$IPC_{execute}$ asks how many instructions the function units (FUs) and memory system can actually complete.
+$IPC_{state\ update}$ asks how quickly the machine can accept completed work into precise architectural state.
+The retire rate cannot exceed the weakest of these rates, because retirement is the final visible outcome of all the earlier pipeline activity.
 
 
 \section{Historical Motivation}\label{sec:ilp-history}
 Historically, supercomputer scalar units demonstrated that out-of-order mechanisms could deliver $IPC>1$ long before that became mainstream in commodity processors.
 The core lesson is that pipeline stalls are not eliminated by one trick.
 Instead, they are managed through coordinated fetch, scheduling, execution, and retirement policies.
-Modern superscalar designs revive this idea by combining hazard management with wider issue and stronger speculation.
+Modern superscalar designs revive this idea by combining hazard management with the ability to issue more IPCs and with stronger speculation.
 
 
 \section{Superscalar Pipeline View}\label{sec:ilp-pipeline-model}
