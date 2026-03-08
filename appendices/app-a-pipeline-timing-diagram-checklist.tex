@@ -2,135 +2,141 @@
 A 5-stage timing diagram is best read as a checklist, not as raw symbols.
 Move cycle by cycle (column by column), then apply the prompts below.
 
+
 \section{How to Use This Checklist}\label{sec:timing-checklist-usage}
 
 \subsection*{Quick Reading Order}\label{subsec:auto-014}
 \begin{enumerate}
-\item Mark repeated stage labels (stall behavior).
-\item Mark killed instructions (squashes, often shown as dashes).
-\item Identify the event that caused each stall/squash (dependence, branch, resource conflict, or memory latency).
-\item Compute measured CPI from the traced window.
+    \item Mark repeated stage labels (stall behavior).
+    \item Mark killed instructions (squashes, often shown as dashes).
+    \item Identify the event that caused each stall/squash (dependence, branch, resource conflict, or memory latency).
+    \item Compute measured CPI from the traced window.
 \end{enumerate}
 
 \subsection*{1. Structural: Resource Organization}\label{subsec:auto-015}
+
 \paragraph{1.1 IF and MEM overlap}\label{par:auto-028}
 \begin{itemize}
-\item \textbf{Ask:} Can instruction fetch occur in the same cycle as a load/store data access?
-\item \textbf{Cue:} One cycle shows IF for one instruction while another instruction is in MEM with a real data access.
-\item \textbf{Meaning:} Sustained overlap indicates concurrent instruction/data paths.
-Repeated IF stalls when load/store reaches MEM suggests a shared bottleneck.
+    \item \textbf{Ask:} Can instruction fetch occur in the same cycle as a load/store data access?
+    \item \textbf{Cue:} One cycle shows IF for one instruction while another instruction is in MEM with a real data access.
+    \item \textbf{Meaning:} Sustained overlap indicates concurrent instruction/data paths.
+    Repeated IF stalls when load/store reaches MEM suggests a shared bottleneck.
 \end{itemize}
 
 \paragraph{1.2 Single-issue vs superscalar}\label{par:auto-029}
 \begin{itemize}
-\item \textbf{Ask:} Is the machine \textit{single-issue} or \textit{superscalar} (\textit{multi-issue})?
-\item \textbf{Cue:} In simple single-issue diagrams, each stage has at most one instruction per cycle.
-\item \textbf{Meaning:} Two instructions shown in one stage in one cycle (for example two EX uses) implies multi-issue and/or multiple functional units.
+    \item \textbf{Ask:} Is the machine \textit{single-issue} or \textit{superscalar} (\textit{multi-issue})?
+    \item \textbf{Cue:} In simple single-issue diagrams, each stage has at most one instruction per cycle.
+    \item \textbf{Meaning:} Two instructions shown in one stage in one cycle (for example two EX uses) implies multi-issue and/or multiple functional units.
 \end{itemize}
 
 \paragraph{1.3 Multi-cycle execute units}\label{par:auto-030}
 \begin{itemize}
-\item \textbf{Ask:} Do some operations occupy EX for multiple cycles?
-\item \textbf{Cue:} One instruction appears in EX across consecutive cycles (EX, EX, EX, \ldots).
-\item \textbf{Meaning:} That operation is using a multi-cycle execute unit and can back up younger instructions.
+    \item \textbf{Ask:} Do some operations occupy EX for multiple cycles?
+    \item \textbf{Cue:} One instruction appears in EX across consecutive cycles (EX, EX, EX, \ldots).
+    \item \textbf{Meaning:} That operation is using a multi-cycle execute unit and can back up younger instructions.
 \end{itemize}
 
 \subsection*{2. Data: Dependence and Forwarding}\label{subsec:auto-016}
+
 \paragraph{2.1 RAW hazard location and cost}\label{par:auto-031}
 \begin{itemize}
-\item \textbf{Ask:} Where are \textit{RAW} hazards, and how many bubbles do they add?
-\item \textbf{Cue:} Consumer instruction repeats a stage (usually ID, sometimes IF) while waiting for producer timing.
-\item \textbf{Meaning:} Number of repeated cells is the local dependence penalty.
+    \item \textbf{Ask:} Where are \textit{RAW} hazards, and how many bubbles do they add?
+    \item \textbf{Cue:} Consumer instruction repeats a stage (usually ID, sometimes IF) while waiting for producer timing.
+    \item \textbf{Meaning:} Number of repeated cells is the local dependence penalty.
 \end{itemize}
 
 \paragraph{2.2 Forwarding strength}\label{par:auto-032}
 \begin{itemize}
-\item \textbf{Ask:} Is forwarding present, and from where?
-\item \textbf{Cue:} Back-to-back ALU dependencies proceed without stalling even though producer WB occurs later.
-\item \textbf{Meaning:} This usually implies EX/MEM$\rightarrow$EX and MEM/WB$\rightarrow$EX forwarding.
-If simple ALU$\rightarrow$ALU pairs stall, forwarding is limited.
+    \item \textbf{Ask:} Is forwarding present, and from where?
+    \item \textbf{Cue:} Back-to-back ALU dependencies proceed without stalling even though producer WB occurs later.
+    \item \textbf{Meaning:} This usually implies EX/MEM$\rightarrow$EX and MEM/WB$\rightarrow$EX forwarding.
+    If simple ALU$\rightarrow$ALU pairs stall, forwarding is limited.
 \end{itemize}
 
 \paragraph{2.3 Load-use behavior}\label{par:auto-033}
 \begin{itemize}
-\item \textbf{Ask:} What is the load-use penalty?
-\item \textbf{Cue:} Load immediately followed by consumer, where consumer stalls one cycle.
-\item \textbf{Meaning:} Classic 5-stage with forwarding still needs a one-cycle load-use stall because load data appears at end of MEM\@.
+    \item \textbf{Ask:} What is the load-use penalty?
+    \item \textbf{Cue:} Load immediately followed by consumer, where consumer stalls one cycle.
+    \item \textbf{Meaning:} Classic 5-stage with forwarding still needs a one-cycle load-use stall because load data appears at end of MEM\@.
 \end{itemize}
 
 \paragraph{2.4 WB/ID same-cycle timing}\label{par:auto-034}
 \begin{itemize}
-\item \textbf{Ask:} Can ID read a register in the same cycle an older instruction writes it during the WB stage?
-\item \textbf{Cue:} Consumer ID aligns with producer WB, with no extra bubble.
-\item \textbf{Meaning:} Implies write-before-read register timing and/or WB$\rightarrow$ID bypass behavior.
+    \item \textbf{Ask:} Can ID read a register in the same cycle an older instruction writes it during the WB stage?
+    \item \textbf{Cue:} Consumer ID aligns with producer WB, with no extra bubble.
+    \item \textbf{Meaning:} Implies write-before-read register timing and/or WB$\rightarrow$ID bypass behavior.
 \end{itemize}
 
 \subsection*{3. Control: Branch and Redirection Policy}\label{subsec:auto-017}
+
 \paragraph{3.1 Resolution stage and penalty}\label{par:auto-035}
 \begin{itemize}
-\item \textbf{Ask:} Where is branch outcome resolved, and what is the visible penalty?
-\item \textbf{Cue:} Find where target/direction becomes known; then count wrong-path squashes or inserted bubbles before correct-path flow stabilizes.
-\item \textbf{Meaning:} Later resolution generally increases misfetch cost.
+    \item \textbf{Ask:} Where is branch outcome resolved, and what is the visible penalty?
+    \item \textbf{Cue:} Find where target/direction becomes known; then count wrong-path squashes or inserted bubbles before correct-path flow stabilizes.
+    \item \textbf{Meaning:} Later resolution generally increases misfetch cost.
 \end{itemize}
 
 \paragraph{3.2 Delay slot vs squash slot}\label{par:auto-036}
 \begin{itemize}
-\item \textbf{Ask:} Does the post-branch slot always execute, or can it be killed?
-\item \textbf{Cue:} Slot instruction either always completes (\textit{delay slot}) or is conditionally killed (\textit{squash slot}/branch-likely style).
-\item \textbf{Meaning:} Always-executed slot indicates delay-slot semantics; conditional kill indicates squash-style semantics.
+    \item \textbf{Ask:} Does the post-branch slot always execute, or can it be killed?
+    \item \textbf{Cue:} Slot instruction either always completes (\textit{delay slot}) or is conditionally killed (\textit{squash slot}/branch-likely style).
+    \item \textbf{Meaning:} Always-executed slot indicates delay-slot semantics; conditional kill indicates squash-style semantics.
 \end{itemize}
 
 \paragraph{3.3 Taken/not-taken inference (branch-likely style)}\label{par:auto-037}
 \begin{itemize}
-\item \textbf{Ask:} Which branch outcome occurred?
-\item \textbf{Cue:} Whether the slot instruction executes or is squashed.
-\item \textbf{Meaning:} In this text's branch-likely examples, a squashed slot corresponds to not taken.
+    \item \textbf{Ask:} Which branch outcome occurred?
+    \item \textbf{Cue:} Whether the slot instruction executes or is squashed.
+    \item \textbf{Meaning:} In this text's branch-likely examples, a squashed slot corresponds to not taken.
 \end{itemize}
 
 \paragraph{3.4 Prediction vs no prediction}\label{par:auto-038}
 \begin{itemize}
-\item \textbf{Ask:} Does fetch speculate, and is speculation often correct?
-\item \textbf{Cue:} Continued fetching past unresolved branches followed by occasional squashes (speculation), versus front-end waiting for resolution (no speculation).
-\item \textbf{Meaning:} Wrong-path fetches later killed imply predictive/fixed speculation; repeated front-end pauses imply non-speculative handling.
+    \item \textbf{Ask:} Does fetch speculate, and is speculation often correct?
+    \item \textbf{Cue:} Continued fetching past unresolved branches followed by occasional squashes (speculation), versus front-end waiting for resolution (no speculation).
+    \item \textbf{Meaning:} Wrong-path fetches later killed imply predictive/fixed speculation; repeated front-end pauses imply non-speculative handling.
 \end{itemize}
 
 \subsection*{4. Memory: Miss Effects in the Timeline}\label{subsec:auto-018}
+
 \paragraph{4.1 Miss penalty visibility}\label{par:auto-039}
 \begin{itemize}
-\item \textbf{Ask:} Are long memory latencies visible?
-\item \textbf{Cue:} Load/store occupies MEM for multiple cycles (M, M, M, \ldots), with younger instructions backing up.
-\item \textbf{Meaning:} Indicates cache-miss (or similar long-latency memory) behavior.
+    \item \textbf{Ask:} Are long memory latencies visible?
+    \item \textbf{Cue:} Load/store occupies MEM for multiple cycles (M, M, M, \ldots), with younger instructions backing up.
+    \item \textbf{Meaning:} Indicates cache-miss (or similar long-latency memory) behavior.
 \end{itemize}
 
 \paragraph{4.2 Blocking vs non-blocking cache behavior}\label{par:auto-040}
 \begin{itemize}
-\item \textbf{Ask:} Is cache behavior \textit{blocking}, or can it do \textit{hit-under-miss} (\textit{non-blocking})?
-\item \textbf{Cue:} Either all younger work freezes behind a miss, or independent work continues.
-\item \textbf{Meaning:} Full freeze implies blocking behavior (common in simple in-order models).
-Continued independent progress suggests non-blocking support and/or more advanced scheduling.
+    \item \textbf{Ask:} Is cache behavior \textit{blocking}, or can it do \textit{hit-under-miss} (\textit{non-blocking})?
+    \item \textbf{Cue:} Either all younger work freezes behind a miss, or independent work continues.
+    \item \textbf{Meaning:} Full freeze implies blocking behavior (common in simple in-order models).
+    Continued independent progress suggests non-blocking support and/or more advanced scheduling.
 \end{itemize}
 
 \subsection*{5. Performance from the Diagram}\label{subsec:auto-019}
+
 \paragraph{5.1 Measured CPI of a trace window}\label{par:auto-041}
 If a window spans $C$ cycles and retires $N_{ret}$ non-squashed instructions (Eq.~\eqref{eq:auto-053}):
 \begin{equation}\label{eq:auto-053}
-\text{CPI}_{measured}=\frac{C}{N_{ret}}.
+    \text{CPI}_{measured}=\frac{C}{N_{ret}}.
 \end{equation}
 Squashed instructions consume cycles but do not count as retired instructions.
 
 \paragraph{5.2 Stall-cycle attribution by cause}\label{par:auto-042}
 Assign repeated-stage cells and squashes to causes:
 \begin{itemize}
-\item dependence waiting (RAW/load-use),
-\item control redirection (branch squashes/bubbles),
-\item structural conflicts (resource contention),
-\item memory-latency extension (repeated MEM).
+    \item dependence waiting (RAW/load-use),
+    \item control redirection (branch squashes/bubbles),
+    \item structural conflicts (resource contention),
+    \item memory-latency extension (repeated MEM).
 \end{itemize}
 This gives a practical CPI breakdown from one timing chart.
 
 \subsection*{6. Common Gotchas}\label{subsec:auto-020}
 \begin{itemize}
-\item ALU instructions may still appear in MEM in pedagogical 5-stage diagrams; this alone does not prove a data-memory access.
-\item IF stalls can be secondary backpressure from a downstream stall (often ID), not a fetch-unit limitation by itself.
-\item Squash and stall are different: squashed instructions are killed; stalled instructions are preserved in place with repeated stage labels.
+    \item ALU instructions may still appear in MEM in pedagogical 5-stage diagrams; this alone does not prove a data-memory access.
+    \item IF stalls can be secondary backpressure from a downstream stall (often ID), not a fetch-unit limitation by itself.
+    \item Squash and stall are different: squashed instructions are killed; stalled instructions are preserved in place with repeated stage labels.
 \end{itemize}

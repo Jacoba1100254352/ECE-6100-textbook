@@ -1,5 +1,6 @@
 \chapter{Introduction}\label{ch:auto-002}
 
+
 \section{What Computer Architecture Is}\label{sec:auto-003}
 Computer architecture is the discipline of designing computing systems that execute real workloads efficiently under practical constraints.
 In this course context, architecture means deciding how a processor and memory system should be organized so that useful work is completed quickly, reliably, and within power and cost limits.
@@ -11,6 +12,7 @@ A design that minimizes latency for one task may reduce throughput for a server-
 A design that aggressively improves performance may consume more energy or require expensive cooling.
 A design that is elegant on paper may be too costly in area or too difficult to verify at scale.
 For this reason, architecture is best treated as constrained optimization: choose structures and policies that best match the target application while respecting implementation limits.
+
 
 \section{Core Methods: Parallelism, Speculation, and Prediction}\label{sec:auto-004}
 Most performance techniques in modern processors can be traced to three closely linked ideas: \textit{parallelism}, \textit{speculation}, and \textit{prediction}.
@@ -41,6 +43,7 @@ A correct guess keeps the front end busy and reduces control-hazard stalls.
 An incorrect guess forces the machine to squash the speculative instructions and restart on the correct path, which introduces a misprediction penalty.
 The basic tradeoff is straightforward: high prediction accuracy yields high performance; low accuracy can erase the benefit of speculation.
 
+
 \section{Parallelism by Grain Size}\label{sec:auto-005}
 Parallelism is best understood by \textit{grain size}, meaning the amount of work grouped into one concurrent unit.
 At the smallest scale, bit-level parallelism appears in wide datapaths and arithmetic logic that operate on many bit positions at once.
@@ -57,6 +60,7 @@ At \textit{thread-level parallelism (TLP)}, multiple threads execute concurrentl
 TLP can provide substantial throughput gains, but only if the workload contains enough independent work and synchronization overhead remains controlled.
 Inter-program parallelism is the coarsest common level, where independent processes run simultaneously under an operating system scheduler.
 This is the dominant form in desktop multitasking and cloud services, where many programs share the same physical platform.
+
 
 \section{Flynn's Taxonomy}\label{sec:auto-006}
 Flynn's taxonomy classifies parallel machines by counting instruction streams and data streams.
@@ -82,6 +86,7 @@ Pipelining is orthogonal to Flynn's taxonomy.
 It is a temporal form of parallelism in which different stages operate on different instructions concurrently.
 Because pipeline structure is an internal execution organization, pipelining can appear inside SISD cores, SIMD engines, and MIMD processors alike.
 
+
 \section{Vectors: Packed-Word SIMD vs. Pipelined Vector Units}\label{sec:auto-007}
 Packed-word SIMD and classic vector pipelines both exploit data parallelism, but they do so with different execution structures.
 Packed-word SIMD divides a fixed-width register into lanes (for example, four 32-bit lanes in 128 bits) and applies one instruction across all lanes in lockstep.
@@ -92,8 +97,8 @@ Vector pipelines, in contrast, stream long vectors through deep arithmetic pipel
 A floating-point multiply can be viewed conceptually as operand preparation, multiply, and result normalization/writeback stages.
 If a pipeline has $k$ stages and processes $n$ elements, a serial implementation needs $nk$ cycles, while a pipelined implementation needs approximately $k+n-1$ cycles after fill effects are accounted for (Eq.~\eqref{eq:auto-001}):
 \begin{equation}\label{eq:auto-001}
-\text{serial cycles} = nk,\qquad
-\text{pipeline cycles} \approx k+n-1.
+    \text{serial cycles} = nk,\qquad
+    \text{pipeline cycles} \approx k+n-1.
 \end{equation}
 The result is substantial throughput gain for long vectors even though single-element latency is not eliminated.
 
@@ -101,6 +106,7 @@ The result is substantial throughput gain for long vectors even though single-el
 Vector chaining improves this further.
 If a second vector operation consumes results from a first operation, the hardware can forward early produced elements directly into the consumer pipeline instead of waiting for the full vector to complete.
 Chaining reduces producer-consumer delay and improves sustained throughput in vectorized loops.
+
 
 \section{Common Chapter 1 Pitfalls}\label{sec:auto-008}
 Students often conflate speculation with prediction.
@@ -111,6 +117,7 @@ It is also common to treat SIMD and MIMD as interchangeable, even though they ta
 A final source of confusion is the difference between packed-word SIMD and long-vector pipelining.
 Both process multiple data elements, but packed SIMD exploits lane-level parallel arithmetic within instruction-width registers, while vector pipelines exploit staged streaming over long element sequences.
 Related to this, pipelining primarily improves throughput rather than the latency of a single operation.
+
 
 \section{Chapter 1 Summary}\label{sec:auto-009}
 Chapter 1 introduces computer architecture as disciplined performance engineering under practical constraints.

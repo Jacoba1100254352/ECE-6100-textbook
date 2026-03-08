@@ -2,52 +2,52 @@
 This appendix collects first-pass definitions used throughout Chapters 1--6.
 
 \begin{description}
-\item[\textit{Parallelism}] Doing multiple useful operations concurrently to increase throughput.
-\item[\textit{Speculation}] Executing work before all required conditions are confirmed, with recovery if assumptions are wrong.
-\item[\textit{Prediction}] Estimating uncertain future behavior to guide speculative execution.
-\item[\textit{Instruction-Level Parallelism (ILP)}] Overlap of independent instructions within one thread.
-\item[\textit{Thread-Level Parallelism (TLP)}] Concurrent execution of multiple threads on one or more cores.
-\item[\textit{SIMD}] One instruction stream operating on multiple data elements in lockstep.
-\item[\textit{MIMD}] Multiple instruction streams operating on multiple data streams independently.
-\item[\textit{Pipelining}] Temporal parallelism where different stages process different instructions simultaneously.
-\item[\textit{Superscalar (Multi-Issue)}] Pipeline organization that can issue more than one instruction per cycle.
-\item[\textit{Runtime}] Time to complete one job (response/turnaround time).
-\item[\textit{Throughput}] Completed work per unit time.
-\item[\textit{Amdahl's Law}] Speedup limit for fixed-size workloads when only a fraction is accelerated.
-\item[\textit{Gustafson's Law}] Scaled-speedup model where workload size grows with processor count.
-\item[\textit{Average Access Time (AAT)}] Expected memory-access latency, typically modeled as hit time plus miss rate times miss penalty.
-\item[\textit{SRAM}] Fast, low-latency, higher-area memory used for on-chip caches.
-\item[\textit{DRAM}] Dense, lower-cost, higher-latency memory used for main memory capacity.
-\item[\textit{Hit Time (HT)}] Latency to serve an access from the current cache level.
-\item[\textit{Miss Ratio (MR)}] Fraction of accesses at a level that miss.
-\item[\textit{Miss Penalty (MP)}] Extra latency to service a miss from lower levels.
-\item[\textit{Compulsory Miss}] First-reference miss for data not previously loaded.
-\item[\textit{Capacity Miss}] Miss caused by working set exceeding effective cache capacity.
-\item[\textit{Conflict Miss}] Miss caused by mapping/placement constraints despite sufficient total capacity.
-\item[\textit{Write-Back}] Write policy where modified data is propagated on eviction.
-\item[\textit{Write-Through}] Write policy where lower level is updated on each write hit.
-\item[\textit{Write-Allocate}] Write-miss policy that fetches and installs the block before write.
-\item[\textit{Write-No-Allocate}] Write-miss policy that bypasses install and writes lower level directly.
-\item[\textit{PIPT}] Physically indexed, physically tagged cache organization in which TLB translation typically precedes L1 indexing/tag lookup.
-\item[\textit{VIPT}] Virtually indexed, physically tagged cache organization that overlaps indexing with translation.
-\item[\textit{TLB}] Translation lookaside buffer storing recent virtual-to-physical translations.
-\item[\textit{Structural Hazard}] Stall risk from insufficient hardware resources.
-\item[\textit{Data Hazard}] Stall risk from operand read/write ordering conflicts.
-\item[\textit{Control Hazard}] Stall risk from unresolved branch/jump control flow.
-\item[\textit{RAW}] Read-after-write dependence hazard.
-\item[\textit{WAR}] Write-after-read dependence hazard.
-\item[\textit{WAW}] Write-after-write dependence hazard.
-\item[\textit{Forwarding (Bypassing)}] Sending a produced value directly to a consumer before register write-back.
-\item[\textit{Branch Target Buffer (BTB)}] Predictor structure that supplies likely branch targets early in fetch.
-\item[\textit{Aliasing}] Predictor or cache entry interference from unrelated addresses mapping to the same slot.
-\item[\textit{Return-Address Stack (RAS)}] Small stack predictor for call/return target addresses.
-\item[\textit{Direction Prediction}] Branch predictor decision for taken versus not taken.
-\item[\textit{BTFNT}] Backward taken, forward not taken static branch heuristic.
-\item[\textit{Delay Slot}] ISA semantic in which the instruction after a branch executes before control transfer takes effect.
-\item[\textit{Squash Slot}] Post-branch instruction position that may be conditionally killed based on branch outcome/policy.
-\item[\textit{WBWA}] Write-back, write-allocate pairing.
-\item[\textit{WTWNA}] Write-through, write-no-allocate pairing.
-\item[\textit{Blocking Cache}] Cache behavior where an outstanding miss prevents servicing younger accesses.
-\item[\textit{Non-Blocking Cache}] Cache behavior allowing selected younger accesses to proceed during a miss.
-\item[\textit{Hit-Under-Miss}] Ability to serve cache hits while a miss is still outstanding.
+    \item[\textit{Parallelism}] Doing multiple useful operations concurrently to increase throughput.
+    \item[\textit{Speculation}] Executing work before all required conditions are confirmed, with recovery if assumptions are wrong.
+    \item[\textit{Prediction}] Estimating uncertain future behavior to guide speculative execution.
+    \item[\textit{Instruction-Level Parallelism (ILP)}] Overlap of independent instructions within one thread.
+    \item[\textit{Thread-Level Parallelism (TLP)}] Concurrent execution of multiple threads on one or more cores.
+    \item[\textit{SIMD}] One instruction stream operating on multiple data elements in lockstep.
+    \item[\textit{MIMD}] Multiple instruction streams operating on multiple data streams independently.
+    \item[\textit{Pipelining}] Temporal parallelism where different stages process different instructions simultaneously.
+    \item[\textit{Superscalar (Multi-Issue)}] Pipeline organization that can issue more than one instruction per cycle.
+    \item[\textit{Runtime}] Time to complete one job (response/turnaround time).
+    \item[\textit{Throughput}] Completed work per unit time.
+    \item[\textit{Amdahl's Law}] Speedup limit for fixed-size workloads when only a fraction is accelerated.
+    \item[\textit{Gustafson's Law}] Scaled-speedup model where workload size grows with processor count.
+    \item[\textit{Average Access Time (AAT)}] Expected memory-access latency, typically modeled as hit time plus miss rate times miss penalty.
+    \item[\textit{SRAM}] Fast, low-latency, higher-area memory used for on-chip caches.
+    \item[\textit{DRAM}] Dense, lower-cost, higher-latency memory used for main memory capacity.
+    \item[\textit{Hit Time (HT)}] Latency to serve an access from the current cache level.
+    \item[\textit{Miss Ratio (MR)}] Fraction of accesses at a level that miss.
+    \item[\textit{Miss Penalty (MP)}] Extra latency to service a miss from lower levels.
+    \item[\textit{Compulsory Miss}] First-reference miss for data not previously loaded.
+    \item[\textit{Capacity Miss}] Miss caused by working set exceeding effective cache capacity.
+    \item[\textit{Conflict Miss}] Miss caused by mapping/placement constraints despite sufficient total capacity.
+    \item[\textit{Write-Back}] Write policy where modified data is propagated on eviction.
+    \item[\textit{Write-Through}] Write policy where lower level is updated on each write hit.
+    \item[\textit{Write-Allocate}] Write-miss policy that fetches and installs the block before write.
+    \item[\textit{Write-No-Allocate}] Write-miss policy that bypasses install and writes lower level directly.
+    \item[\textit{PIPT}] Physically indexed, physically tagged cache organization in which TLB translation typically precedes L1 indexing/tag lookup.
+    \item[\textit{VIPT}] Virtually indexed, physically tagged cache organization that overlaps indexing with translation.
+    \item[\textit{TLB}] Translation lookaside buffer storing recent virtual-to-physical translations.
+    \item[\textit{Structural Hazard}] Stall risk from insufficient hardware resources.
+    \item[\textit{Data Hazard}] Stall risk from operand read/write ordering conflicts.
+    \item[\textit{Control Hazard}] Stall risk from unresolved branch/jump control flow.
+    \item[\textit{RAW}] Read-after-write dependence hazard.
+    \item[\textit{WAR}] Write-after-read dependence hazard.
+    \item[\textit{WAW}] Write-after-write dependence hazard.
+    \item[\textit{Forwarding (Bypassing)}] Sending a produced value directly to a consumer before register write-back.
+    \item[\textit{Branch Target Buffer (BTB)}] Predictor structure that supplies likely branch targets early in fetch.
+    \item[\textit{Aliasing}] Predictor or cache entry interference from unrelated addresses mapping to the same slot.
+    \item[\textit{Return-Address Stack (RAS)}] Small stack predictor for call/return target addresses.
+    \item[\textit{Direction Prediction}] Branch predictor decision for taken versus not taken.
+    \item[\textit{BTFNT}] Backward taken, forward not taken static branch heuristic.
+    \item[\textit{Delay Slot}] ISA semantic in which the instruction after a branch executes before control transfer takes effect.
+    \item[\textit{Squash Slot}] Post-branch instruction position that may be conditionally killed based on branch outcome/policy.
+    \item[\textit{WBWA}] Write-back, write-allocate pairing.
+    \item[\textit{WTWNA}] Write-through, write-no-allocate pairing.
+    \item[\textit{Blocking Cache}] Cache behavior where an outstanding miss prevents servicing younger accesses.
+    \item[\textit{Non-Blocking Cache}] Cache behavior allowing selected younger accesses to proceed during a miss.
+    \item[\textit{Hit-Under-Miss}] Ability to serve cache hits while a miss is still outstanding.
 \end{description}
