@@ -1,9 +1,11 @@
 \chapter{Performance Evaluation}\label{ch:auto-003}
 
+
 \section{Why Performance Evaluation Matters}\label{sec:auto-010}
 Architecture decisions are only meaningful if they are evaluated with the right metric.
 A design that improves one metric can degrade another, and a design that looks fast on one workload can be slow on the workload that actually matters.
 The central objective of Chapter 2 is therefore methodological: define performance correctly, choose representative workloads, and use mathematically correct summaries when comparing alternatives.
+
 
 \section{Throughput vs. Runtime}\label{sec:auto-011}
 Two primary performance metrics appear repeatedly in computer architecture.
@@ -18,14 +20,15 @@ The same machine can be better under one metric and worse under the other, so pe
 This distinction also explains why pipelining can be valuable even when individual operation latency does not fall dramatically.
 A deeper pipeline can increase the number of completed operations per unit time, improving throughput, while leaving single-operation latency unchanged or slightly worse.
 
+
 \section{CPU Runtime Equation}\label{sec:auto-012}
 The fundamental equation used throughout performance analysis is (Eq.~\eqref{eq:auto-002}):
 \begin{equation}\label{eq:auto-002}
-\text{CPU time} = \text{Instruction Count (IC)} \times \text{Cycles per Instruction (CPI)} \times \text{Cycle Time (CT)}.
+    \text{CPU time} = \text{Instruction Count (IC)} \times \text{Cycles per Instruction (CPI)} \times \text{Cycle Time (CT)}.
 \end{equation}
 Using clock frequency $f = 1/\text{CT}$, the same equation is (Eq.~\eqref{eq:auto-003}):
 \begin{equation}\label{eq:auto-003}
-\text{CPU time} = \frac{\text{IC} \times \text{CPI}}{f}.
+    \text{CPU time} = \frac{\text{IC} \times \text{CPI}}{f}.
 \end{equation}
 This decomposition is useful because each factor is controlled by different mechanisms.
 \textit{Instruction count} is influenced by algorithm choice, compiler quality, and ISA expressiveness.
@@ -34,29 +37,30 @@ This decomposition is useful because each factor is controlled by different mech
 
 For instruction mixes, total cycles are computed directly (Eq.~\eqref{eq:auto-004}):
 \begin{equation}\label{eq:auto-004}
-\text{Total cycles} = \sum_i \left(\text{IC}_i \times \text{CPI}_i\right), \qquad
-\text{CPI}_{avg} = \frac{\text{Total cycles}}{\text{Total instructions}}.
+    \text{Total cycles} = \sum_i \left(\text{IC}_i \times \text{CPI}_i\right), \qquad
+    \text{CPI}_{avg} = \frac{\text{Total cycles}}{\text{Total instructions}}.
 \end{equation}
 
 \paragraph{Worked example}\label{par:auto-009}
 Suppose a workload executes 76 loads at 6 cycles each, 30 stores at 4 cycles each, 300 adds at 1 cycle each, and 58 multiplies at 5 cycles each.
 Then total cycles are
 \begin{equation}\label{eq:auto-005}
-76\cdot6 + 30\cdot4 + 300\cdot1 + 58\cdot5 = 1166.
+    76\cdot6 + 30\cdot4 + 300\cdot1 + 58\cdot5 = 1166.
 \end{equation}
 At 2.2\,MHz, runtime is
 \begin{equation}\label{eq:auto-006}
-\frac{1166}{2.2\times 10^6} \approx 5.30\times 10^{-4}\text{s} = 0.53\text{ms}.
+    \frac{1166}{2.2\times 10^6} \approx 5.30\times 10^{-4}\text{s} = 0.53\text{ms}.
 \end{equation}
 If multiply latency is reduced from 5 cycles to 3 cycles, new total cycles become
 \begin{equation}\label{eq:auto-007}
-76\cdot6 + 30\cdot4 + 300\cdot1 + 58\cdot3 = 1050,
+    76\cdot6 + 30\cdot4 + 300\cdot1 + 58\cdot3 = 1050,
 \end{equation}
 which yields a speedup of
 \begin{equation}\label{eq:auto-008}
-\frac{1166}{1050}\approx 1.11.
+    \frac{1166}{1050}\approx 1.11.
 \end{equation}
 The example illustrates a recurring theme: accelerating only one instruction class can help, but total improvement depends on how often that class occurs.
+
 
 \section{RISC vs. CISC Through the Performance Equation}\label{sec:auto-013}
 \textit{RISC} and \textit{CISC} are best understood as design tradeoffs, not as a simple ``better/worse'' ranking.
@@ -64,40 +68,42 @@ Historically, CISC designs emphasized richer, denser instructions to reduce dyna
 RISC designs emphasized simpler instructions and more regular pipelines, often improving CPI and enabling higher clock rates.
 In CPU-time terms, this is a direct trade (Eq.~\eqref{eq:auto-009}):
 \begin{equation}\label{eq:auto-009}
-\text{IC}\downarrow \text{may come with} \text{CPI}\uparrow \text{or} \text{CT}\uparrow,\quad
-\text{or vice versa.}
+    \text{IC}\downarrow \text{may come with} \text{CPI}\uparrow \text{or} \text{CT}\uparrow,\quad
+    \text{or vice versa.}
 \end{equation}
 
 In modern systems the boundary is less rigid than textbook definitions suggest, and x86 implementations, for example, decode complex instructions into simpler internal micro-operations and then execute them with highly RISC-like back ends.
 ARM designs, traditionally associated with RISC, also include increasingly rich instruction features to improve efficiency for modern workloads.
 The practical conclusion is that ISA style should be evaluated by end-to-end performance, power, and software ecosystem impact rather than by labels alone.
 
+
 \section{Amdahl's Law}\label{sec:auto-014}
 \textit{Amdahl's Law} quantifies the speedup limit when only part of a workload is accelerated.
 If fraction $f$ of execution time benefits from a speedup factor $s$, total speedup is
 \begin{equation}\label{eq:auto-010}
-S_{Amdahl}=\frac{1}{(1-f)+\frac{f}{s}}.
+    S_{Amdahl}=\frac{1}{(1-f)+\frac{f}{s}}.
 \end{equation}
 The limit as $s\to\infty$ is
 \begin{equation}\label{eq:auto-011}
-S_{\text{upper}}=\frac{1}{1-f}.
+    S_{\text{upper}}=\frac{1}{1-f}.
 \end{equation}
 This bound is the key insight: the unaccelerated fraction eventually dominates.
 
 \paragraph{Worked example}\label{par:auto-010}
 If 80\% of runtime is parallelizable and the accelerated part can use 100{,}000 processors ideally ($s=100{,}000$), then
 \begin{equation}\label{eq:auto-012}
-S=\frac{1}{0.2+\frac{0.8}{100000}}\approx 5.0.
+    S=\frac{1}{0.2+\frac{0.8}{100000}}\approx 5.0.
 \end{equation}
 Even enormous parallel resources cannot overcome a significant serial fraction.
 This is why architectural proposals must report both the accelerated fraction and the achieved acceleration factor.
+
 
 \section{Gustafson's Law and Why It Does Not Contradict Amdahl}\label{sec:auto-015}
 \textit{Gustafson's Law} addresses a different question: instead of fixing problem size, it assumes the workload scales with available processors.
 Let $\alpha$ be the sequential fraction measured on an $N$-processor run.
 Scaled speedup is
 \begin{equation}\label{eq:auto-013}
-S_{Gustafson}=\alpha + (1-\alpha)N.
+    S_{Gustafson}=\alpha + (1-\alpha)N.
 \end{equation}
 This often grows nearly linearly with $N$ when $\alpha$ is small.
 
@@ -109,19 +115,20 @@ Both are valid, but they answer different engineering questions.
 \paragraph{Example}\label{par:auto-011}
 With $\alpha=0.15$ and $N=16$,
 \begin{equation}\label{eq:auto-014}
-S_{Gustafson}=0.15+0.85\cdot16=13.75.
+    S_{Gustafson}=0.15+0.85\cdot16=13.75.
 \end{equation}
 This can exceed Amdahl's fixed-size bound because the scaled workload includes more total useful work.
+
 
 \section{Combining Performance Numbers Correctly}\label{sec:auto-016}
 Single-number summaries are useful only when the averaging method matches the quantity being averaged.
 For times (seconds per task), \textit{arithmetic mean} is appropriate (Eq.~\eqref{eq:auto-015}):
 \begin{equation}\label{eq:auto-015}
-\bar{T}_{arith}=\frac{1}{n}\sum_{i=1}^{n}T_i.
+    \bar{T}_{arith}=\frac{1}{n}\sum_{i=1}^{n}T_i.
 \end{equation}
 For rates (tasks per second), use \textit{harmonic mean} (Eq.~\eqref{eq:auto-016}):
 \begin{equation}\label{eq:auto-016}
-\bar{R}_{harm}=\frac{n}{\sum_{i=1}^{n}\frac{1}{R_i}}.
+    \bar{R}_{harm}=\frac{n}{\sum_{i=1}^{n}\frac{1}{R_i}}.
 \end{equation}
 
 Using arithmetic mean on rates can select the wrong system.
@@ -129,11 +136,12 @@ Suppose machine A runs two workloads at 4 and 4 transactions/s, while machine B 
 Arithmetic means are 4.0 and 4.5, which appears to favor B\@.
 But for one transaction of each workload, total throughput is determined by total work divided by total time (Eq.~\eqref{eq:auto-017}):
 \begin{equation}\label{eq:auto-017}
-R_A=\frac{2}{\frac{1}{4}+\frac{1}{4}}=4,\qquad
-R_B=\frac{2}{\frac{1}{2}+\frac{1}{7}}=\frac{28}{9}\approx 3.11.
+    R_A=\frac{2}{\frac{1}{4}+\frac{1}{4}}=4,\qquad
+    R_B=\frac{2}{\frac{1}{2}+\frac{1}{7}}=\frac{28}{9}\approx 3.11.
 \end{equation}
 Under equal-work comparison, A is better.
 This is exactly why rates should be combined harmonically, not arithmetically.
+
 
 \section{Workload Dependence and Benchmarking}\label{sec:auto-017}
 Performance numbers are workload-dependent.
@@ -143,6 +151,7 @@ A claim such as ``processor X is faster'' is incomplete unless it states the ben
 Representative benchmarking therefore requires matching the measured workloads to expected deployment behavior.
 A web service, a game engine, and a scientific simulation stress very different execution paths and memory behaviors.
 Chapter 2 methodology demands that architects evaluate on relevant traces and report assumptions explicitly; otherwise conclusions will not transfer to real systems.
+
 
 \section{Chapter 2 Summary}\label{sec:auto-018}
 Chapter 2 provides the framework for disciplined performance reasoning.
