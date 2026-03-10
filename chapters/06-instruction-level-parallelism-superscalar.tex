@@ -1,9 +1,9 @@
 \chapter[Instruction-Level Parallelism and Superscalar]{Instruction-Level Parallelism and Superscalar Architecture}\label{ch:ilp-superscalar}
 
-
 \section{Why CPI Can Go Below One}\label{sec:ilp-cpi-ipc}
 In basic single-issue pipelines, designers often treat $CPI\approx 1$ as a practical lower bound.
 Superscalar execution challenges that assumption by allowing multiple instructions to make progress in the same cycle.
+This broader goal is usually described as instruction-level parallelism (ILP).
 In this context, it is helpful to consider the inverse relationship (Eq.~\eqref{eq:ilp-ipc-cpi}):
 \begin{equation}\label{eq:ilp-ipc-cpi}
     IPC=\frac{1}{CPI}.
@@ -32,51 +32,148 @@ Modern superscalar designs revive this idea by combining hazard management with 
 
 
 \section{Superscalar Pipeline View}\label{sec:ilp-pipeline-model}
-A practical superscalar model can be explained with six logical units.
+A practical superscalar model can be explained with five main logical units plus a final retirement/commit action.
+Figure~\ref{fig:ilp-superscalar-pipeline} provides a compact visual summary of how these units interact in the overall datapath.
+In that figure, the boxed labels denote the main structures or stages, while the smaller labels on the right denote the dominant action on the adjacent arrow bundle: fetch, dispatch, fire or issue, complete, and retire or commit.
+The front end is drawn as separate Branch Handling and Instruction Fetch boxes, but together they still represent the single logical IF unit described below.
 
-\paragraph{1. Branch handling and fetch}\label{par:ilp-fetch}
-This unit performs instruction fetch while consulting branch-handling structures such as direction predictors, branch-target mechanisms, and return-address prediction.
+\paragraph{1. Branch Handling and Instruction Fetch (IF)}\label{par:ilp-fetch}
+This unit performs instruction fetch (IF) while consulting branch-handling structures such as direction predictors, branch-target mechanisms, and return-address prediction.
 Its goal is to produce multiple candidate instructions per cycle.
 
-\paragraph{2. Decode and dispatch}\label{par:ilp-dispatch}
-This unit interprets incoming instructions in program order and prepares them for scheduling.
+\paragraph{2. Dispatch and Decode (DISP)}\label{par:ilp-dispatch}
+This unit decodes incoming instructions in program order and dispatches them toward the scheduling structures.
 Dispatch is where architectural intent is still clearly in order, which is important for precise recovery.
 
 \paragraph{3. Scheduling}\label{par:ilp-schedule}
-Scheduling assigns ready instructions to available function units in time.
+Scheduling assigns ready instructions to available FUs in time.
 This is where execution can diverge from program order to exploit parallelism.
 
-\paragraph{4. Execute}\label{par:ilp-execute}
-Function units perform arithmetic, memory, and control operations with operation-specific latencies.
-Multiple function units allow parallel progress.
+\paragraph{4. Execute (EX)}\label{par:ilp-execute}
+FUs perform arithmetic, memory, and control operations with operation-specific latencies.
+Multiple FUs allow parallel progress.
 
-\paragraph{5. State update}\label{par:ilp-state-update}
-State update determines which completed results are architecturally accepted.
+\paragraph{5. State Update (SU)}\label{par:ilp-state-update}
+State update collects completed results, handles squash/recovery, and prepares instructions for precise architectural completion.
 This unit supports squash/recovery when speculation is wrong.
+The final outgoing flow from this unit is the retirement or commit action, where results become architecturally visible in program order.
+In Fig.~\ref{fig:ilp-superscalar-pipeline}, retirement is represented by the final outgoing arrows below State Update rather than by a separate boxed stage.
 
-\paragraph{6. Retire (commit)}\label{par:ilp-retire}
-Retirement exposes final results to the architectural state in a precise manner, typically preserving in-order visibility to software.
+\begin{figure}[t]
+    \centering
+    \begin{tikzpicture}[
+        font=\small,
+        >=Latex,
+        box/.style={draw, rectangle, minimum height=10mm, minimum width=34mm, align=center},
+        smallbox/.style={draw, rectangle, minimum height=8mm, minimum width=16mm, align=center},
+        queue/.style={draw, rectangle, minimum height=6mm, minimum width=28mm, draw=red!65!black},
+        stagearrow/.style={->, thick},
+        sidearrow/.style={->, semithick},
+        dasharrow/.style={->, dashed, semithick}
+    ]
+
+    % Top row
+    \node[box, minimum width=24mm] (branch) at (0,0) {Branch\\Handling};
+    \node[box, minimum width=52mm] (fetch) at (4.6,0) {Instruction Fetch};
+    \node[smallbox] (icache) at (8.6,0) {I\$};
+
+    % Main pipeline
+    \node[box, minimum width=62mm] (dispatch) at (4.6,-2.3) {Dispatch and Decode};
+    \node[box, minimum width=62mm] (schedule) at (4.6,-4.5) {Schedule};
+    \node[box, minimum width=68mm, minimum height=21mm] (execute) at (4.6,-7.2) {};
+    \node[box, minimum width=68mm] (state) at (4.6,-10.1) {State Update};
+    \node at ($(execute.north)+(0,-0.45)$) {Execute unit};
+
+    % Functional units inside execute
+    \node[smallbox, minimum width=10mm, minimum height=8mm] (fu1) at (3.0,-7.75) {FU};
+    \node[smallbox, minimum width=10mm, minimum height=8mm] (fu2) at (4.2,-7.75) {FU};
+    \node at (5.25,-7.75) {$\cdots$};
+    \node[smallbox, minimum width=10mm, minimum height=8mm] (fu3) at (6.2,-7.75) {FU};
+
+    % Side structures
+    \node[box, minimum width=22mm, minimum height=22mm] (regfile) at (-1.3,-3.4) {Reg\\File};
+    \node[smallbox, minimum width=14mm, minimum height=10mm] (dcache) at (9.2,-7.2) {D\$};
+
+    % Queues on right
+    \node[queue] (dqueue) at (10.9,-2.3) {};
+    \node[queue] (squeue) at (10.9,-4.5) {};
+
+    % Connections at top
+    \draw[<->, thick] (branch.east) -- (fetch.west);
+    \draw[<->, thick] (fetch.east) -- (icache.west);
+
+    % Vertical flow
+    \draw[stagearrow] ($(fetch.south)+(-1.6,0)$) -- ($(dispatch.north)+(-1.6,0)$);
+    \draw[stagearrow] ($(fetch.south)+(-0.4,0)$) -- ($(dispatch.north)+(-0.4,0)$);
+    \draw[stagearrow] ($(fetch.south)+(1.6,0)$) -- ($(dispatch.north)+(1.6,0)$);
+    \node at (5.2,-1.15) {$\cdots$};
+
+    \draw[stagearrow] ($(dispatch.south)+(-1.6,0)$) -- ($(schedule.north)+(-1.6,0)$);
+    \draw[stagearrow] ($(dispatch.south)+(-0.4,0)$) -- ($(schedule.north)+(-0.4,0)$);
+    \draw[stagearrow] ($(dispatch.south)+(1.6,0)$) -- ($(schedule.north)+(1.6,0)$);
+    \node at (5.2,-3.4) {$\cdots$};
+
+    \draw[stagearrow] ($(schedule.south)+(-1.6,0)$) -- ($(execute.north)+(-1.6,0)$);
+    \draw[stagearrow] ($(schedule.south)+(-0.4,0)$) -- ($(execute.north)+(-0.4,0)$);
+    \draw[stagearrow] ($(schedule.south)+(1.6,0)$) -- ($(execute.north)+(1.6,0)$);
+    \node at (5.2,-5.55) {$\cdots$};
+
+    \draw[stagearrow] (fu1.south) -- ($(state.north)+(-1.6,0)$);
+    \draw[stagearrow] (fu2.south) -- ($(state.north)+(-0.4,0)$);
+    \draw[stagearrow] (fu3.south) -- ($(state.north)+(1.6,0)$);
+
+    \draw[stagearrow] ($(state.south)+(-1.6,0)$) -- ++(0,-0.8);
+    \draw[stagearrow] ($(state.south)+(-0.4,0)$) -- ++(0,-0.8);
+    \draw[stagearrow] ($(state.south)+(1.6,0)$) -- ++(0,-0.8);
+    \node at (5.2,-11.10) {$\cdots$};
+
+    % Left-side register file connections
+    \draw[sidearrow] (regfile.north east) -- ($(dispatch.west)+(0,0.00)$);
+    \draw[sidearrow] (regfile.south east) -- ($(schedule.west)+(0,0.00)$);
+    \draw[dasharrow] ($(state.west)+(-0.2,0)$) -- ++(-2.3,0) -- ++(0,5.0) -- (regfile.south);
+
+    % D-cache connection
+    \draw[-, semithick] (execute.east) -- (dcache.west);
+
+    % Labels on right
+    \node[anchor=west] at (7.0,-1.15) {fetch};
+    \node[anchor=west, text=red!65!black] at (12.4,-2.3) {Dispatch Queue};
+    \node[anchor=west] at (7.0,-3.4) {dispatch};
+    \node[anchor=west, text=red!65!black] at (12.4,-4.5) {Scheduling Queue};
+    \node[anchor=west] at (7.0,-5.55) {fire or issue};
+    \node[anchor=west] at (7.0,-9.0) {complete};
+    \node[anchor=west] at (7.0,-11.0) {retire or commit};
+
+    \end{tikzpicture}
+    \caption{Generic logical superscalar pipeline view illustrating one possible organization. It is not itself specific to FICI, FICO, or FOCO; those classifications depend on how firing and completion are implemented. Boxed elements denote the main structures or stages, while the right-side annotations denote the adjacent flow actions: fetch, dispatch, fire or issue, complete, and retire or commit. Representative side structures and queues are also shown.}
+    \label{fig:ilp-superscalar-pipeline}
+\end{figure}
 
 
 \section{Dependency Types and Why They Matter}\label{sec:ilp-dependencies}
 Superscalar scheduling must respect three dependency classes.
 \begin{itemize}
     \item \textit{RAW} (read-after-write) is a true flow dependency.
+    A later instruction needs a value produced by an earlier one, so executing them in the wrong order would use stale data and produce the wrong result.
     \item \textit{WAR} (write-after-read) is an anti-dependency.
+    A later instruction must not overwrite a register before an earlier instruction has finished reading it, even though the two instructions do not share a true data value.
     \item \textit{WAW} (write-after-write) is an output dependency.
+    Two instructions write the same destination, so their writes must appear in the correct order or the final architectural value will be wrong.
 \end{itemize}
 Only RAW is fundamentally unavoidable.
-WAR and WAW are name dependencies that arise from register reuse and can be reduced or removed by renaming.
+WAR and WAW are name dependencies that arise from register reuse and can be reduced or removed by renaming the register.
 
 
 \section{Fire/Complete Taxonomy}\label{sec:ilp-fire-complete}
 A compact way to classify designs is by fire order and complete order.
 \begin{itemize}
     \item \textit{FICI}: fire in order, complete in order (classic simple pipeline behavior).
+    Instructions begin execution in program order and also finish in program order, which simplifies control but limits how much parallelism the machine can exploit.
     \item \textit{FICO}: fire in order, complete out of order (simpler superscalar step).
+    Instructions still begin execution in order, but different latencies allow later instructions to finish first, so some parallel speedup is possible without fully out-of-order scheduling.
     \item \textit{FOCO}: fire out of order, complete out of order (more aggressive and higher potential ILP).
+    The scheduler may start and finish instructions whenever operands and hardware are ready, which exposes more ILP but requires more machinery to preserve correct architectural behavior.
 \end{itemize}
-FICO is often useful pedagogically because it demonstrates parallel completion while keeping dispatch discipline simple.
 
 
 \section{Scoreboarding Intuition (FICO Style)}\label{sec:ilp-scoreboard}
@@ -103,13 +200,13 @@ The dependency pressure that remains is primarily RAW, which reflects true data 
 
 
 \section{Speculation Without and With Prediction}\label{sec:ilp-speculation}
-Superscalar pipelines use speculation to keep function units busy.
-Some designs can speculate without high-quality prediction (for example, eager execution ideas), but useful work fraction is then limited.
+Superscalar pipelines use speculation to keep FUs busy.
+Some designs can speculate without high-quality prediction (for example, eager execution ideas), but the useful work fraction is then limited.
 High-accuracy branch handling usually gives better effective IPC because fewer speculative instructions are squashed.
 
 
 \section{Chapter 6 Summary}\label{sec:chapter6-summary-ilp}
-Instruction-level parallelism turns $CPI<1$ from a slogan into a concrete microarchitectural target.
+Instruction-level parallelism turns $CPI<1$ into a concrete microarchitectural target.
 Superscalar design achieves this by widening the pipeline's effective throughput and managing dependencies, hazards, and speculative state carefully.
 FICO-style scoreboarding illustrates the basic mechanism, while renaming and stronger out-of-order policies push performance further.
 These ideas form the bridge from classic five-stage thinking to modern high-throughput scalar cores.
