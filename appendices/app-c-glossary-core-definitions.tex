@@ -11,6 +11,14 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[\textit{MIMD}] Multiple instruction streams operating on multiple data streams independently.
     \item[\textit{Pipelining}] Temporal parallelism where different stages process different instructions simultaneously.
     \item[\textit{Superscalar (Multi-Issue)}] Pipeline organization that can issue more than one instruction per cycle.
+    \item[\textit{Tomasulo's Algorithm}] Out-of-order scheduling method that combines renaming, reservation stations, and result broadcast to wake dependent instructions when operands become ready.
+    \item[\textit{Reservation Station}] Scheduling entry that holds an instruction, its operand state, and dependency tags until it can execute.
+    \item[\textit{Common Data Bus (CDB)}] Shared result-broadcast path used to distribute a completed value and its producer tag to waiting instructions.
+    \item[\textit{Result Bus}] Generalized form of the CDB; modern designs often use more than one such broadcast path.
+    \item[\textit{Architected Register}] Register name defined by the ISA and visible to software.
+    \item[\textit{Physical Register}] Internal hardware register used to hold renamed values beyond the architected register set.
+    \item[\textit{Register Alias Table (RAT)}] Mapping table from architected register names to the current physical register locations.
+    \item[\textit{Ready Bit}] Status bit indicating that a register or operand value has already been produced and may be consumed.
     \item[\textit{Runtime}] Time to complete one job (response/turnaround time).
     \item[\textit{Throughput}] Completed work per unit time.
     \item[\textit{Amdahl's Law}] Speedup limit for fixed-size workloads when only a fraction is accelerated.
