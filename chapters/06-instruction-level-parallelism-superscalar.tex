@@ -26,9 +26,9 @@ The retire rate cannot exceed the weakest of these rates, because retirement is 
 
 \section{Historical Motivation}\label{sec:ilp-history}
 Historically, supercomputer scalar units demonstrated that out-of-order mechanisms could deliver $IPC>1$ long before that became mainstream in commodity processors.
-The core lesson is that pipeline stalls are not eliminated by one trick.
+The core lesson is that pipeline stalls are reduced by combining several mechanisms, not by relying on any single mechanism alone.
 Instead, they are managed through coordinated fetch, scheduling, execution, and retirement policies.
-Modern superscalar designs revive this idea by combining hazard management with the ability to issue more IPCs and with stronger speculation.
+Modern superscalar designs revive this idea by combining hazard management with the ability to issue more instructions per cycle and with stronger speculation.
 
 
 \section{Superscalar Pipeline View}\label{sec:ilp-pipeline-model}
@@ -61,6 +61,7 @@ In Fig.~\ref{fig:ilp-superscalar-pipeline}, retirement is represented by the fin
 
 \begin{figure}[t]
     \centering
+    \resizebox{\textwidth}{!}{%
     \begin{tikzpicture}[
         font=\small,
         >=Latex,
@@ -145,6 +146,7 @@ In Fig.~\ref{fig:ilp-superscalar-pipeline}, retirement is represented by the fin
     \node[anchor=west] at (7.0,-11.0) {retire or commit};
 
     \end{tikzpicture}
+    }
     \caption{Generic logical superscalar pipeline view illustrating one possible organization. It is not itself specific to FICI, FICO, or FOCO; those classifications depend on how firing and completion are implemented. Boxed elements denote the main structures or stages, while the right-side annotations denote the adjacent flow actions: fetch, dispatch, fire or issue, complete, and retire or commit. Representative side structures and queues are also shown.}
     \label{fig:ilp-superscalar-pipeline}
 \end{figure}
@@ -197,6 +199,87 @@ Designers therefore optimize both unit availability and scheduling policy, not j
 Renaming introduces additional physical register identities so later writes do not falsely block earlier reads or writes.
 Conceptually, renaming transforms many WAR/WAW hazards into non-hazards while preserving program meaning.
 The dependency pressure that remains is primarily RAW, which reflects true data flow.
+In a typical implementation, the registers named by the ISA are the \textit{architected registers}, while the larger hidden pool used by the machine is the \textit{physical register file}.
+A \textit{register alias table (RAT)} maps each architected register name to the physical register that currently holds its most recent value.
+When dispatch renames a destination, it allocates a fresh physical register and updates the RAT so younger instructions will refer to the new location rather than the older one.
+Ready bits in the physical register file then indicate whether each renamed value has actually been produced yet.
+
+
+\section{Tomasulo's Algorithm}\label{sec:ilp-tomasulo}
+\textit{Tomasulo's algorithm} is a classic out-of-order execution method that allows instructions to fire when their operands are ready rather than strictly in program order.
+Its central idea is to combine renaming with \textit{reservation stations}, which are scheduling entries that hold an instruction until the required operands and execution resources are available.
+Historically, this approach is associated with Bob Tomasulo's work on the IBM System/360 Model 91, and it remains the conceptual foundation behind many modern out-of-order schedulers.
+
+\paragraph{Main structures}\label{par:ilp-tomasulo-structures}
+A simplified Tomasulo-style machine contains a dispatch unit, a set of reservation stations, one or more FUs, a result-broadcast network, and a renamed register file.
+Dispatch still runs in program order, but once instructions occupy reservation stations they may wake up and fire out of order.
+Each reservation-station entry records the required FU type, the destination tag or physical register, and for each source either a ready value or a tag identifying which older instruction will eventually produce that value.
+
+\paragraph{Dispatch, fire, and complete}\label{par:ilp-tomasulo-flow}
+At dispatch time, each source operand is examined.
+If the needed value is already ready, the value is copied into the reservation station.
+If it is not ready, the reservation station records the producing tag instead.
+The destination is renamed so younger instructions refer to the new producer rather than to the older architectural name.
+Later, when both sources are ready and a matching FU is available, the instruction can fire even if an older unrelated instruction is still waiting somewhere else in the machine.
+Completion is a separate event from firing: when an instruction completes, it broadcasts its tag and value on the result bus so dependent instructions can wake up and the renamed register file can be updated.
+
+\paragraph{Illustrative four-instruction trace}\label{par:ilp-tomasulo-trace}
+The following short trace captures the key behavior.
+Instruction A is a load that misses in the cache.
+Instruction B is an add that depends on A.
+Instruction C is an independent load that hits in the cache.
+Instruction D is an add that depends on C.
+Because the machine is out of order and the cache is non-blocking, C and then D can make progress while A is still waiting on the miss.
+\begin{description}
+    \item[Cycle 0.] A, B, C, and D dispatch into reservation stations.
+    Sources that are already available are copied in as values; missing sources are recorded as tags.
+    Destinations are renamed, and the corresponding destination entries are marked not ready.
+    \item[Cycle 1.] A fires, and independent instruction C can also fire because it does not depend on A.
+    This is the key gain from out-of-order scheduling: an older miss does not automatically freeze younger independent work.
+    \item[Cycles 2--3.] Nothing new completes.
+    B is still waiting for A, and D is still waiting for C.
+    \item[Cycle 4.] C completes first and broadcasts its tag and value, for example 420, on the result bus.
+    Reservation stations compare that tag against all waiting operands, so D wakes up and becomes ready to fire.
+    \item[Cycle 5.] D fires and begins its add using the value from C.
+    \item[Cycle 6.] A finally completes its miss and D also wants to complete.
+    With only one result bus, both cannot broadcast at once, so the usual rule is to let the older instruction win.
+    A therefore broadcasts first, for example with value 67, and B immediately becomes ready.
+    D then broadcasts its own result, for example 440, and B can fire as soon as the machine allows post-broadcast wakeup.
+\end{description}
+This trace shows why it is important to distinguish \textit{fire} from \textit{complete}.
+Firing sends operands into an FU and begins execution.
+Completing publishes the result so the rest of the machine can observe it.
+
+\paragraph{Non-blocking caches}\label{par:ilp-tomasulo-nonblocking}
+This Tomasulo-style example also motivates a \textit{non-blocking cache}.
+Such a cache is often described as supporting \textit{hit under miss}.
+If A misses in the cache, the machine does not necessarily want every younger memory access to stop.
+Instead, independent cache accesses may continue to probe the cache pipeline.
+That allows C to hit and complete while A is still waiting on a lower-level response.
+That improves throughput, but it also makes control more complex because the cache and scheduler must now track multiple outstanding requests correctly.
+
+
+\section{Result Buses and Physical Register Files}\label{sec:ilp-result-bus-prf}
+Basic Tomasulo has an obvious bottleneck: if all completed instructions must use one common data bus, then only one completion can be broadcast in a cycle.
+That limitation can be summarized as Eq.~\eqref{eq:ilp-result-bus-bound}.
+\begin{equation}\label{eq:ilp-result-bus-bound}
+    IPC_{complete} \le N_{result\ buses}.
+\end{equation}
+Adding more result buses raises the completion ceiling, but it also increases wakeup complexity because each reservation station must compare against more simultaneous broadcasts.
+
+One historical way to manage this cost is to redesign Tomasulo around an explicit physical register file and a RAT rather than storing all transient values only in reservation-station entries.
+With physical registers, the scheduler can often replace some associative tag searches with direct lookup by physical register number.
+That is faster and usually lower power than asking every waiting instruction to compare against every possible producer all the time.
+
+The tradeoff is a heavier register file.
+If many reservation-station entries are checked each cycle, the physical register file may need substantial read bandwidth.
+A common first-order estimate is shown in Eq.~\eqref{eq:ilp-prf-port-estimate}.
+\begin{equation}\label{eq:ilp-prf-port-estimate}
+    N_{read\ ports}\approx 2N_{sched},\qquad
+    N_{write\ ports}\approx N_{result\ buses}.
+\end{equation}
+The factor of two on the read side comes from the common case of two source operands per instruction.
+Real designs use banking, clustering, bypass paths, operand caching, and other tricks to reduce this raw multi-port cost, but the estimate is a useful baseline for understanding why renamed out-of-order cores are expensive.
 
 
 \section{Speculation Without and With Prediction}\label{sec:ilp-speculation}
@@ -208,5 +291,5 @@ High-accuracy branch handling usually gives better effective IPC because fewer s
 \section{Chapter 6 Summary}\label{sec:chapter6-summary-ilp}
 Instruction-level parallelism turns $CPI<1$ into a concrete microarchitectural target.
 Superscalar design achieves this by widening the pipeline's effective throughput and managing dependencies, hazards, and speculative state carefully.
-FICO-style scoreboarding illustrates the basic mechanism, while renaming and stronger out-of-order policies push performance further.
+FICO-style scoreboarding illustrates the basic mechanism, while renaming, Tomasulo-style wakeup and result broadcast, and stronger out-of-order policies push performance further.
 These ideas form the bridge from classic five-stage thinking to modern high-throughput scalar cores.

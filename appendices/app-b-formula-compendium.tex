@@ -203,7 +203,23 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
     CPI<1 \iff IPC>1.
 \end{equation}
 
-\paragraph{Chapter 6-F3 (Simplified Scoreboard Fire Condition)}\label{par:ch6-formula-3}
+\paragraph{Chapter 6-F3 (Retire-Throughput Bound)}\label{par:ch6-formula-3}
+\begin{equation}\label{eq:ch6-formula-throughput}
+    IPC_{retire}\le \min\!\left(IPC_{fetch},\ IPC_{dispatch},\ IPC_{execute},\ IPC_{state\ update}\right).
+\end{equation}
+
+\paragraph{Chapter 6-F4 (Simplified Scoreboard Fire Condition)}\label{par:ch6-formula-4}
 \begin{equation}\label{eq:ch5-formula-fire}
     \text{Fire if } \neg busy(src_1)\wedge \neg busy(src_2)\wedge \neg busy(dest)\wedge \neg busy(FU_{needed}).
+\end{equation}
+
+\paragraph{Chapter 6-F5 (Result-Bus Completion Bound)}\label{par:ch6-formula-5}
+\begin{equation}\label{eq:ch6-formula-result-bus}
+    IPC_{complete}\le N_{result\ buses}.
+\end{equation}
+
+\paragraph{Chapter 6-F6 (Physical Register File Port Estimate)}\label{par:ch6-formula-6}
+\begin{equation}\label{eq:ch6-formula-prf-ports}
+    N_{read\ ports}\approx 2N_{sched},\qquad
+    N_{write\ ports}\approx N_{result\ buses}.
 \end{equation}
