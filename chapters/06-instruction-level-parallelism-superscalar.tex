@@ -206,7 +206,7 @@ Ready bits in the physical register file then indicate whether each renamed valu
 
 
 \section{Tomasulo's Algorithm}\label{sec:ilp-tomasulo}
-\textit{Tomasulo's algorithm} is a classic out-of-order execution method that allows instructions to fire when their operands are ready rather than strictly in program order.
+\textit{Tomasulo's algorithm} is a classic out-of-order execution method that implements \textit{FOCO} by allowing instructions to fire when their operands are ready rather than strictly in program order.
 Its central idea is to combine renaming with \textit{reservation stations}, which are scheduling entries that hold an instruction until the required operands and execution resources are available.
 Historically, this approach is associated with Bob Tomasulo's work on the IBM System/360 Model 91, and it remains the conceptual foundation behind many modern out-of-order schedulers.
 
