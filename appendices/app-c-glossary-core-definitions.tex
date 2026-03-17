@@ -11,6 +11,25 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[\textit{MIMD}] Multiple instruction streams operating on multiple data streams independently.
     \item[\textit{Pipelining}] Temporal parallelism where different stages process different instructions simultaneously.
     \item[\textit{Superscalar (Multi-Issue)}] Pipeline organization that can issue more than one instruction per cycle.
+    \item[\textit{Register Renaming}] Introduction of additional physical register identities so later writes do not falsely block earlier reads or writes.
+    \item[\textit{Tomasulo's Algorithm}] Out-of-order scheduling method that combines renaming, reservation stations, and result broadcast to wake dependent instructions when operands become ready.
+    \item[\textit{Reservation Station}] Scheduling entry that holds an instruction, its operand state, and dependency tags until it can execute.
+    \item[\textit{Common Data Bus (CDB)}] Shared result-broadcast path used to distribute a completed value and its producer tag to waiting instructions.
+    \item[\textit{Result Bus}] Generalized form of the CDB; modern designs often use more than one such broadcast path.
+    \item[\textit{Architected Register}] Register name defined by the ISA and visible to software.
+    \item[\textit{Architected Register File}] Register file containing the committed architectural state visible to software.
+    \item[\textit{Physical Register}] Internal hardware register used to hold renamed values beyond the architected register set.
+    \item[\textit{Register Alias Table (RAT)}] Mapping table from architected register names to the current physical register locations.
+    \item[\textit{Ready Bit}] Status bit indicating that a register or operand value has already been produced and may be consumed.
+    \item[\textit{Reorder Buffer (ROB)}] In-order retirement structure that records speculative results and enables precise exceptions.
+    \item[\textit{Future File}] Register organization that holds the most recent speculative values while a separate architected register file holds committed state.
+    \item[\textit{Messy Register File}] Informal name for the current speculative register state that may contain out-of-order completions not yet reflected in a coherent sequential state.
+    \item[\textit{Precise Exception}] Exception model in which all older instructions appear committed and all younger instructions appear not to have changed architectural state.
+    \item[\textit{Imprecise Exception}] Exception model that reports an error without guaranteeing an exact sequential recovery point.
+    \item[\textit{Checkpoint/Repair}] Recovery method that periodically captures coherent register state and restores it when an exception or mis-speculation occurs.
+    \item[\textit{Instruction Boundary}] Dynamic marker used to denote a coherence point or recovery boundary in checkpoint-based schemes.
+    \item[\textit{Hyperthreading (SMT)}] Simultaneous multithreading in which multiple threads share one core's execution resources.
+    \item[\textit{Speculative Side Channel}] Information leak caused when squashed speculative work still changes microarchitectural state such as caches or predictors.
     \item[\textit{Runtime}] Time to complete one job (response/turnaround time).
     \item[\textit{Throughput}] Completed work per unit time.
     \item[\textit{Amdahl's Law}] Speedup limit for fixed-size workloads when only a fraction is accelerated.
@@ -50,4 +69,74 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[\textit{Blocking Cache}] Cache behavior where an outstanding miss prevents servicing younger accesses.
     \item[\textit{Non-Blocking Cache}] Cache behavior allowing selected younger accesses to proceed during a miss.
     \item[\textit{Hit-Under-Miss}] Ability to serve cache hits while a miss is still outstanding.
+\end{description}
+
+\section*{Acronym List}\label{sec:acronym-list}
+\begin{description}
+    \item[AAT] Average Access Time
+    \item[ALU] Arithmetic Logic Unit
+    \item[AVX] Advanced Vector Extensions
+    \item[AW] Address Width
+    \item[BTFNT] Backward Taken, Forward Not Taken
+    \item[BTB] Branch Target Buffer
+    \item[CDB] Common Data Bus
+    \item[CISC] Complex Instruction Set Computer
+    \item[CPI] Cycles Per Instruction
+    \item[CPU] Central Processing Unit
+    \item[CT] Cycle Time
+    \item[DISP] Dispatch and Decode
+    \item[DRAM] Dynamic Random-Access Memory
+    \item[EX] Execute
+    \item[FICI] Fire In order, Complete In order
+    \item[FIFO] First In, First Out
+    \item[FICO] Fire In order, Complete Out of order
+    \item[FOCO] Fire Out of order, Complete Out of order
+    \item[FP] Floating Point
+    \item[FU] Functional Unit
+    \item[GPU] Graphics Processing Unit
+    \item[IBM] International Business Machines
+    \item[HT] Hit Time
+    \item[IC] Instruction Count
+    \item[ID] Instruction Decode
+    \item[IF] Instruction Fetch
+    \item[ILP] Instruction-Level Parallelism
+    \item[IPC] Instructions Per Cycle
+    \item[ISA] Instruction Set Architecture
+    \item[LFU] Least Frequently Used
+    \item[LIP] Least Recently Used Insertion Policy
+    \item[LRU] Least Recently Used
+    \item[MEM] Memory
+    \item[MIMD] Multiple Instruction, Multiple Data
+    \item[MIP] Most Recently Used Insertion Policy
+    \item[MISD] Multiple Instruction, Single Data
+    \item[MP] Miss Penalty
+    \item[MR] Miss Ratio
+    \item[MRU] Most Recently Used
+    \item[OS] Operating System
+    \item[PC] Program Counter
+    \item[PFN] Physical Frame Number
+    \item[PIPT] Physically Indexed, Physically Tagged
+    \item[RAS] Return-Address Stack
+    \item[RAT] Register Alias Table
+    \item[RAW] Read After Write
+    \item[RISC] Reduced Instruction Set Computer
+    \item[ROB] Reorder Buffer
+    \item[RS] Reservation Station
+    \item[SIMD] Single Instruction, Multiple Data
+    \item[SIMT] Single Instruction, Multiple Threads
+    \item[SISD] Single Instruction, Single Data
+    \item[SMT] Simultaneous Multithreading
+    \item[SRAM] Static Random-Access Memory
+    \item[SSE] Streaming SIMD Extensions
+    \item[SSD] Solid-State Drive
+    \item[SU] State Update
+    \item[TLB] Translation Lookaside Buffer
+    \item[TLP] Thread-Level Parallelism
+    \item[VIPT] Virtually Indexed, Physically Tagged
+    \item[VPN] Virtual Page Number
+    \item[WAR] Write After Read
+    \item[WAW] Write After Write
+    \item[WB] Write Back
+    \item[WBWA] Write-Back, Write-Allocate
+    \item[WTWNA] Write-Through, Write-No-Allocate
 \end{description}

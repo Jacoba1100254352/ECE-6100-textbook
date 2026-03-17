@@ -64,12 +64,12 @@ This is the dominant form in desktop multitasking and cloud services, where many
 
 \section{Flynn's Taxonomy}\label{sec:auto-006}
 Flynn's taxonomy classifies parallel machines by counting instruction streams and data streams.
-In \textit{SISD} (single instruction, single data), one instruction stream acts on one data stream, matching the traditional scalar uniprocessor model.
-In \textit{SIMD} (single instruction, multiple data), one instruction stream is applied across many data elements in lockstep, which is highly effective for dense data-parallel computations such as vector math, image processing, and many GPU kernels.
+In \textit{single instruction, single data (SISD)}, one instruction stream acts on one data stream, matching the traditional scalar uniprocessor model.
+In \textit{single instruction, multiple data (SIMD)}, one instruction stream is applied across many data elements in lockstep, which is highly effective for dense data-parallel computations such as vector math, image processing, and many graphics processing unit (GPU) kernels.
 
-In \textit{MIMD} (multiple instruction, multiple data), multiple processing elements execute different instruction streams on different data streams.
-This is the dominant model for modern multicore CPUs, distributed servers, and cluster systems because it supports general-purpose, irregular workloads.
-\textit{MISD} (multiple instruction, single data) exists mostly in specialized contexts, such as certain fault-tolerant designs, and is uncommon in mainstream systems.
+In \textit{multiple instruction, multiple data (MIMD)}, multiple processing elements execute different instruction streams on different data streams.
+This is the dominant model for modern multicore central processing units (CPUs), distributed servers, and cluster systems because it supports general-purpose, irregular workloads.
+\textit{multiple instruction, single data (MISD)} exists mostly in specialized contexts, such as certain fault-tolerant designs, and is uncommon in mainstream systems.
 
 \subsection{SIMD vs. MIMD}\label{subsec:auto-003}
 SIMD and MIMD solve different problems.
@@ -77,7 +77,7 @@ SIMD is efficient when the same operation must be applied repeatedly to large co
 Its lockstep execution naturally provides synchronization across lanes, which reduces control overhead.
 MIMD is more flexible because each processor can follow its own control path, but this flexibility introduces synchronization and communication costs that must be managed explicitly by hardware and software.
 
-Modern GPUs often use a hybrid model sometimes called \textit{SIMT} (Single Instruction, Multiple Threads).
+Modern GPUs often use a hybrid model sometimes called \textit{single instruction, multiple threads (SIMT)}.
 SIMT provides a SIMD-like execution efficiency for the hardware while allowing a MIMD-like programming model where each thread appears to have its own scalar program counter.
 The hardware manages the divergence and convergence of these threads, grouping those on the same path into SIMD-style execution units.
 
@@ -91,7 +91,7 @@ Because pipeline structure is an internal execution organization, pipelining can
 Packed-word SIMD and classic vector pipelines both exploit data parallelism, but they do so with different execution structures.
 Packed-word SIMD divides a fixed-width register into lanes (for example, four 32-bit lanes in 128 bits) and applies one instruction across all lanes in lockstep.
 An operation such as \texttt{ADD\_PACKED} performs multiple elementwise additions per instruction, and lane boundaries isolate carries so one lane's overflow does not spill into neighboring lanes.
-This style underlies CPU SIMD extensions such as SSE, AVX, and NEON\@.
+This style underlies CPU SIMD extensions such as streaming SIMD extensions (SSE), advanced vector extensions (AVX), and Arm NEON\@.
 
 Vector pipelines, in contrast, stream long vectors through deep arithmetic pipelines.
 A floating-point multiply can be viewed conceptually as operand preparation, multiply, and result normalization/writeback stages.

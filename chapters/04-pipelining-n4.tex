@@ -12,7 +12,7 @@ The canonical integer pipeline has five stages (Eq.~\eqref{eq:auto-035}):
 \begin{equation}\label{eq:auto-035}
     IF \rightarrow ID \rightarrow EX \rightarrow MEM \rightarrow WB.
 \end{equation}
-Instruction Fetch (IF) reads the instruction from the instruction memory hierarchy and advances the PC\@.
+Instruction Fetch (IF) reads the instruction from the instruction memory hierarchy and advances the program counter (PC)\@.
 Instruction Decode (ID) decodes opcode and operands and reads source registers.
 Execute (EX) performs ALU work and effective-address calculation.
 Memory (MEM) performs data-memory access for loads and stores.
@@ -82,8 +82,8 @@ In modern designs, many obvious structural hazards are eliminated in hardware be
 \section{Data Hazards}\label{sec:auto-040}
 \textit{Data hazards} occur when the pipeline changes the order of read/write accesses to operands so that the order differs from the order in the original sequential program.
 
-\paragraph{RAW (Read After Write)}\label{par:auto-023}
-A \textit{RAW hazard} occurs when an instruction refers to a result that has not yet been calculated or stored by a preceding instruction.
+\paragraph{Read After Write (RAW)}\label{par:auto-023}
+A \textit{read-after-write (RAW)} hazard occurs when an instruction refers to a result that has not yet been calculated or stored by a preceding instruction.
 This is the most common hazard in the classic 5-stage pipeline.
 \begin{equation}\label{eq:auto-042}
     \texttt{I1: ADD R1, R2, R3} \qquad \texttt{I2: SUB R4, R1, R5}
@@ -91,8 +91,8 @@ This is the most common hazard in the classic 5-stage pipeline.
 In this case, \texttt{I2} needs \texttt{R1} in its ID/EX stage, but \texttt{I1} does not write \texttt{R1} until its WB stage.
 Without intervention, \texttt{I2} would read a stale value.
 
-\paragraph{WAR and WAW}\label{par:auto-024}
-\textit{WAR} (Write After Read) and \textit{WAW} (Write After Write) hazards do not typically occur in the simple 5-stage in-order pipeline because instructions read early (ID) and write late (WB) in a fixed order.
+\paragraph{Write After Read and Write After Write}\label{par:auto-024}
+\textit{Write-after-read (WAR)} and \textit{write-after-write (WAW)} hazards do not typically occur in the simple 5-stage in-order pipeline because instructions read early (ID) and write late (WB) in a fixed order.
 However, they become critical in out-of-order execution or pipelines with multiple completion units of varying latencies.
 
 \subsection{Forwarding (Bypassing)}\label{subsec:auto-005}
@@ -134,7 +134,7 @@ This improves performance when heuristics are good but complicates ISA semantics
 
 
 \section{Branch Target Buffer (BTB)}\label{sec:auto-042}
-The \textit{BTB} predicts where a branch goes (target prediction) early enough to guide fetch.
+The \textit{branch target buffer (BTB)} predicts where a branch goes (target prediction) early enough to guide fetch.
 
 \subsection{BTB with Tags}\label{subsec:auto-009}
 A tagged BTB stores branch PC tags and associated targets.

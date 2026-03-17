@@ -22,7 +22,7 @@ A deeper pipeline can increase the number of completed operations per unit time,
 
 
 \section{CPU Runtime Equation}\label{sec:auto-012}
-The fundamental equation used throughout performance analysis is (Eq.~\eqref{eq:auto-002}):
+The fundamental central processing unit (CPU) time equation used throughout performance analysis is (Eq.~\eqref{eq:auto-002}):
 \begin{equation}\label{eq:auto-002}
     \text{CPU time} = \text{Instruction Count (IC)} \times \text{Cycles per Instruction (CPI)} \times \text{Cycle Time (CT)}.
 \end{equation}
@@ -31,7 +31,7 @@ Using clock frequency $f = 1/\text{CT}$, the same equation is (Eq.~\eqref{eq:aut
     \text{CPU time} = \frac{\text{IC} \times \text{CPI}}{f}.
 \end{equation}
 This decomposition is useful because each factor is controlled by different mechanisms.
-\textit{Instruction count} is influenced by algorithm choice, compiler quality, and ISA expressiveness.
+\textit{Instruction count} is influenced by algorithm choice, compiler quality, and instruction set architecture (ISA) expressiveness.
 \textit{Cycles per instruction (CPI)} is influenced by microarchitecture, hazard behavior, memory hierarchy behavior, and available parallelism.
 \textit{Cycle time} is influenced by circuit and pipeline timing constraints.
 
@@ -63,7 +63,7 @@ The example illustrates a recurring theme: accelerating only one instruction cla
 
 
 \section{RISC vs. CISC Through the Performance Equation}\label{sec:auto-013}
-\textit{RISC} and \textit{CISC} are best understood as design tradeoffs, not as a simple ``better/worse'' ranking.
+\textit{Reduced instruction set computer (RISC)} and \textit{complex instruction set computer (CISC)} are best understood as design tradeoffs, not as a simple ``better/worse'' ranking.
 Historically, CISC designs emphasized richer, denser instructions to reduce dynamic instruction count and code size.
 RISC designs emphasized simpler instructions and more regular pipelines, often improving CPI and enabling higher clock rates.
 In CPU-time terms, this is a direct trade (Eq.~\eqref{eq:auto-009}):
@@ -73,7 +73,7 @@ In CPU-time terms, this is a direct trade (Eq.~\eqref{eq:auto-009}):
 \end{equation}
 
 In modern systems the boundary is less rigid than textbook definitions suggest, and x86 implementations, for example, decode complex instructions into simpler internal micro-operations and then execute them with highly RISC-like back ends.
-ARM designs, traditionally associated with RISC, also include increasingly rich instruction features to improve efficiency for modern workloads.
+Arm designs, traditionally associated with RISC, also include increasingly rich instruction features to improve efficiency for modern workloads.
 The practical conclusion is that ISA style should be evaluated by end-to-end performance, power, and software ecosystem impact rather than by labels alone.
 
 
