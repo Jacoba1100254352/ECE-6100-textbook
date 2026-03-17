@@ -3,8 +3,8 @@
 
 \section{Memory Technology and the Hierarchy}\label{sec:auto-019}
 Modern cache design begins with a technology reality: fast memory is expensive and dense memory is slower.
-\textit{SRAM} cells use more transistors per bit, provide lower access latency, and do not require refresh, so SRAM is the natural choice for on-chip caches.
-\textit{DRAM} cells are denser and cheaper per bit but slower and refresh-driven, so DRAM is the natural choice for main memory capacity.
+\textit{Static random-access memory (SRAM)} cells use more transistors per bit, provide lower access latency, and do not require refresh, so SRAM is the natural choice for on-chip caches.
+\textit{Dynamic random-access memory (DRAM)} cells are denser and cheaper per bit but slower and refresh-driven, so DRAM is the natural choice for main memory capacity.
 This is why systems are built as hierarchies rather than as one uniform memory.
 
 A useful mental model is that each level trades speed for size as distance from the core increases.
@@ -21,9 +21,9 @@ This is one reason very large single-level caches become slow: making arrays tal
 In mainstream systems, the first level is a small L1 cache optimized for minimum hit time.
 A larger L2 cache is usually next, trading some latency for much lower miss ratio.
 Below L2 sits physical memory (DRAM), which is much larger but much slower.
-Beneath DRAM is virtual-memory backing store (for example SSD), managed by the operating system through paging.
+Beneath DRAM is virtual-memory backing store (for example solid-state drive (SSD)), managed by the operating system through paging.
 
-From the CPU perspective, each lower level is accessed only when the upper level misses.
+From the central processing unit (CPU) perspective, each lower level is accessed only when the upper level misses.
 This staged access is exactly why average-access-time analysis composes recursively across levels.
 
 
@@ -182,14 +182,15 @@ If misses are mainly compulsory, prefetching and layout changes are primary tool
 \section{Replacement Policies and Their Tradeoffs}\label{sec:auto-026}
 When a set is full and a miss occurs, one resident block must be evicted.
 \textit{Belady's optimal policy} is a theoretical lower bound that requires future knowledge and is not implementable directly.
-\textit{LRU} approximates this by evicting the least recently touched entry, and usually performs well under temporal locality.
-\textit{FIFO} ignores reuse and can evict hot lines.
+\textit{Least recently used (LRU)} approximates this by evicting the least recently touched entry, and usually performs well under temporal locality.
+\textit{First in, first out (FIFO)} ignores reuse and can evict hot lines.
 \textit{Random} is simple and sometimes surprisingly competitive but unpredictable.
-\textit{LFU} tracks frequency but can lag phase changes.
+\textit{Least frequently used (LFU)} tracks frequency but can lag phase changes.
 
 For high associativity, exact LRU state grows costly.
 Practical designs use approximations, tree-based encodings, or hybrid insertion policies.
-A notable policy distinction is insertion behavior: a line can be installed as \textit{MRU} (default in many demand-miss paths) or near LRU (useful for speculative prefetch lines to reduce pollution).
+A notable policy distinction is insertion behavior: a line can be installed as \textit{most recently used (MRU)} (default in many demand-miss paths) or near LRU (useful for speculative prefetch lines to reduce pollution).
+Related insertion-policy abbreviations are \textit{most recently used insertion policy (MIP)} and \textit{least recently used insertion policy (LIP)}.
 
 
 \section{Write Policies}\label{sec:auto-027}
@@ -284,7 +285,7 @@ A naive \textit{physically indexed, physically tagged} path can serialize transl
 \textit{Virtually indexed, physically tagged (VIPT)} caches overlap TLB translation with set indexing and preserve physical-tag correctness.
 
 \paragraph{PIPT vs. VIPT timing view}\label{par:auto-074}
-With virtual memory, the CPU generates a virtual address split into VPN and page offset.
+With virtual memory, the CPU generates a virtual address split into virtual page number (VPN) and page offset.
 In a \textit{physically indexed, physically tagged (PIPT)} L1, both index and tag use physical address bits.
 That means the TLB must produce the physical address before cache indexing can begin.
 So a first-order timing model is (Eq.~\eqref{eq:auto-088}):
@@ -321,7 +322,7 @@ Virtual-memory terminology mirrors cache terminology closely.
 A virtual address is typically split into a \textit{virtual page number (VPN)} and page offset.
 Translation maps VPN to a \textit{physical frame number (PFN)} through a page table.
 A \textit{translation lookaside buffer (TLB)} is a cache of recent translations.
-A missing translation in the TLB causes a page-table walk; if the page is not in DRAM, a page fault triggers OS handling and secondary-storage transfer.
+A missing translation in the TLB causes a page-table walk; if the page is not in DRAM, a page fault triggers operating system (OS) handling and secondary-storage transfer.
 
 The analogy to caching is direct.
 VPN behaves like a tag, page offset behaves like block offset, and the TLB behaves like a small associative cache of mapping metadata.

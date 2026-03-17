@@ -191,7 +191,7 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
 \end{equation}
 
 
-\section*{Chapter 6 Formula Set (ILP and Superscalar)}\label{sec:ch6-formulas}
+\section*{Chapter 6 Formula Set (ILP, Superscalar, and Out-of-Order Execution)}\label{sec:ch6-formulas}
 
 \paragraph{Chapter 6-F1 (IPC and CPI Relationship)}\label{par:ch6-formula-1}
 \begin{equation}\label{eq:ch5-formula-ipc-cpi}
@@ -222,4 +222,37 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
 \begin{equation}\label{eq:ch6-formula-prf-ports}
     N_{read\ ports}\approx 2N_{sched},\qquad
     N_{write\ ports}\approx N_{result\ buses}.
+\end{equation}
+
+\paragraph{Chapter 6-F7 (Precise Exception Property)}\label{par:ch6-formula-7}
+\begin{equation}\label{eq:ch6-formula-precise}
+    \begin{aligned}
+        \text{precise exception at }i \Rightarrow\ &\text{all instructions older than }i\text{ are committed}\\
+        &\wedge\ \text{no instruction younger than }i\text{ is architecturally visible}
+    \end{aligned}
+\end{equation}
+
+\paragraph{Chapter 6-F8 (RAT Rename Mapping)}\label{par:ch6-formula-8}
+\begin{equation}\label{eq:ch6-formula-rat}
+    P_{src1}=RAT[A_{src1}],\qquad
+    P_{src2}=RAT[A_{src2}],\qquad
+    RAT[A_{dest}]\leftarrow P_{free}.
+\end{equation}
+
+\paragraph{Chapter 6-F9 (Ready-Based Fire Condition)}\label{par:ch6-formula-9}
+\begin{equation}\label{eq:ch6-formula-fire-ready}
+    fire_i \Leftarrow ready(P_{src1})\wedge ready(P_{src2})\wedge free(FU_i).
+\end{equation}
+
+\paragraph{Chapter 6-F10 (ROB Retirement Condition)}\label{par:ch6-formula-10}
+\begin{equation}\label{eq:ch6-formula-retire}
+    retire \Leftarrow ready(ROB_{head})\wedge \neg exception(ROB_{head}).
+\end{equation}
+
+\paragraph{Chapter 6-F11 (ROB Exception Rule)}\label{par:ch6-formula-11}
+\begin{equation}\label{eq:ch6-formula-exception}
+    \begin{aligned}
+        exception(ROB_{head}) \Rightarrow\ &\text{flush younger instructions}\\
+        &\wedge\ \text{transfer control to the retry or handler PC}
+    \end{aligned}
 \end{equation}

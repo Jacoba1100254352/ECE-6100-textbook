@@ -53,11 +53,12 @@ A common parameterization is (Eq.~\eqref{eq:auto-049}):
     (C_1,B,S_1,C_2,S_2,\{\text{MIP,LIP}\},\{\text{None,+1,Markov,Hybrid}\},r).
 \end{equation}
 In this notation, $C$ controls capacity ($2^C$ bytes), $B$ controls block size ($2^B$ bytes), and $S$ controls associativity ($2^S$ ways).
+Here \textit{most recently used insertion policy (MIP)} and \textit{least recently used insertion policy (LIP)} are common insertion-policy options.
 
 
 \section{Hierarchy Semantics in the Model}\label{sec:auto-051}
 \textbf{L1/L2 abstraction:} L1 accesses are modeled independently from L2 internals, and L2 requests are modeled as arriving from an upper-level requester.
-\textbf{Write-strategy contrast:} \textit{WBWA} behavior in L1 emphasizes dirty-state tracking and deferred propagation, while \textit{WTWNA} behavior in L2 emphasizes immediate lower-level visibility and no allocation on write misses.
+\textbf{Write-strategy contrast:} \textit{write-back, write-allocate (WBWA)} behavior in L1 emphasizes dirty-state tracking and deferred propagation, while \textit{write-through, write-no-allocate (WTWNA)} behavior in L2 emphasizes immediate lower-level visibility and no allocation on write misses.
 
 \textbf{Miss-servicing order effects:} ordering choices in read-miss repair and writeback events influence replacement-state evolution and therefore downstream statistics.
 \textbf{Disabled-level interpretation:} a disabled L2 can be represented as an always-miss transit layer with zero L2 hit time in AAT terms.
