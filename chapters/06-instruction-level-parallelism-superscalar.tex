@@ -380,7 +380,7 @@ The terminology varies, but the idea is the same: one convention marks a value a
 \section{Tomasulo's Algorithm}\label{sec:ilp-tomasulo}
 \textit{Tomasulo's algorithm} is a classic out-of-order execution method that implements \textit{FOCO} by allowing instructions to fire when their operands are ready rather than strictly in program order.
 Its central idea is to combine renaming with \textit{reservation stations}, which are scheduling entries that hold an instruction until the required operands and execution resources are available.
-Historically, this approach is associated with Bob Tomasulo's work on the International Business Machines (IBM) System/360 Model 91, and it remains the conceptual foundation behind many modern out-of-order schedulers.
+Historically, this approach is associated with Bob Tomasulo's work on the IBM System/360 Model 91, and it remains the conceptual foundation behind many modern out-of-order schedulers.
 
 \paragraph{Main structures}\label{par:ilp-tomasulo-structures}
 A simplified Tomasulo-style machine contains a dispatch unit, a set of reservation stations, one or more FUs, a result-broadcast network, and a renamed register file.
@@ -501,9 +501,9 @@ The same logical condition is shown in Eq.~\eqref{eq:ilp-ready-fire}.
 Each scheduling-queue entry is a reservation station that records the FU type, the destination physical register or tag, and either ready source values or the physical-register identities that will eventually supply them.
 When a producing instruction completes, the result bus updates the physical register file and wakes any waiting entries that need that value.
 
-Some literature describes the speculative physical-register state as a \textit{future file}.
-Other teaching treatments use the informal phrase \textit{messy register file} to emphasize that the speculative state may be ahead of the last coherent architectural state.
-The naming differs, but the design idea is the same: speculative state can move ahead aggressively, while committed state must remain precise.
+The speculative physical-register state may be called the \textit{future file} or the \textit{messy register file}.
+In either case, the term refers to a speculative state that may be ahead of the last coherent architectural state.
+The key idea is the same: the speculative state can move ahead aggressively, while the committed state must remain precise.
 
 
 \section{Precise State and Recovery}\label{sec:ilp-precise-state}
@@ -518,8 +518,8 @@ That requirement is usually stated as the \textit{precise exception} property in
 \end{equation}
 
 This was not always required in the same way.
-In Tomasulo's original floating-point setting on the International Business Machines (IBM) System/360 Model 91, the out-of-order machinery covered a narrower part of the processor and the machine could tolerate \textit{imprecise exceptions} in situations that modern general-purpose cores cannot.
-Once out-of-order execution extended to ordinary integer, load/store, and control-flow instructions under virtual memory, recovery to an exact sequential state became mandatory rather than optional.
+In Tomasulo's original floating-point setting on the IBM System/360 Model 91, the out-of-order machinery covered a narrower part of the processor and the machine could tolerate \textit{imprecise exceptions} in situations that modern general-purpose cores cannot.
+Once out-of-order execution extended to ordinary integer, load/store, and control-flow instructions under virtual memory, recovery to an exact sequential state changed from optional to mandatory.
 
 
 \section{Reorder Buffers and Retirement}\label{sec:ilp-rob}
@@ -552,7 +552,7 @@ It is powerful, but the search itself is associative and can become part of the 
 \paragraph{Freeing physical registers}\label{par:ilp-freeing-pregs}
 Renamed machines also need a rule for reclaiming old physical registers.
 The exact policy differs across implementations, but the common principle is simple: an old physical register cannot return to the free list until no older in-flight instruction can still need it.
-Teaching models sometimes describe this with use counters, pending-free bits, or retirement-based reclamation.
+Common implementations describe this with use counters, pending-free bits, or retirement-based reclamation.
 The details vary, but all correct schemes delay reuse until the older mapping is no longer architecturally or speculatively required.
 
 
@@ -565,7 +565,7 @@ This explains how the machine can behave aggressively internally while still pre
 
 The ROB is not the only recovery method.
 \textit{Checkpoint/repair} schemes periodically capture a coherent snapshot of register state and use that snapshot as the recovery point.
-One common teaching model uses three conceptual views of the state: a messy current copy, a working copy being built toward coherence, and a golden copy representing the last known coherent sequential state.
+One common description uses three conceptual views of the state: a messy current copy, a working copy being built toward coherence, and a golden copy representing the last known coherent sequential state.
 
 The key control concept is the \textit{instruction boundary}.
 Dispatch chooses a dynamic boundary, often denoted by markers such as IB1 and IB2.
