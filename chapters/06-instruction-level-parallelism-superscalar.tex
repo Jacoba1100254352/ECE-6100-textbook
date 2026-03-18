@@ -611,6 +611,173 @@ ROB bypass logic, associative searches, speculative-state tracking, and recovery
 As out-of-order windows grow wider and deeper, state management and recovery logic become first-order design problems rather than secondary implementation details.
 
 
+\section{VLIW as a Compiler-Scheduled Alternative}\label{sec:ilp-vliw}
+One response to dynamic-scheduling complexity is to move more of the scheduling work into the compiler.
+As superscalar windows grow, the machine would like a larger scheduling queue so it can search farther ahead for independent work, but larger queues also make wakeup, select, and operand-readiness checks harder to close at a short cycle time.
+This leads to the \textit{very long instruction word (VLIW)} approach, historically associated with Josh Fisher.
+A VLIW encoding packs several operations intended to execute in parallel into one instruction word, so the compiler decides the schedule at compile time rather than letting large runtime scheduling hardware discover it dynamically.
+
+In this context, an individual encoded action is an \textit{op}.
+A set of ops intended to execute in the same cycle is a \textit{multi-op}.
+VLIW reduces runtime hardware complexity because the machine no longer needs a large associative scheduling queue, aggressive wakeup logic, or much of the dynamic issue machinery used in FOCO-style processors.
+The tradeoff is that the compiler must do much more work up front, and the resulting code is less adaptive to runtime variation such as cache misses or changing branch behavior.
+This tradeoff is attractive in domains such as \textit{digital signal processors (DSPs)}, where workloads are regular and low-power execution is important.
+
+Compiler design must balance three competing goals: code quality, compilation time, and maintainability.
+In principle, finding the optimal schedule for a dependence-constrained block is exponential in block size, so practical VLIW compilers rely on heuristics rather than on exact search.
+List scheduling is one of the standard heuristics for this job.
+
+
+\section{Dependence Graphs and List Scheduling}\label{sec:ilp-vliw-list-scheduling}
+The compiler begins from a \textit{data dependence graph}.
+True flow edges capture read-after-write dependencies, while anti-dependence and output-dependence edges capture false constraints caused by register reuse.
+Pure flow dependence always takes priority over false dependence because it represents real data movement.
+If the code contains loops, this graph can contain cycles, so it is not necessarily a directed acyclic graph.
+
+Table~\ref{tab:ilp-vliw-block} gives a compact block that will be used for the scheduling example.
+Assume one load/store unit, one ALU, and one multiplier.
+Also assume the compiler has already assigned registers so that the remaining constraints shown in the table are dominated by true dependences rather than by avoidable name conflicts.
+\begin{table}[t]
+    \centering
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|l|l|c|}
+        \hline
+        Instr. & Operation & True dependences & Latency \\
+        \hline
+        A & LW $R2, X$ & None & 2 \\
+        \hline
+        B & LW $R3, Y$ & None & 2 \\
+        \hline
+        C & LW $R4, Z$ & None & 2 \\
+        \hline
+        D & ADD $R5, R1, R2$ & A & 1 \\
+        \hline
+        E & MUL $R6, R2, R3$ & A, B & 3 \\
+        \hline
+        F & MUL $R7, R1, R3$ & B & 3 \\
+        \hline
+        G & ADD $R8, R7, \#1$ & F & 1 \\
+        \hline
+        H & SW $R8, X$ & G & 1 \\
+        \hline
+        I & ADD $R9, R2, R4$ & A, C & 1 \\
+        \hline
+    \end{tabular}
+    \caption{Illustrative basic block for VLIW list scheduling.}
+    \label{tab:ilp-vliw-block}
+\end{table}
+
+One common priority heuristic is \textit{dependence height}, which estimates how much latency remains below a node on the longest dependent path.
+If the heuristic includes the latency of the current instruction itself, one convenient definition is Eq.~\eqref{eq:ilp-dependence-height}.
+\begin{equation}\label{eq:ilp-dependence-height}
+    height(i)=
+    \begin{cases}
+        lat(i), & succ(i)=\emptyset\\
+        lat(i)+\max\limits_{j\in succ(i)} height(j), & \text{otherwise}
+    \end{cases}
+\end{equation}
+Higher-height instructions receive higher priority because delaying them is more likely to lengthen the critical path.
+For the block in Table~\ref{tab:ilp-vliw-block}, the longest true-dependence chain is $B\rightarrow F\rightarrow G\rightarrow H$, so the heuristic tends to prioritize $F$ ahead of $E$ once both become candidates for the single multiplier.
+
+List scheduling then tries to place the highest-priority ready instructions into each cycle subject to both dependence timing and resource availability.
+A simple legality condition is shown in Eq.~\eqref{eq:ilp-list-schedule-legal}.
+\begin{equation}\label{eq:ilp-list-schedule-legal}
+    cycle(i)=\min\!\left\{c\ \middle|\ \forall j\in pred(i),\ c\ge cycle(j)+lat(j),\ \text{and a compatible FU is free in }c \right\}.
+\end{equation}
+This is not an optimal algorithm, but it is practical and captures the central VLIW idea: schedule as much parallel work as possible before runtime while still respecting dependencies and resource limits.
+
+Table~\ref{tab:ilp-vliw-schedule} shows one possible compiler-produced schedule for a block running on a machine with one arithmetic logic unit (ALU), one multiplier, and one load/store unit.
+The point is not that this schedule is unique, but that the compiler can decide the cycle packing in advance and encode it directly.
+\begin{table}[t]
+    \centering
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        Cycle & Load/Store Unit & ALU & Multiplier \\
+        \hline
+        1 & A &  &  \\
+        \hline
+        2 & B &  &  \\
+        \hline
+        3 & C & D &  \\
+        \hline
+        4 &  &  & F \\
+        \hline
+        5 &  & I & E \\
+        \hline
+        6 &  &  &  \\
+        \hline
+        7 &  & G &  \\
+        \hline
+        8 & H &  &  \\
+        \hline
+    \end{tabular}
+    \caption{One possible VLIW-style schedule produced by list scheduling under fixed functional-unit limits.}
+    \label{tab:ilp-vliw-schedule}
+\end{table}
+The schedule shows two important points.
+First, the compiler only packs operations together when both the dependence constraints and the functional-unit constraints allow it.
+Second, the absence of an operation in a slot does not require the hardware to discover what to do; the compiler can encode the schedule directly.
+In particular, cycle 6 is intentionally empty because $G$ cannot start until the three-cycle multiply $F$ has finished producing $R7$.
+
+
+\section{Multi-Op Encoding, Tail Bits, and Pause Fields}\label{sec:ilp-vliw-encoding}
+VLIW raises an encoding question: how should a machine represent the boundaries of a multi-op if not every cycle uses every functional unit?
+One simple approach is to fill every unused slot with an explicit no-op, but that wastes code space.
+An alternative is to encode only real ops and add a small amount of grouping information.
+Each encoded op still carries its ordinary fields such as opcode, destination register, and source registers; the additional VLIW-specific fields only describe grouping and delay.
+
+One useful scheme adds a \textit{tail bit} to each encoded op.
+If the tail bit is 0, the current op is not the end of the current multi-op.
+If the tail bit is 1, the current op ends the current multi-op.
+The next op then begins a new multi-op.
+This lets the instruction stream represent a variable number of ops per cycle without requiring every cycle to contain the same number of explicit no-op fillers.
+
+A related field is a \textit{pause field}, which tells the fetch/issue logic to wait a specified number of cycles before beginning the next multi-op.
+This is a compact way to represent silence between multi-ops while still keeping the binary encoding regular.
+Table~\ref{tab:ilp-vliw-encoding} illustrates the idea using the schedule from Table~\ref{tab:ilp-vliw-schedule}.
+\begin{table}[t]
+    \centering
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|c|c|p{2.9in}|}
+        \hline
+        Encoded op & Tail & Pause & Meaning \\
+        \hline
+        A & 1 & 0 & Single-op multi-op for cycle 1. \\
+        \hline
+        B & 1 & 0 & Single-op multi-op for cycle 2. \\
+        \hline
+        C & 0 & 0 & First op of the cycle-3 multi-op. \\
+        \hline
+        D & 1 & 0 & Ends the cycle-3 multi-op. \\
+        \hline
+        F & 1 & 0 & Single-op multi-op for cycle 4. \\
+        \hline
+        I & 0 & 0 & First op of the cycle-5 multi-op. \\
+        \hline
+        E & 1 & 1 & Ends the cycle-5 multi-op and inserts one pause cycle before the next multi-op. \\
+        \hline
+        G & 1 & 0 & Single-op multi-op for cycle 7. \\
+        \hline
+        H & 1 & 0 & Single-op multi-op for cycle 8. \\
+        \hline
+    \end{tabular}
+    \caption{Illustrative VLIW encoding using tail bits and a pause field rather than explicit no-op padding.}
+    \label{tab:ilp-vliw-encoding}
+\end{table}
+
+
+\section{Memory Disambiguation}\label{sec:ilp-vliw-memory-disambiguation}
+Loads and stores create a special scheduling problem.
+If a compiler moves a load ahead of an older store to the same address, the load may read the wrong value.
+The compiler therefore needs \textit{memory disambiguation}: it must prove that two memory references do not overlap, or else it must preserve the original order or insert explicit synchronization.
+
+This is one of the limits of VLIW compared with dynamic scheduling hardware.
+An out-of-order processor may speculate and recover if it guesses wrong.
+A VLIW compiler must usually be more conservative unless it has strong alias information.
+That is one reason VLIW works best when memory behavior is regular enough for compile-time reasoning to be reliable.
+
+
 \section{Chapter 6 Summary}\label{sec:chapter6-summary-ilp}
 Instruction-level parallelism turns $CPI<1$ into a concrete microarchitectural target.
 Superscalar design achieves this by widening the pipeline's effective throughput and managing dependencies, hazards, and speculative state carefully.
@@ -618,4 +785,5 @@ FICO-style scoreboarding illustrates the basic mechanism, while renaming, Tomasu
 Once the machine executes and completes work out of order, however, scheduling is no longer enough by itself.
 The core must also maintain precise architectural state through mechanisms such as physical-register renaming, reorder buffers, future files, or checkpoint/repair schemes.
 Modern processors therefore combine ILP techniques with careful recovery, retirement, and microarchitectural side-effect control.
-These ideas form the bridge from classic five-stage thinking to modern high-throughput out-of-order scalar cores.
+VLIW shows a contrasting path: instead of building increasingly complex runtime schedulers, the compiler can schedule ops into multi-ops ahead of time and encode that schedule directly.
+These ideas together form the bridge from classic five-stage thinking to modern high-throughput scalar cores and compiler-scheduled ILP machines.

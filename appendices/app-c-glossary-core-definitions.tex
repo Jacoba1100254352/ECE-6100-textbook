@@ -6,12 +6,18 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[\textit{Speculation}] Executing work before all required conditions are confirmed, with recovery if assumptions are wrong.
     \item[\textit{Prediction}] Estimating uncertain future behavior to guide speculative execution.
     \item[\textit{Instruction-Level Parallelism (ILP)}] Overlap of independent instructions within one thread.
+    \item[\textit{Very Long Instruction Word (VLIW)}] Instruction encoding style that packs several compiler-scheduled ops into one instruction word.
     \item[\textit{Thread-Level Parallelism (TLP)}] Concurrent execution of multiple threads on one or more cores.
+    \item[\textit{Digital Signal Processor (DSP)}] Processor class optimized for regular numeric workloads such as filtering, radio, and image-processing kernels.
     \item[\textit{SIMD}] One instruction stream operating on multiple data elements in lockstep.
     \item[\textit{MIMD}] Multiple instruction streams operating on multiple data streams independently.
     \item[\textit{Pipelining}] Temporal parallelism where different stages process different instructions simultaneously.
     \item[\textit{Superscalar (Multi-Issue)}] Pipeline organization that can issue more than one instruction per cycle.
     \item[\textit{Register Renaming}] Introduction of additional physical register identities so later writes do not falsely block earlier reads or writes.
+    \item[\textit{Op}] One encoded operation within a VLIW instruction stream.
+    \item[\textit{Multi-Op}] Group of ops intended to execute in the same cycle in a VLIW design.
+    \item[\textit{Tail Bit}] Per-op field marking whether the current op ends the current multi-op.
+    \item[\textit{Pause Field}] Encoded delay field that inserts a specified number of idle cycles before the next multi-op begins.
     \item[\textit{Tomasulo's Algorithm}] Out-of-order scheduling method that combines renaming, reservation stations, and result broadcast to wake dependent instructions when operands become ready.
     \item[\textit{Reservation Station}] Scheduling entry that holds an instruction, its operand state, and dependency tags until it can execute.
     \item[\textit{Common Data Bus (CDB)}] Shared result-broadcast path used to distribute a completed value and its producer tag to waiting instructions.
@@ -56,6 +62,10 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[\textit{RAW}] Read-after-write dependence hazard.
     \item[\textit{WAR}] Write-after-read dependence hazard.
     \item[\textit{WAW}] Write-after-write dependence hazard.
+    \item[\textit{Data Dependence Graph}] Graph representation of instruction ordering constraints induced by true and false dependences.
+    \item[\textit{Dependence Height}] Priority heuristic measuring the remaining latency on the longest dependent path below an instruction.
+    \item[\textit{List Scheduling}] Heuristic compiler scheduling method that repeatedly places the highest-priority ready instructions into the earliest legal cycle.
+    \item[\textit{Memory Disambiguation}] Compile-time or runtime reasoning used to determine whether two memory references may access the same location.
     \item[\textit{Forwarding (Bypassing)}] Sending a produced value directly to a consumer before register write-back.
     \item[\textit{Branch Target Buffer (BTB)}] Predictor structure that supplies likely branch targets early in fetch.
     \item[\textit{Aliasing}] Predictor or cache entry interference from unrelated addresses mapping to the same slot.
@@ -84,6 +94,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[CPI] Cycles Per Instruction
     \item[CPU] Central Processing Unit
     \item[CT] Cycle Time
+    \item[DSP] Digital Signal Processor
     \item[DISP] Dispatch and Decode
     \item[DRAM] Dynamic Random-Access Memory
     \item[EX] Execute
@@ -94,7 +105,6 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[FP] Floating Point
     \item[FU] Functional Unit
     \item[GPU] Graphics Processing Unit
-    \item[IBM] International Business Machines
     \item[HT] Hit Time
     \item[IC] Instruction Count
     \item[ID] Instruction Decode
@@ -133,6 +143,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[TLB] Translation Lookaside Buffer
     \item[TLP] Thread-Level Parallelism
     \item[VIPT] Virtually Indexed, Physically Tagged
+    \item[VLIW] Very Long Instruction Word
     \item[VPN] Virtual Page Number
     \item[WAR] Write After Read
     \item[WAW] Write After Write

@@ -256,3 +256,17 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
         &\wedge\ \text{transfer control to the retry or handler PC}
     \end{aligned}
 \end{equation}
+
+\paragraph{Chapter 6-F12 (Dependence Height)}\label{par:ch6-formula-12}
+\begin{equation}\label{eq:ch6-formula-height}
+    height(i)=
+    \begin{cases}
+        lat(i), & succ(i)=\emptyset\\
+        lat(i)+\max\limits_{j\in succ(i)} height(j), & \text{otherwise}
+    \end{cases}
+\end{equation}
+
+\paragraph{Chapter 6-F13 (Earliest Legal List-Scheduling Cycle)}\label{par:ch6-formula-13}
+\begin{equation}\label{eq:ch6-formula-list-legal}
+    cycle(i)=\min\!\left\{c\ \middle|\ \forall j\in pred(i),\ c\ge cycle(j)+lat(j),\ \text{and a compatible FU is free in }c \right\}.
+\end{equation}
