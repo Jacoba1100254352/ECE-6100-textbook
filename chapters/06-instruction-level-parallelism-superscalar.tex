@@ -553,6 +553,8 @@ It is powerful, but the search itself is associative and can become part of the 
 Renamed machines also need a rule for reclaiming old physical registers.
 The exact policy differs across implementations, but the common principle is simple: an old physical register cannot return to the free list until no older in-flight instruction can still need it.
 Common implementations describe this with use counters, pending-free bits, or retirement-based reclamation.
+For example, if an architected register was formerly mapped to physical register $P23$ and rename later redirects that architected name to $P27$, the old $P23$ mapping cannot be recycled immediately.
+It becomes reclaimable only after no older instruction can still read it and the newer mapping has safely become the committed architectural version.
 The details vary, but all correct schemes delay reuse until the older mapping is no longer architecturally or speculatively required.
 
 
@@ -562,6 +564,7 @@ The \textit{future file} holds the most recent speculative values that execution
 The \textit{architected register file} holds only committed state.
 Execution and wakeup consult the speculative state, while retirement copies correct in-order results into the architected state.
 This explains how the machine can behave aggressively internally while still presenting a sequential interface to software.
+In a physical-register implementation, this often means retirement copies the committed value from the current physical register into the architected register file, while exception recovery can restore a precise view by redirecting the register alias table (RAT) back to the committed architectural mappings.
 
 The ROB is not the only recovery method.
 \textit{Checkpoint/repair} schemes periodically capture a coherent snapshot of register state and use that snapshot as the recovery point.
@@ -624,8 +627,10 @@ The tradeoff is that the compiler must do much more work up front, and the resul
 This tradeoff is attractive in domains such as \textit{digital signal processors (DSPs)}, where workloads are regular and low-power execution is important.
 
 Compiler design must balance three competing goals: code quality, compilation time, and maintainability.
+In practice, that usually rules out algorithms much worse than quadratic for large compiler passes, and even cubic methods are used cautiously.
 In principle, finding the optimal schedule for a dependence-constrained block is exponential in block size, so practical VLIW compilers rely on heuristics rather than on exact search.
 List scheduling is one of the standard heuristics for this job.
+The broader performance point is that widening fetch and scheduling machinery yields diminishing returns: useful IPC usually grows sublinearly with front-end width, while the cost of dynamic scheduling hardware grows quickly.
 
 
 \section{Dependence Graphs and List Scheduling}\label{sec:ilp-vliw-list-scheduling}
@@ -635,14 +640,16 @@ Pure flow dependence always takes priority over false dependence because it repr
 If the code contains loops, this graph can contain cycles, so it is not necessarily a directed acyclic graph.
 
 Table~\ref{tab:ilp-vliw-block} gives a compact block that will be used for the scheduling example.
-Assume one load/store unit, one ALU, and one multiplier.
+Assume one pipelined load/store unit, one pipelined arithmetic logic unit (ALU), and one pipelined multiplier.
+Each unit can accept a new op every cycle; the listed latencies describe when results become available, not how long the unit remains occupied.
 Also assume the compiler has already assigned registers so that the remaining constraints shown in the table are dominated by true dependences rather than by avoidable name conflicts.
 \begin{table}[t]
     \centering
     \renewcommand{\arraystretch}{1.15}
     \begin{tabular}{|c|l|l|c|}
         \hline
-        Instr. & Operation & True dependences & Latency \\
+        Instr.
+        & Operation & True dependences & Latency \\
         \hline
         A & LW $R2, X$ & None & 2 \\
         \hline
@@ -666,6 +673,84 @@ Also assume the compiler has already assigned registers so that the remaining co
     \caption{Illustrative basic block for VLIW list scheduling.}
     \label{tab:ilp-vliw-block}
 \end{table}
+Figure~\ref{fig:ilp-vliw-ddg} presents the same block in a more visual form: the original operations, the resulting data dependence graph, and one priority list ordered by dependence height.
+\begin{figure}[t]
+    \centering
+    \small
+    \begin{minipage}[t]{0.27\textwidth}
+        \raggedright
+        \textbf{Original operations}\par
+        \vspace{0.5ex}
+        \begin{tabular}[t]{@{}ll@{}}
+            A: & LW $R2, X$ \\
+            B: & LW $R3, Y$ \\
+            C: & LW $R4, Z$ \\
+            D: & ADD $R5, R1, R2$ \\
+            E: & MUL $R6, R2, R3$ \\
+            F: & MUL $R7, R1, R3$ \\
+            G: & ADD $R8, R7, \#1$ \\
+            H: & SW $R8, X$ \\
+            I: & ADD $R9, R2, R4$
+        \end{tabular}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.45\textwidth}
+        \centering
+        \textbf{Data Dependence Graph}\par
+        \vspace{1ex}
+        \begin{tikzpicture}[
+            >=Latex,
+            depnode/.style={draw, circle, inner sep=1pt, minimum size=15pt, font=\small},
+            hlabel/.style={font=\scriptsize, text=blue!65!black}
+        ]
+            \node[depnode] (A) at (0,0) {A};
+            \node[depnode] (B) at (1.7,0) {B};
+            \node[depnode] (C) at (3.4,0) {C};
+            \node[depnode] (D) at (0,-1.1) {D};
+            \node[depnode] (E) at (1.7,-1.1) {E};
+            \node[depnode] (F) at (0,-2.2) {F};
+            \node[depnode] (I) at (2.7,-2.2) {I};
+            \node[depnode] (G) at (0,-3.3) {G};
+            \node[depnode] (H) at (0,-4.4) {H};
+
+            \node[hlabel, left=1.5mm of A] {$5$};
+            \node[hlabel, above=1.5mm of B] {$7$};
+            \node[hlabel, above=1.5mm of C] {$3$};
+            \node[hlabel, left=1.5mm of D] {$1$};
+            \node[hlabel, right=1.5mm of E] {$3$};
+            \node[hlabel, left=1.5mm of F] {$5$};
+            \node[hlabel, right=1.5mm of I] {$1$};
+            \node[hlabel, left=1.5mm of G] {$2$};
+            \node[hlabel, left=1.5mm of H] {$1$};
+
+            \draw[->] (A) -- (D);
+            \draw[->] (A) -- (E);
+            \draw[->] (A) -- (I);
+            \draw[->] (B) -- (E);
+            \draw[->] (B) -- (F);
+            \draw[->] (C) -- (I);
+            \draw[->] (F) -- (G);
+            \draw[->] (G) -- (H);
+        \end{tikzpicture}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.20\textwidth}
+        \raggedright
+        \textbf{List ordered by dependence height}\par
+        \vspace{0.5ex}
+        \begin{tabular}[t]{@{}l@{}}
+            $B$ $(7)$ \\
+            $A$ $(5)$ \\
+            $F$ $(5)$ \\
+            $C$ $(3)$ \\
+            $E$ $(3)$ \\
+            $G$ $(2)$ \\
+            $D$ $(1)$ \\
+            $I$ $(1)$ \\
+            $H$ $(1)$
+        \end{tabular}
+    \end{minipage}
+    \caption{Original operations, dependence graph, and one priority ordering for the VLIW list-scheduling example. The small numeric annotations next to nodes indicate dependence height. Ties may be broken arbitrarily.}
+    \label{fig:ilp-vliw-ddg}
+\end{figure}
 
 One common priority heuristic is \textit{dependence height}, which estimates how much latency remains below a node on the longest dependent path.
 If the heuristic includes the latency of the current instruction itself, one convenient definition is Eq.~\eqref{eq:ilp-dependence-height}.
@@ -686,8 +771,10 @@ A simple legality condition is shown in Eq.~\eqref{eq:ilp-list-schedule-legal}.
 \end{equation}
 This is not an optimal algorithm, but it is practical and captures the central VLIW idea: schedule as much parallel work as possible before runtime while still respecting dependencies and resource limits.
 
-Table~\ref{tab:ilp-vliw-schedule} shows one possible compiler-produced schedule for a block running on a machine with one arithmetic logic unit (ALU), one multiplier, and one load/store unit.
+Table~\ref{tab:ilp-vliw-schedule} shows one possible compiler-produced schedule for the block running on a machine with one arithmetic logic unit (ALU), one multiplier, and one load/store unit.
 The point is not that this schedule is unique, but that the compiler can decide the cycle packing in advance and encode it directly.
+For illustration, this schedule keeps the three initial loads in source order even though a greedier dependence-height policy could start $B$ before $A$ and shorten the block by one cycle.
+That choice leaves one explicit empty cycle later, which makes the pause-field encoding example concrete.
 \begin{table}[t]
     \centering
     \renewcommand{\arraystretch}{1.15}
@@ -712,13 +799,46 @@ The point is not that this schedule is unique, but that the compiler can decide 
         8 & H &  &  \\
         \hline
     \end{tabular}
-    \caption{One possible VLIW-style schedule produced by list scheduling under fixed functional-unit limits.}
+    \caption{One legal VLIW-style schedule for the block under fixed functional-unit limits.}
     \label{tab:ilp-vliw-schedule}
 \end{table}
 The schedule shows two important points.
 First, the compiler only packs operations together when both the dependence constraints and the functional-unit constraints allow it.
 Second, the absence of an operation in a slot does not require the hardware to discover what to do; the compiler can encode the schedule directly.
 In particular, cycle 6 is intentionally empty because $G$ cannot start until the three-cycle multiply $F$ has finished producing $R7$.
+Table~\ref{tab:ilp-vliw-packed-schedule} shows the same schedule in a field-level packing format closer to an actual multi-op layout.
+This table defines which operands occupy each unit's fields in each cycle; it does not by itself define the serialized op order in memory.
+\begin{table}[t]
+    \centering
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \renewcommand{\arraystretch}{1.12}
+    \begin{tabular}{|c|c c c|c c c|c c|c c|}
+        \hline
+        Cycle & \multicolumn{3}{c|}{IALU (1 cycle)} & \multicolumn{3}{c|}{MUL (3 cycles)} & \multicolumn{2}{c|}{Load (2 cycles)} & \multicolumn{2}{c|}{Store (1 cycle)} \\
+        \hline
+         & $d$ & $s_1$ & $s_2$ & $d$ & $s_1$ & $s_2$ & $d$ & addr & addr & $s$ \\
+        \hline
+        1 &  &  &  &  &  &  & $R2$ & $X$ &  &  \\
+        \hline
+        2 &  &  &  &  &  &  & $R3$ & $Y$ &  &  \\
+        \hline
+        3 & $R5$ & $R1$ & $R2$ &  &  &  & $R4$ & $Z$ &  &  \\
+        \hline
+        4 &  &  &  & $R7$ & $R1$ & $R3$ &  &  &  &  \\
+        \hline
+        5 & $R9$ & $R2$ & $R4$ & $R6$ & $R2$ & $R3$ &  &  &  &  \\
+        \hline
+        6 &  &  &  &  &  &  &  &  &  &  \\
+        \hline
+        7 & $R8$ & $R7$ & $\#1$ &  &  &  &  &  &  &  \\
+        \hline
+        8 &  &  &  &  &  &  &  &  & $X$ & $R8$ \\
+        \hline
+    \end{tabular}
+    \caption{Field-level packing of the schedule from Table~\ref{tab:ilp-vliw-schedule}. Rows 3 and 5 are multi-ops because they contain more than one op in the same cycle.}
+    \label{tab:ilp-vliw-packed-schedule}
+\end{table}
 
 
 \section{Multi-Op Encoding, Tail Bits, and Pause Fields}\label{sec:ilp-vliw-encoding}
@@ -733,9 +853,11 @@ If the tail bit is 1, the current op ends the current multi-op.
 The next op then begins a new multi-op.
 This lets the instruction stream represent a variable number of ops per cycle without requiring every cycle to contain the same number of explicit no-op fillers.
 
-A related field is a \textit{pause field}, which tells the fetch/issue logic to wait a specified number of cycles before beginning the next multi-op.
-This is a compact way to represent silence between multi-ops while still keeping the binary encoding regular.
+A related field is a \textit{pause field}, which tells the front-end control logic to wait a specified number of cycles before beginning the next multi-op.
+In the simple scheme used here, the pause value is interpreted only on the op whose tail bit ends the current multi-op; pause values on earlier ops in the same multi-op are ignored.
+This is a compact way to represent silence between multi-ops while still keeping each op's encoding regular.
 Table~\ref{tab:ilp-vliw-encoding} illustrates the idea using the schedule from Table~\ref{tab:ilp-vliw-schedule}.
+It shows one legal serialized op order for the same multi-ops that appear in Table~\ref{tab:ilp-vliw-packed-schedule}.
 \begin{table}[t]
     \centering
     \renewcommand{\arraystretch}{1.15}
@@ -765,6 +887,8 @@ Table~\ref{tab:ilp-vliw-encoding} illustrates the idea using the schedule from T
     \caption{Illustrative VLIW encoding using tail bits and a pause field rather than explicit no-op padding.}
     \label{tab:ilp-vliw-encoding}
 \end{table}
+Some implementations instead use simple interlocking at the multi-op level, which can remove the need for an explicit pause field.
+That saves encoding space, but it also gives up some of the compiler's direct control over exactly when the next multi-op may begin.
 
 
 \section{Memory Disambiguation}\label{sec:ilp-vliw-memory-disambiguation}
