@@ -5,7 +5,7 @@
 This chapter integrates the concepts from Chapters 1--4 into a single combined overview.
 
 
-\section{Homework Themes from Chapters 1 and 2}\label{sec:auto-047}
+\section{Integrated Themes from Chapters 1 and 2}\label{sec:auto-047}
 Core concept clusters include classifying optimizations as parallelism, speculation, or both; distinguishing throughput from runtime and selecting the correct metric; interpreting $\text{CPU time}=\text{IC}\times\text{CPI}\times\text{CT}$ as a tradeoff framework; applying Amdahl's law for fixed-size speedup limits; interpreting Gustafson's law for scaled-size behavior; and using arithmetic means for times versus harmonic means for rates.
 
 \paragraph{Worked check}\label{par:auto-026}
@@ -15,8 +15,15 @@ If an optimization accelerates 30\% of runtime by $2\times$, total speedup is
 \end{equation}
 The unaccelerated fraction remains in the denominator and bounds overall speedup.
 
+\paragraph{Worked check: maximum possible speedup}\label{par:auto-026a}
+If a mechanism accelerates 25\% of the original benchmark runtime and that portion is made arbitrarily fast, the maximum total speedup is
+\begin{equation}\label{eq:auto-045a}
+    S_{\max}=\frac{1}{1-0.25}=\frac{4}{3}\approx 1.33.
+\end{equation}
+This is the cleanest way to read the \emph{maximum} speedup of a partial optimization.
 
-\section{Homework Themes from Chapter 3}\label{sec:auto-048}
+
+\section{Integrated Themes from Chapter 3}\label{sec:auto-048}
 Core concept clusters include computing sets, ways, and tag/index/offset widths from $(C,B,S)$; interpreting compulsory, conflict, and capacity misses; analyzing replacement and write-policy behavior; applying $AAT=HT+MR\cdot MP$; and relating cache size, block size, and associativity to hit time, miss ratio, and miss penalty.
 
 \paragraph{Worked check}\label{par:auto-027}
@@ -25,10 +32,29 @@ For a cache with $HT=1.8$ ns, $MR=0.06$, and $MP=28$ ns (Eq.~\eqref{eq:auto-046}
     AAT = 1.8 + 0.06\cdot 28 = 3.48\ \text{ns}.
 \end{equation}
 
+\paragraph{Worked check: repeated trace reasoning}\label{par:auto-027a}
+Consider a direct-mapped L1 with $(C,B,S)=(8,4,0)$, write-back/write-allocate, and the repeated access sequence
+\begin{equation}\label{eq:auto-046a}
+    R\ 0x41F1,\ R\ 0xB54A,\ W\ 0x4204,\ W\ 0xCA3B,\ R\ 0x420E,\ W\ 0xB537.
+\end{equation}
+With $B=4$, the six accesses touch the five blocks $\{0x41F,0xB54,0x420,0xCA3,0xB53\}$ because $0x4204$ and $0x420E$ lie in the same block.
+The first iteration therefore has 5 compulsory misses.
+The key structural fact is that blocks $0xCA3$ and $0xB53$ map to the same direct-mapped set, so after warm-up the sequence continues to suffer two conflict misses per iteration.
+Over iterations 2--10, that produces 18 additional misses.
+Those 18 misses are the non-compulsory misses for the full run, and because the conflicting writes repeatedly evict dirty lines, the full sequence produces 19 writebacks if dirty lines are \emph{not} flushed after the final access.
 
-\section{Chapter 4 Practice Problems (with Answers)}\label{sec:auto-049}
+\paragraph{Victim cache and +1 prefetch contrast}\label{par:auto-027b}
+That same trace separates two common remedies cleanly.
+A small victim cache can eliminate the recurring two-block ping-pong at one set; after warm-up, the combined L1+victim-cache miss count can drop to zero because each conflicting block is recovered from the victim structure instead of DRAM\@.
+By contrast, a $+1$ prefetcher is not automatically a cure.
+In this trace it can prefetch block $0x420$ early enough to remove one first-iteration demand miss, but it does not remove the recurring conflict between $0xCA3$ and $0xB53$.
+This is the key design lesson of the trace: next-block prefetching and victim caching address different miss mechanisms.
 
-\subsection*{Practice One: Pipeline Speedup}\label{subsec:auto-012}
+
+\section{Worked Checks for Chapter 4}\label{sec:auto-049}
+Core concept clusters from Chapter 4 include reading timing diagrams to infer hazards and hardware support, distinguishing separate instruction and data-memory paths from shared-memory structural hazards, identifying which bypass paths are present, checking whether the register file supports same-cycle write-then-read behavior, and simulating branch predictors such as always taken, one-bit and Smith-counter schemes, GShare, GSelect, Yeh/Patt, perceptrons, and hybrid tournament predictors.
+
+\subsection*{Pipeline Speedup}\label{subsec:auto-012}
 Assume a 5-stage design where each stage has 250 ps logic delay and pipeline-register overhead is 30 ps.
 Unpipelined instruction time is $5\times250=1250$ ps.
 Pipelined clock is $250+30=280$ ps.
@@ -38,12 +64,22 @@ Ideal long-run speedup is (Eq.~\eqref{eq:auto-047}):
 \end{equation}
 This is below 5 because register overhead is non-zero.
 
-\subsection*{Practice Two: CPI with Branch Stalls}\label{subsec:auto-013}
+\subsection*{CPI with Branch Stalls}\label{subsec:auto-013}
 If branch frequency is 18\% and each branch contributes an average of 1.6 stall cycles (Eq.~\eqref{eq:auto-048}):
 \begin{equation}\label{eq:auto-048}
     CPI = 1 + 0.18\times1.6 = 1.288.
 \end{equation}
 This illustrates how even moderate branch penalties raise CPI above the ideal value of 1.
+
+\subsection*{Software Branch Handling}\label{subsec:auto-013a}
+When a branch has delay slots, every instruction moved into those slots must be safe regardless of whether the branch is taken.
+When a branch instead has squash slots under an ``assume taken'' policy, the compiler may place instructions from the predicted taken path there, because wrong-path entries will be canceled.
+So the safe rule is simple:
+\begin{enumerate}
+    \item fill delay slots only with path-independent instructions,
+    \item fill squash slots from the predicted path when profitable, and
+    \item leave \texttt{NOP}s when correctness would otherwise be uncertain.
+\end{enumerate}
 
 
 \section{Cache Simulation Conceptual Model}\label{sec:auto-050}
@@ -100,6 +136,7 @@ More aggressive prefetching can reduce compulsory misses yet increase bandwidth 
 
 
 \section{Chapter 5 Summary}\label{sec:auto-055}
-Homework themes, pipeline analysis, and cache simulation models reinforce the same central idea: architecture performance is governed by measurable tradeoffs among latency, throughput, locality, and prediction quality.
+Integrated themes, pipeline analysis, and cache simulation models reinforce the same central idea: architecture performance is governed by measurable tradeoffs among latency, throughput, locality, and prediction quality.
 The simulation concepts provide a concrete way to observe those tradeoffs in controlled workloads.
+That same simulator mindset extends naturally to branch-prediction accuracy, fetched-versus-retired instruction counts, queue pressure, and reorder-buffer pressure, which are interpreted more fully in Chapter 6.
 A grouped formula index for the full text is provided in Appendix~\ref{ch:formula-compendium}.

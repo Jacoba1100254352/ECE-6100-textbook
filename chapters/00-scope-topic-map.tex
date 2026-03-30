@@ -3,8 +3,16 @@
 
 
 \section*{How to Use This Text}\label{sec:auto-001}
-Chapters 1 through 6 provide topic depth with definitions, equations, and worked examples.
-Chapter 5 provides integrated review and cache-simulation context, and Chapter 6 develops instruction-level parallelism, superscalar design, out-of-order execution, precise-state recovery, reorder buffers, and register-management mechanisms for modern scalar cores.
+Chapters 1 through 7 provide topic depth with definitions, equations, and worked examples.
+Chapter 5 provides integrated review and cache-simulation context, Chapter 6 develops dynamic instruction-level parallelism mechanisms such as superscalar scheduling and out-of-order execution, and Chapter 7 develops compiler-scheduled instruction-level parallelism through very long instruction word (VLIW) execution and software pipelining.
+
+\section*{Cross-Chapter Reading Paths}\label{sec:exam2-alignment}
+\begin{enumerate}
+    \item Readers who want the performance-and-memory foundation should begin with Chapters 1 through 3 and then read the first part of Chapter 4.
+    \item Readers focused on control hazards, prediction, and data hazards should concentrate on the middle and later sections of Chapter 4.
+    \item Readers focused on instruction-level parallelism should read Chapter 6 for dynamic ILP and Chapter 7 for compiler-scheduled ILP\@.
+    \item Readers focused on simulator-style interpretation and consolidated worked checks should use Chapter 5 alongside the detailed discussions in Chapters 3, 4, and 6.
+\end{enumerate}
 
 
 \section*{Topic Coverage Map}\label{sec:auto-002}
@@ -16,13 +24,16 @@ Coverage includes speculation with and without prediction, grain sizes of parall
 Coverage includes throughput versus runtime, the central processing unit (CPU)-time equation in terms of instruction count (IC), cycles per instruction (CPI), and cycle time, reduced instruction set computer (RISC) versus complex instruction set computer (CISC) tradeoffs, Amdahl's and Gustafson's laws, and correct use of arithmetic versus harmonic means.
 
 \paragraph{Chapter 3: Cache Memories}\label{par:auto-003}
-Coverage includes static random-access memory (SRAM) versus dynamic random-access memory (DRAM) and bit-line delay, locality, hierarchy levels, virtual-memory terminology and its analogy to caching, average access time (AAT), the three C's of misses, cache geometry and construction, replacement and write policies, techniques to improve miss rate, miss penalty, and hit time, and compiler/data-layout effects.
+Coverage includes static random-access memory (SRAM) versus dynamic random-access memory (DRAM) and bit-line delay, locality, hierarchy levels, virtual-memory terminology and its analogy to caching, average access time (AAT), the three C's of misses, cache geometry and construction, replacement and write policies, insertion-policy choices such as MIP and LIP, prefetching strategies including Markov and hybrid schemes, techniques to improve miss rate, miss penalty, and hit time, simulator-style hierarchy statistics, and compiler/data-layout effects.
 
 \paragraph{Chapter 4: Pipelining}\label{par:auto-004}
-Coverage includes instruction fetch / instruction decode / execute / memory / write back (IF/ID/EX/MEM/WB) behavior, speedup equations, cycles per instruction (CPI) stall modeling, the principle that program behavior plus hazards produces stalls, structural and control hazards, delay and squash-slot ideas, branch target buffer (BTB) behavior with and without tags, return-address stack (RAS) behavior, and direction-prediction heuristics.
+Coverage includes instruction fetch / instruction decode / execute / memory / write back (IF/ID/EX/MEM/WB) behavior, speedup equations, cycles per instruction (CPI) stall modeling, the principle that program behavior plus hazards produces stalls, structural and control hazards, delay and squash-slot ideas, branch target buffer (BTB) behavior with and without tags, return-address stack (RAS) behavior, direction-prediction heuristics, and dynamic predictors including one-bit and Smith-counter schemes, GShare, GSelect, Yeh/Patt, perceptrons, hybrid tournament selection, and delayed predictor-update timing.
 
 \paragraph{Chapter 5: Integrated Review and Cache Simulation Concepts}\label{par:auto-005}
-Coverage includes homework-aligned synthesis, worked pipeline calculations, hierarchy semantics, prefetching concepts, and interpretation of simulator-style statistics and average access time (AAT) formulas.
+Coverage includes integrated synthesis, worked pipeline calculations, hierarchy semantics, prefetching, and interpretation of simulator-style cache, branch, and average access time (AAT) statistics.
 
-\paragraph{Chapter 6: ILP, Superscalar Architecture, and Out-of-Order Execution}\label{par:scope-ch6}
-Coverage includes cycles per instruction (CPI) versus instructions per cycle (IPC) interpretation, instruction-level parallelism (ILP), historical superscalar context, fire/complete ordering models, scoreboarding and busy-bit scheduling, function-unit latency considerations, Tomasulo-style reservation stations, physical register files, result buses, register renaming intuition, precise versus imprecise exceptions, reorder buffer (ROB) and future-file organization, checkpoint/repair recovery, compiler-scheduled very long instruction word (VLIW) execution, dependence-graph and list-scheduling ideas, memory disambiguation, and the security consequences of speculative out-of-order execution.
+\paragraph{Chapter 6: Dynamic ILP, Superscalar Scheduling, and Out-of-Order Execution}\label{par:scope-ch6}
+Coverage includes cycles per instruction (CPI) versus instructions per cycle (IPC) interpretation, instruction-level parallelism (ILP), historical superscalar context, fire/complete ordering models, scoreboarding and busy-bit scheduling, function-unit latency considerations, Tomasulo-style reservation stations, physical register files, result buses, register renaming intuition, precise versus imprecise exceptions, reorder buffer (ROB) and future-file organization, checkpoint/repair recovery, simulator-style fetched/retired and queue-pressure counter interpretation, and the security consequences of speculative out-of-order execution.
+
+\paragraph{Chapter 7: Compiler-Scheduled ILP and Software Pipelining}\label{par:scope-ch7}
+Coverage includes compiler-scheduled very long instruction word (VLIW) execution, dependence-graph and list-scheduling ideas, zero-no-op multi-op encoding with tail and pause fields, software pipelining and iterative modulo scheduling, and memory disambiguation.

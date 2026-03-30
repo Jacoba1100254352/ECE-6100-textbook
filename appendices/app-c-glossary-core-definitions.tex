@@ -1,5 +1,5 @@
 \chapter{Glossary of Core Definitions}\label{ch:auto-007}
-This appendix collects first-pass definitions used throughout Chapters 1--6.
+This appendix collects first-pass definitions used throughout Chapters 1--7.
 
 \begin{description}
     \item[\textit{Parallelism}] Doing multiple useful operations concurrently to increase throughput.
@@ -7,6 +7,8 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[\textit{Prediction}] Estimating uncertain future behavior to guide speculative execution.
     \item[\textit{Instruction-Level Parallelism (ILP)}] Overlap of independent instructions within one thread.
     \item[\textit{Very Long Instruction Word (VLIW)}] Instruction encoding style that packs several compiler-scheduled ops into one instruction word.
+    \item[\textit{Polycyclic Scheduling}] Early name for overlapping multiple loop iterations in one compact repeating schedule.
+    \item[\textit{Software Pipelining}] Loop-scheduling technique that overlaps operations from different iterations and emits a prologue, steady-state kernel, and epilogue.
     \item[\textit{Thread-Level Parallelism (TLP)}] Concurrent execution of multiple threads on one or more cores.
     \item[\textit{Digital Signal Processor (DSP)}] Processor class optimized for regular numeric workloads such as filtering, radio, and image-processing kernels.
     \item[\textit{SIMD}] One instruction stream operating on multiple data elements in lockstep.
@@ -18,6 +20,15 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[\textit{Multi-Op}] Group of ops intended to execute in the same cycle in a VLIW design.
     \item[\textit{Tail Bit}] Per-op field marking whether the current op ends the current multi-op.
     \item[\textit{Pause Field}] Encoded delay field that inserts a specified number of idle cycles before the next multi-op begins.
+    \item[\textit{Iterative Modulo Scheduling (IMS)}] Practical software-pipelining algorithm that searches for a legal modulo schedule by trying increasing initiation intervals.
+    \item[\textit{Initiation Interval (II)}] Number of cycles between the start of successive loop iterations in a software-pipelined schedule.
+    \item[\textit{Minimum Initiation Interval (MII)}] Lower bound on II, equal to $\max(ResII,RecII)$.
+    \item[\textit{Resource-Constrained Initiation Interval (ResII)}] Lower bound on II imposed by the number of available functional units of each type.
+    \item[\textit{Recurrence-Constrained Initiation Interval (RecII)}] Lower bound on II imposed by loop-carried dependence cycles.
+    \item[\textit{Prologue}] Non-repeating prefix of a software-pipelined loop that fills the pipeline before steady state.
+    \item[\textit{Kernel}] Repeating steady-state portion of a software-pipelined loop.
+    \item[\textit{Epilogue}] Non-repeating suffix of a software-pipelined loop that drains remaining work after loop exit.
+    \item[\textit{Point Latency Model}] Scheduling model that treats an op as occupying one issue point and becoming ready after a fixed latency.
     \item[\textit{Tomasulo's Algorithm}] Out-of-order scheduling method that combines renaming, reservation stations, and result broadcast to wake dependent instructions when operands become ready.
     \item[\textit{Reservation Station}] Scheduling entry that holds an instruction, its operand state, and dependency tags until it can execute.
     \item[\textit{Common Data Bus (CDB)}] Shared result-broadcast path used to distribute a completed value and its producer tag to waiting instructions.
@@ -71,6 +82,13 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[\textit{Aliasing}] Predictor or cache entry interference from unrelated addresses mapping to the same slot.
     \item[\textit{Return-Address Stack (RAS)}] Small stack predictor for call/return target addresses.
     \item[\textit{Direction Prediction}] Branch predictor decision for taken versus not taken.
+    \item[\textit{One-Bit Predictor}] Dynamic branch predictor that records only the last observed branch outcome.
+    \item[\textit{Smith Predictor}] Saturating-counter branch predictor, commonly implemented with a two-bit counter per entry.
+    \item[\textit{GShare}] Global-history predictor that uses an exclusive-or of low PC bits and global history to index the prediction table.
+    \item[\textit{GSelect}] Global-history predictor that forms its index by concatenating selected PC bits and global-history bits.
+    \item[\textit{Yeh/Patt Predictor}] Two-level branch predictor that uses recorded branch history to index a table of direction counters.
+    \item[\textit{Perceptron Predictor}] Branch predictor that computes a weighted sum over branch-history bits and predicts from the sign of that sum.
+    \item[\textit{Hybrid Predictor}] Predictor that chooses among multiple underlying predictors, often through a tournament-style selector.
     \item[\textit{BTFNT}] Backward taken, forward not taken static branch heuristic.
     \item[\textit{Delay Slot}] ISA semantic in which the instruction after a branch executes before control transfer takes effect.
     \item[\textit{Squash Slot}] Post-branch instruction position that may be conditionally killed based on branch outcome/policy.
@@ -94,6 +112,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[CPI] Cycles Per Instruction
     \item[CPU] Central Processing Unit
     \item[CT] Cycle Time
+    \item[DDG] Data Dependence Graph
     \item[DSP] Digital Signal Processor
     \item[DISP] Dispatch and Decode
     \item[DRAM] Dynamic Random-Access Memory
@@ -109,13 +128,16 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[IC] Instruction Count
     \item[ID] Instruction Decode
     \item[IF] Instruction Fetch
+    \item[II] Initiation Interval
     \item[ILP] Instruction-Level Parallelism
+    \item[IMS] Iterative Modulo Scheduling
     \item[IPC] Instructions Per Cycle
     \item[ISA] Instruction Set Architecture
     \item[LFU] Least Frequently Used
     \item[LIP] Least Recently Used Insertion Policy
     \item[LRU] Least Recently Used
     \item[MEM] Memory
+    \item[MII] Minimum Initiation Interval
     \item[MIMD] Multiple Instruction, Multiple Data
     \item[MIP] Most Recently Used Insertion Policy
     \item[MISD] Multiple Instruction, Single Data
@@ -129,6 +151,8 @@ This appendix collects first-pass definitions used throughout Chapters 1--6.
     \item[RAS] Return-Address Stack
     \item[RAT] Register Alias Table
     \item[RAW] Read After Write
+    \item[RecII] Recurrence-Constrained Initiation Interval
+    \item[ResII] Resource-Constrained Initiation Interval
     \item[RISC] Reduced Instruction Set Computer
     \item[ROB] Reorder Buffer
     \item[RS] Reservation Station

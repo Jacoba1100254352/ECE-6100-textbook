@@ -1,4 +1,4 @@
-\chapter[ILP, Superscalar, and Out-of-Order]{Instruction-Level Parallelism, Superscalar Architecture, and Out-of-Order Execution}\label{ch:ilp-superscalar}
+\chapter[Dynamic ILP and Out-of-Order]{Dynamic ILP: Superscalar Scheduling and Out-of-Order Execution}\label{ch:ilp-superscalar}
 
 \section{Why Cycles per Instruction Can Go Below One}\label{sec:ilp-cpi-ipc}
 In basic single-issue pipelines, designers often treat cycles per instruction (CPI) near 1 as a practical lower bound.
@@ -532,6 +532,8 @@ In simple form, retirement follows Eq.~\eqref{eq:ilp-rob-retire}.
 \begin{equation}\label{eq:ilp-rob-retire}
     retire \Leftarrow ready(ROB_{head})\wedge \neg exception(ROB_{head}).
 \end{equation}
+If the machine can retire at most $W_{retire}$ instructions per cycle, then a single cycle may commit up to the oldest $W_{retire}$ consecutive ready non-excepting entries from the ROB head, but it may not skip over an older unready or excepting entry.
+Retire width therefore limits architecturally visible IPC even when execution hardware has already completed more work internally.
 If the instruction at the ROB head is marked as an exception, the machine instead flushes younger speculative work and transfers control to the retry or handler PC, as shown in Eq.~\eqref{eq:ilp-rob-exception-rule}.
 \begin{equation}\label{eq:ilp-rob-exception-rule}
     \begin{aligned}
@@ -549,6 +551,86 @@ If no matching entry exists, the value must already have retired, so dispatch re
 This is often described as a ROB with bypass or forwarding.
 It is powerful, but the search itself is associative and can become part of the critical timing path.
 
+\paragraph{Worked tag-based ROB-bypass trace}\label{par:ilp-rob-bypass-worked}
+The lookup rule becomes clearer on a tiny tag-based example.
+Assume the architected register file initially holds committed ready values for $R1$, $R2$, and $R3$, and that dispatch allocates ROB tags in program order.
+Consider:
+
+{\small
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+    \textit{A}: & LW $R1,0(R3)$ \\
+    \textit{B}: & ADD $R3,R2,R1$ \\
+    \textit{C}: & ADD $R1,R3,R2$
+\end{tabular}
+\end{center}}
+
+At dispatch, the source resolution is:
+
+{\small
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{|c|c|c|c|}
+    \hline
+    Instr.
+    & Dest reg/tag & Src \#1 at dispatch & Src \#2 at dispatch \\
+    \hline
+    \textit{A} & $R1$/A & $R3$ value from architected RF & n/a \\
+    \hline
+    \textit{B} & $R3$/B & $R2$ value from architected RF & waits on tag A from ROB entry \textit{A} \\
+    \hline
+    \textit{C} & $R1$/C & waits on tag B from ROB entry \textit{B} & $R2$ value from architected RF \\
+    \hline
+\end{tabular}
+\end{center}}
+
+The important point is that dispatch always takes the newest in-flight producer.
+So \textit{B} does not read the old committed $R1$ value; it waits on tag A\@.
+Likewise, \textit{C} does not read the old committed $R3$ value; it waits on tag B\@.
+After all three instructions have dispatched, the in-flight structures look like Table~\ref{tab:ilp-rob-bypass-worked}.
+
+\begin{table}[t]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|c|c|c|c|}
+        \hline
+        Instr.
+        & Dest reg/tag & Src \#1 & Src \#2 & Queue status \\
+        \hline
+        \textit{A} & $R1$/A & $R3$ value ready & n/a & ready to fire \\
+        \hline
+        \textit{B} & $R3$/B & $R2$ value ready & tag A not ready & waiting on \textit{A} \\
+        \hline
+        \textit{C} & $R1$/C & tag B not ready & $R2$ value ready & waiting on \textit{B} \\
+        \hline
+    \end{tabular}
+
+    \vspace{1ex}
+
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        ROB entry & Dest reg & Ready & Value source \\
+        \hline
+        \textit{A} & $R1$ & 0 & pending load result \\
+        \hline
+        \textit{B} & $R3$ & 0 & pending add result \\
+        \hline
+        \textit{C} & $R1$ & 0 & pending add result \\
+        \hline
+    \end{tabular}
+    \caption{Tag-based Tomasulo plus ROB bypass after dispatch of \textit{A}, \textit{B}, and \textit{C}.}
+    \label{tab:ilp-rob-bypass-worked}
+\end{table}
+
+From this point, execution is straightforward.
+\textit{A} completes first and marks ROB entry A ready, which wakes \textit{B}.
+\textit{B} then completes and marks ROB entry B ready, which wakes \textit{C}.
+\textit{C} completes last.
+Retirement still occurs strictly in order \textit{A}, then \textit{B}, then \textit{C}, so after the last retirement both the scheduling queue and the ROB are empty.
+The final committed mapping is simply the architected register file updated by the retired results, with $R3$ holding the value produced by \textit{B} and $R1$ holding the younger value produced by \textit{C}.
+For any such trace, once the total elapsed cycles are known, the fragment IPC is just retired instructions divided by elapsed cycles over the chosen measurement interval.
+
 \paragraph{Freeing physical registers}\label{par:ilp-freeing-pregs}
 Renamed machines also need a rule for reclaiming old physical registers.
 The exact policy differs across implementations, but the common principle is simple: an old physical register cannot return to the free list until no older in-flight instruction can still need it.
@@ -556,6 +638,116 @@ Common implementations describe this with use counters, pending-free bits, or re
 For example, if an architected register was formerly mapped to physical register $P23$ and rename later redirects that architected name to $P27$, the old $P23$ mapping cannot be recycled immediately.
 It becomes reclaimable only after no older instruction can still read it and the newer mapping has safely become the committed architectural version.
 The details vary, but all correct schemes delay reuse until the older mapping is no longer architecturally or speculatively required.
+
+\paragraph{When architected registers are actually written}\label{par:ilp-areg-write-timing}
+Completion and retirement are not the same event.
+Completion usually writes the speculative destination into the physical register file and marks the matching ROB entry ready.
+The architected register file is updated only when that ROB entry reaches the head and retires in order.
+This separation is what allows the machine to execute aggressively while still presenting precise sequential state to software.
+
+\paragraph{Worked PRegs/RAT/ROB end-state trace}\label{par:ilp-preg-rob-worked}
+The bookkeeping becomes much clearer on a tiny trace.
+Assume the initial mappings are $R0\rightarrow P0$, $R1\rightarrow P1$, $R2\rightarrow P2$, and $R3\rightarrow P3$, with $P4$ through $P7$ free.
+Assume two-wide fetch and dispatch, two-wide retirement, two 1-cycle ALUs, one 1-cycle LSU, and a back-to-front cycle evaluation so that Execute can mark a destination physical register ready before Schedule runs later in the same cycle.
+Consider the following sequence:
+
+{\small
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+    \textit{A}: & LW $R3,0(R1)$ \\
+    \textit{B}: & ADD $R1,R3,R2$ \\
+    \textit{C}: & ADD $R2,R2,R1$
+\end{tabular}
+\end{center}}
+
+One legal cycle-by-cycle interpretation is:
+\begin{description}
+    \item[Cycle 1.] Fetch \textit{A} and \textit{B}.
+    \item[Cycle 2.] Dispatch \textit{A} and \textit{B}. \textit{A} allocates $P4$ as the new destination for $R3$ and records old mapping $P3$ in its ROB entry. \textit{B} therefore reads $P4$ as its first source, allocates $P5$ as the new destination for $R1$, and records old mapping $P1$ in its ROB entry.
+    Fetch \textit{C}.
+    \item[Cycle 3.] \textit{A} fires on the LSU. Dispatch \textit{C}, which now reads $P2$ and $P5$, allocates $P6$ as the new destination for $R2$, and records old mapping $P2$ in its ROB entry.
+    \item[Cycle 4.] \textit{A} completes, marking $P4$ ready and its ROB entry ready.
+    Because that completion is visible before scheduling in the same cycle, \textit{B} can now fire.
+    \item[Cycle 5.] \textit{A} retires, so the architected copy of $R3$ now comes from $P4$ and old mapping $P3$ can be freed. \textit{B} completes, marking $P5$ ready, and \textit{C} can then fire.
+    \item[Cycle 6.] \textit{B} retires, so the architected copy of $R1$ now comes from $P5$ and old mapping $P1$ can be freed. \textit{C} completes, marking $P6$ ready.
+    \item[Cycle 7.] \textit{C} retires, so the architected copy of $R2$ now comes from $P6$ and old mapping $P2$ can be freed.
+\end{description}
+
+The exact cycle numbers can shift by one under a different but internally consistent simulator ordering, but the final renamed state is the same.
+
+{\small
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{|c|c|c|c|c|c|}
+    \hline
+    Instr.
+    & FU & Dest PReg & Src \#1 & Src \#2 & Final status \\
+    \hline
+    \textit{A} & LSU & $P4$ & $P1$ & n/a & completed and retired \\
+    \hline
+    \textit{B} & ALU & $P5$ & $P4$ & $P2$ & completed and retired \\
+    \hline
+    \textit{C} & ALU & $P6$ & $P2$ & $P5$ & completed and retired \\
+    \hline
+\end{tabular}
+
+\vspace{1ex}
+
+\begin{tabular}{|c|c|c|c|}
+    \hline
+    ROB entry & Dest AReg & Prev PReg & Final status \\
+    \hline
+    \textit{A} & $R3$ & $P3$ & retired \\
+    \hline
+    \textit{B} & $R1$ & $P1$ & retired \\
+    \hline
+    \textit{C} & $R2$ & $P2$ & retired \\
+    \hline
+\end{tabular}
+
+\vspace{1ex}
+
+\begin{tabular}{|c|c|}
+    \hline
+    AReg & Final PReg \\
+    \hline
+    $R0$ & $P0$ \\
+    \hline
+    $R1$ & $P5$ \\
+    \hline
+    $R2$ & $P6$ \\
+    \hline
+    $R3$ & $P4$ \\
+    \hline
+\end{tabular}
+\hspace{1.5em}
+\begin{tabular}{|c|c|c|}
+    \hline
+    PReg & Ready & Free \\
+    \hline
+    $P0$ & 1 & 0 \\
+    \hline
+    $P1$ & 1 & 1 \\
+    \hline
+    $P2$ & 1 & 1 \\
+    \hline
+    $P3$ & 1 & 1 \\
+    \hline
+    $P4$ & 1 & 0 \\
+    \hline
+    $P5$ & 1 & 0 \\
+    \hline
+    $P6$ & 1 & 0 \\
+    \hline
+    $P7$ & 0 & 1 \\
+    \hline
+\end{tabular}
+\end{center}}
+
+Three rules are doing all the work here.
+Dispatch allocates the next free physical destination and records the previous architectural mapping in the ROB\@.
+Completion makes the speculative destination ready for younger consumers.
+Retirement is the event that both updates the architected view and frees the previous physical mapping.
 
 
 \section{Future Files and Checkpoint/Repair}\label{sec:ilp-future-file-checkpoint}
@@ -565,6 +757,12 @@ The \textit{architected register file} holds only committed state.
 Execution and wakeup consult the speculative state, while retirement copies correct in-order results into the architected state.
 This explains how the machine can behave aggressively internally while still presenting a sequential interface to software.
 In a physical-register implementation, this often means retirement copies the committed value from the current physical register into the architected register file, while exception recovery can restore a precise view by redirecting the register alias table (RAT) back to the committed architectural mappings.
+
+\paragraph{Comparison with tag-only Tomasulo}\label{par:ilp-tag-vs-preg}
+A physical-register plus RAT design does not automatically increase the amount of ILP that the scheduler can discover.
+If a tag-based Tomasulo machine and a physical-register machine have the same function units, the same wakeup/select policy, the same retire width, and enough result buses that completion bandwidth is not the bottleneck, then they can expose the same execution schedule and the same IPC on a given trace.
+The main differences are in bookkeeping cost, lookup style, recovery organization, and physical-register reuse rather than in the dependence constraints themselves.
+Performance diverges only when one design changes a practical limit such as result-bus count, port bandwidth, wakeup timing, or retirement bandwidth.
 
 The ROB is not the only recovery method.
 \textit{Checkpoint/repair} schemes periodically capture a coherent snapshot of register state and use that snapshot as the recovery point.
@@ -614,293 +812,30 @@ ROB bypass logic, associative searches, speculative-state tracking, and recovery
 As out-of-order windows grow wider and deeper, state management and recovery logic become first-order design problems rather than secondary implementation details.
 
 
-\section{VLIW as a Compiler-Scheduled Alternative}\label{sec:ilp-vliw}
-One response to dynamic-scheduling complexity is to move more of the scheduling work into the compiler.
-As superscalar windows grow, the machine would like a larger scheduling queue so it can search farther ahead for independent work, but larger queues also make wakeup, select, and operand-readiness checks harder to close at a short cycle time.
-This leads to the \textit{very long instruction word (VLIW)} approach, historically associated with Josh Fisher.
-A VLIW encoding packs several operations intended to execute in parallel into one instruction word, so the compiler decides the schedule at compile time rather than letting large runtime scheduling hardware discover it dynamically.
+\section{Interpreting Out-of-Order Processor Statistics}\label{sec:ilp-sim-stats}
+Trace-driven superscalar simulators often report more than cycles and IPC\@.
+Those counters are useful only if their meanings and denominators are clear.
 
-In this context, an individual encoded action is an \textit{op}.
-A set of ops intended to execute in the same cycle is a \textit{multi-op}.
-VLIW reduces runtime hardware complexity because the machine no longer needs a large associative scheduling queue, aggressive wakeup logic, or much of the dynamic issue machinery used in FOCO-style processors.
-The tradeoff is that the compiler must do much more work up front, and the resulting code is less adaptive to runtime variation such as cache misses or changing branch behavior.
-This tradeoff is attractive in domains such as \textit{digital signal processors (DSPs)}, where workloads are regular and low-power execution is important.
+\paragraph{Fetched versus retired instructions}\label{par:ilp-fetched-vs-retired}
+The architecturally meaningful IPC uses retired instructions, not fetched instructions.
+\textit{Trace instructions} count the dynamic instructions in the workload itself.
+\textit{Fetched instructions} count every instruction the front end brought in, including wrong-path work fetched before a branch misprediction was repaired.
+\textit{Retired instructions} count only the instructions that reached precise architectural state.
+In a correct full run, retired instructions usually match the trace instruction count, while fetched instructions may be much larger when prediction accuracy is poor.
 
-Compiler design must balance three competing goals: code quality, compilation time, and maintainability.
-In practice, that usually rules out algorithms much worse than quadratic for large compiler passes, and even cubic methods are used cautiously.
-In principle, finding the optimal schedule for a dependence-constrained block is exponential in block size, so practical VLIW compilers rely on heuristics rather than on exact search.
-List scheduling is one of the standard heuristics for this job.
-The broader performance point is that widening fetch and scheduling machinery yields diminishing returns: useful IPC usually grows sublinearly with front-end width, while the cost of dynamic scheduling hardware grows quickly.
+\paragraph{Miss and misprediction counters}\label{par:ilp-miss-mispredict-counters}
+Branch-misprediction counts measure control-flow repair events.
+Instruction-cache misses reduce front-end supply, while data-cache misses usually delay load or store completion and can starve dependent instructions.
+These counters therefore explain why IPC may fall even when the machine nominally has ample fetch width and many function units.
 
+\paragraph{Queue-pressure counters}\label{par:ilp-queue-pressure}
+Maximum and average dispatch-queue, scheduling-queue, and ROB occupancy show where pressure accumulates.
+If ROB usage remains near its limit and dispatch is frequently blocked because the ROB is full, then commit bandwidth, long-latency instructions, or recovery delays are throttling forward progress.
+If scheduling queues remain lightly used but \textit{no-fire cycles} are high, then the machine is more likely waiting on ready operands or memory completion than on queue capacity.
 
-\section{Dependence Graphs and List Scheduling}\label{sec:ilp-vliw-list-scheduling}
-The compiler begins from a \textit{data dependence graph}.
-True flow edges capture read-after-write dependencies, while anti-dependence and output-dependence edges capture false constraints caused by register reuse.
-Pure flow dependence always takes priority over false dependence because it represents real data movement.
-If the code contains loops, this graph can contain cycles, so it is not necessarily a directed acyclic graph.
-
-Table~\ref{tab:ilp-vliw-block} gives a compact block that will be used for the scheduling example.
-Assume one pipelined load/store unit, one pipelined arithmetic logic unit (ALU), and one pipelined multiplier.
-Each unit can accept a new op every cycle; the listed latencies describe when results become available, not how long the unit remains occupied.
-Also assume the compiler has already assigned registers so that the remaining constraints shown in the table are dominated by true dependences rather than by avoidable name conflicts.
-\begin{table}[t]
-    \centering
-    \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{|c|l|l|c|}
-        \hline
-        Instr.
-        & Operation & True dependences & Latency \\
-        \hline
-        A & LW $R2, X$ & None & 2 \\
-        \hline
-        B & LW $R3, Y$ & None & 2 \\
-        \hline
-        C & LW $R4, Z$ & None & 2 \\
-        \hline
-        D & ADD $R5, R1, R2$ & A & 1 \\
-        \hline
-        E & MUL $R6, R2, R3$ & A, B & 3 \\
-        \hline
-        F & MUL $R7, R1, R3$ & B & 3 \\
-        \hline
-        G & ADD $R8, R7, \#1$ & F & 1 \\
-        \hline
-        H & SW $R8, X$ & G & 1 \\
-        \hline
-        I & ADD $R9, R2, R4$ & A, C & 1 \\
-        \hline
-    \end{tabular}
-    \caption{Illustrative basic block for VLIW list scheduling.}
-    \label{tab:ilp-vliw-block}
-\end{table}
-Figure~\ref{fig:ilp-vliw-ddg} presents the same block in a more visual form: the original operations, the resulting data dependence graph, and one priority list ordered by dependence height.
-\begin{figure}[t]
-    \centering
-    \small
-    \begin{minipage}[t]{0.27\textwidth}
-        \raggedright
-        \textbf{Original operations}\par
-        \vspace{0.5ex}
-        \begin{tabular}[t]{@{}ll@{}}
-            A: & LW $R2, X$ \\
-            B: & LW $R3, Y$ \\
-            C: & LW $R4, Z$ \\
-            D: & ADD $R5, R1, R2$ \\
-            E: & MUL $R6, R2, R3$ \\
-            F: & MUL $R7, R1, R3$ \\
-            G: & ADD $R8, R7, \#1$ \\
-            H: & SW $R8, X$ \\
-            I: & ADD $R9, R2, R4$
-        \end{tabular}
-    \end{minipage}\hfill
-    \begin{minipage}[t]{0.45\textwidth}
-        \centering
-        \textbf{Data Dependence Graph}\par
-        \vspace{1ex}
-        \begin{tikzpicture}[
-            >=Latex,
-            depnode/.style={draw, circle, inner sep=1pt, minimum size=15pt, font=\small},
-            hlabel/.style={font=\scriptsize, text=blue!65!black}
-        ]
-            \node[depnode] (A) at (0,0) {A};
-            \node[depnode] (B) at (1.7,0) {B};
-            \node[depnode] (C) at (3.4,0) {C};
-            \node[depnode] (D) at (0,-1.1) {D};
-            \node[depnode] (E) at (1.7,-1.1) {E};
-            \node[depnode] (F) at (0,-2.2) {F};
-            \node[depnode] (I) at (2.7,-2.2) {I};
-            \node[depnode] (G) at (0,-3.3) {G};
-            \node[depnode] (H) at (0,-4.4) {H};
-
-            \node[hlabel, left=1.5mm of A] {$5$};
-            \node[hlabel, above=1.5mm of B] {$7$};
-            \node[hlabel, above=1.5mm of C] {$3$};
-            \node[hlabel, left=1.5mm of D] {$1$};
-            \node[hlabel, right=1.5mm of E] {$3$};
-            \node[hlabel, left=1.5mm of F] {$5$};
-            \node[hlabel, right=1.5mm of I] {$1$};
-            \node[hlabel, left=1.5mm of G] {$2$};
-            \node[hlabel, left=1.5mm of H] {$1$};
-
-            \draw[->] (A) -- (D);
-            \draw[->] (A) -- (E);
-            \draw[->] (A) -- (I);
-            \draw[->] (B) -- (E);
-            \draw[->] (B) -- (F);
-            \draw[->] (C) -- (I);
-            \draw[->] (F) -- (G);
-            \draw[->] (G) -- (H);
-        \end{tikzpicture}
-    \end{minipage}\hfill
-    \begin{minipage}[t]{0.20\textwidth}
-        \raggedright
-        \textbf{List ordered by dependence height}\par
-        \vspace{0.5ex}
-        \begin{tabular}[t]{@{}l@{}}
-            $B$ $(7)$ \\
-            $A$ $(5)$ \\
-            $F$ $(5)$ \\
-            $C$ $(3)$ \\
-            $E$ $(3)$ \\
-            $G$ $(2)$ \\
-            $D$ $(1)$ \\
-            $I$ $(1)$ \\
-            $H$ $(1)$
-        \end{tabular}
-    \end{minipage}
-    \caption{Original operations, dependence graph, and one priority ordering for the VLIW list-scheduling example. The small numeric annotations next to nodes indicate dependence height. Ties may be broken arbitrarily.}
-    \label{fig:ilp-vliw-ddg}
-\end{figure}
-
-One common priority heuristic is \textit{dependence height}, which estimates how much latency remains below a node on the longest dependent path.
-If the heuristic includes the latency of the current instruction itself, one convenient definition is Eq.~\eqref{eq:ilp-dependence-height}.
-\begin{equation}\label{eq:ilp-dependence-height}
-    height(i)=
-    \begin{cases}
-        lat(i), & succ(i)=\emptyset\\
-        lat(i)+\max\limits_{j\in succ(i)} height(j), & \text{otherwise}
-    \end{cases}
-\end{equation}
-Higher-height instructions receive higher priority because delaying them is more likely to lengthen the critical path.
-For the block in Table~\ref{tab:ilp-vliw-block}, the longest true-dependence chain is $B\rightarrow F\rightarrow G\rightarrow H$, so the heuristic tends to prioritize $F$ ahead of $E$ once both become candidates for the single multiplier.
-
-List scheduling then tries to place the highest-priority ready instructions into each cycle subject to both dependence timing and resource availability.
-A simple legality condition is shown in Eq.~\eqref{eq:ilp-list-schedule-legal}.
-\begin{equation}\label{eq:ilp-list-schedule-legal}
-    cycle(i)=\min\!\left\{c\ \middle|\ \forall j\in pred(i),\ c\ge cycle(j)+lat(j),\ \text{and a compatible FU is free in }c \right\}.
-\end{equation}
-This is not an optimal algorithm, but it is practical and captures the central VLIW idea: schedule as much parallel work as possible before runtime while still respecting dependencies and resource limits.
-
-Table~\ref{tab:ilp-vliw-schedule} shows one possible compiler-produced schedule for the block running on a machine with one arithmetic logic unit (ALU), one multiplier, and one load/store unit.
-The point is not that this schedule is unique, but that the compiler can decide the cycle packing in advance and encode it directly.
-For illustration, this schedule keeps the three initial loads in source order even though a greedier dependence-height policy could start $B$ before $A$ and shorten the block by one cycle.
-That choice leaves one explicit empty cycle later, which makes the pause-field encoding example concrete.
-\begin{table}[t]
-    \centering
-    \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{|c|c|c|c|}
-        \hline
-        Cycle & Load/Store Unit & ALU & Multiplier \\
-        \hline
-        1 & A &  &  \\
-        \hline
-        2 & B &  &  \\
-        \hline
-        3 & C & D &  \\
-        \hline
-        4 &  &  & F \\
-        \hline
-        5 &  & I & E \\
-        \hline
-        6 &  &  &  \\
-        \hline
-        7 &  & G &  \\
-        \hline
-        8 & H &  &  \\
-        \hline
-    \end{tabular}
-    \caption{One legal VLIW-style schedule for the block under fixed functional-unit limits.}
-    \label{tab:ilp-vliw-schedule}
-\end{table}
-The schedule shows two important points.
-First, the compiler only packs operations together when both the dependence constraints and the functional-unit constraints allow it.
-Second, the absence of an operation in a slot does not require the hardware to discover what to do; the compiler can encode the schedule directly.
-In particular, cycle 6 is intentionally empty because $G$ cannot start until the three-cycle multiply $F$ has finished producing $R7$.
-Table~\ref{tab:ilp-vliw-packed-schedule} shows the same schedule in a field-level packing format closer to an actual multi-op layout.
-This table defines which operands occupy each unit's fields in each cycle; it does not by itself define the serialized op order in memory.
-\begin{table}[t]
-    \centering
-    \small
-    \setlength{\tabcolsep}{4pt}
-    \renewcommand{\arraystretch}{1.12}
-    \begin{tabular}{|c|c c c|c c c|c c|c c|}
-        \hline
-        Cycle & \multicolumn{3}{c|}{IALU (1 cycle)} & \multicolumn{3}{c|}{MUL (3 cycles)} & \multicolumn{2}{c|}{Load (2 cycles)} & \multicolumn{2}{c|}{Store (1 cycle)} \\
-        \hline
-         & $d$ & $s_1$ & $s_2$ & $d$ & $s_1$ & $s_2$ & $d$ & addr & addr & $s$ \\
-        \hline
-        1 &  &  &  &  &  &  & $R2$ & $X$ &  &  \\
-        \hline
-        2 &  &  &  &  &  &  & $R3$ & $Y$ &  &  \\
-        \hline
-        3 & $R5$ & $R1$ & $R2$ &  &  &  & $R4$ & $Z$ &  &  \\
-        \hline
-        4 &  &  &  & $R7$ & $R1$ & $R3$ &  &  &  &  \\
-        \hline
-        5 & $R9$ & $R2$ & $R4$ & $R6$ & $R2$ & $R3$ &  &  &  &  \\
-        \hline
-        6 &  &  &  &  &  &  &  &  &  &  \\
-        \hline
-        7 & $R8$ & $R7$ & $\#1$ &  &  &  &  &  &  &  \\
-        \hline
-        8 &  &  &  &  &  &  &  &  & $X$ & $R8$ \\
-        \hline
-    \end{tabular}
-    \caption{Field-level packing of the schedule from Table~\ref{tab:ilp-vliw-schedule}. Rows 3 and 5 are multi-ops because they contain more than one op in the same cycle.}
-    \label{tab:ilp-vliw-packed-schedule}
-\end{table}
-
-
-\section{Multi-Op Encoding, Tail Bits, and Pause Fields}\label{sec:ilp-vliw-encoding}
-VLIW raises an encoding question: how should a machine represent the boundaries of a multi-op if not every cycle uses every functional unit?
-One simple approach is to fill every unused slot with an explicit no-op, but that wastes code space.
-An alternative is to encode only real ops and add a small amount of grouping information.
-Each encoded op still carries its ordinary fields such as opcode, destination register, and source registers; the additional VLIW-specific fields only describe grouping and delay.
-
-One useful scheme adds a \textit{tail bit} to each encoded op.
-If the tail bit is 0, the current op is not the end of the current multi-op.
-If the tail bit is 1, the current op ends the current multi-op.
-The next op then begins a new multi-op.
-This lets the instruction stream represent a variable number of ops per cycle without requiring every cycle to contain the same number of explicit no-op fillers.
-
-A related field is a \textit{pause field}, which tells the front-end control logic to wait a specified number of cycles before beginning the next multi-op.
-In the simple scheme used here, the pause value is interpreted only on the op whose tail bit ends the current multi-op; pause values on earlier ops in the same multi-op are ignored.
-This is a compact way to represent silence between multi-ops while still keeping each op's encoding regular.
-Table~\ref{tab:ilp-vliw-encoding} illustrates the idea using the schedule from Table~\ref{tab:ilp-vliw-schedule}.
-It shows one legal serialized op order for the same multi-ops that appear in Table~\ref{tab:ilp-vliw-packed-schedule}.
-\begin{table}[t]
-    \centering
-    \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{|c|c|c|p{2.9in}|}
-        \hline
-        Encoded op & Tail & Pause & Meaning \\
-        \hline
-        A & 1 & 0 & Single-op multi-op for cycle 1. \\
-        \hline
-        B & 1 & 0 & Single-op multi-op for cycle 2. \\
-        \hline
-        C & 0 & 0 & First op of the cycle-3 multi-op. \\
-        \hline
-        D & 1 & 0 & Ends the cycle-3 multi-op. \\
-        \hline
-        F & 1 & 0 & Single-op multi-op for cycle 4. \\
-        \hline
-        I & 0 & 0 & First op of the cycle-5 multi-op. \\
-        \hline
-        E & 1 & 1 & Ends the cycle-5 multi-op and inserts one pause cycle before the next multi-op. \\
-        \hline
-        G & 1 & 0 & Single-op multi-op for cycle 7. \\
-        \hline
-        H & 1 & 0 & Single-op multi-op for cycle 8. \\
-        \hline
-    \end{tabular}
-    \caption{Illustrative VLIW encoding using tail bits and a pause field rather than explicit no-op padding.}
-    \label{tab:ilp-vliw-encoding}
-\end{table}
-Some implementations instead use simple interlocking at the multi-op level, which can remove the need for an explicit pause field.
-That saves encoding space, but it also gives up some of the compiler's direct control over exactly when the next multi-op may begin.
-
-
-\section{Memory Disambiguation}\label{sec:ilp-vliw-memory-disambiguation}
-Loads and stores create a special scheduling problem.
-If a compiler moves a load ahead of an older store to the same address, the load may read the wrong value.
-The compiler therefore needs \textit{memory disambiguation}: it must prove that two memory references do not overlap, or else it must preserve the original order or insert explicit synchronization.
-
-This is one of the limits of VLIW compared with dynamic scheduling hardware.
-An out-of-order processor may speculate and recover if it guesses wrong.
-A VLIW compiler must usually be more conservative unless it has strong alias information.
-That is one reason VLIW works best when memory behavior is regular enough for compile-time reasoning to be reliable.
-
+\paragraph{Isolating control and memory effects}\label{par:ilp-isolate-effects}
+Many simulators also offer a no-miss or no-misprediction mode.
+Such a configuration does not model real execution, but it is analytically useful because it isolates pure width, scheduling, and dependence limits from penalties caused by cache misses and bad control-flow prediction.
 
 \section{Chapter 6 Summary}\label{sec:chapter6-summary-ilp}
 Instruction-level parallelism turns $CPI<1$ into a concrete microarchitectural target.
@@ -909,5 +844,5 @@ FICO-style scoreboarding illustrates the basic mechanism, while renaming, Tomasu
 Once the machine executes and completes work out of order, however, scheduling is no longer enough by itself.
 The core must also maintain precise architectural state through mechanisms such as physical-register renaming, reorder buffers, future files, or checkpoint/repair schemes.
 Modern processors therefore combine ILP techniques with careful recovery, retirement, and microarchitectural side-effect control.
-VLIW shows a contrasting path: instead of building increasingly complex runtime schedulers, the compiler can schedule ops into multi-ops ahead of time and encode that schedule directly.
-These ideas together form the bridge from classic five-stage thinking to modern high-throughput scalar cores and compiler-scheduled ILP machines.
+Simulator-visible counters such as fetched-versus-retired instructions, misprediction counts, miss counts, queue occupancy, and ROB pressure then provide a practical way to diagnose which limits are dominating a given design point.
+These ideas together form the bridge from classic five-stage thinking to modern high-throughput scalar cores.

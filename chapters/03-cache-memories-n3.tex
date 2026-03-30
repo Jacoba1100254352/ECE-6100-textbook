@@ -123,6 +123,27 @@ Total tag-store plus metadata is (Eq.~\eqref{eq:auto-028}):
 If $B$ is reduced to 3 while $C$ and $S$ are fixed, the number of blocks rises to $2^{10}=1024$, so tag overhead increases to $1024\times53=54{,}272$ bits.
 This illustrates an important Chapter 3 point: smaller blocks can increase tag overhead significantly.
 
+\paragraph{Concrete Tag-Store Accounting}\label{par:auto-017a}
+The quickest reliable procedure is:
+\begin{enumerate}
+    \item determine the number of lines from $2^{C-B}$,
+    \item determine tag width from the relevant physical or virtual address width,
+    \item add only the metadata bits the problem explicitly asks for, and
+    \item multiply per-line metadata by line count.
+\end{enumerate}
+For example, suppose a cache is \textit{write-back, write-allocate} and \textit{physically indexed, physically tagged} with $(C,B,S)=(18,7,3)$, 64-bit virtual addresses, 4\,KB pages, and 32\,GB of physical memory.
+The physical address width is 35 bits because $32$\,GB $=2^{35}$ bytes.
+The cache therefore has $2^{18-7}=2^{11}=2048$ lines, and the physical tag width is
+\begin{equation}\label{eq:auto-028a}
+    |\text{Tag}| = 35-(18-3)=20\ \text{bits}.
+\end{equation}
+Because the level is write-back, write-allocate, each line also needs one valid bit and one dirty bit, so per-line tag-store plus required metadata is 22 bits.
+Total tag-store size is therefore
+\begin{equation}\label{eq:auto-028b}
+    2048 \times (20+1+1)=45{,}056\ \text{bits}.
+\end{equation}
+If the problem says to ignore replacement metadata such as LRU state, then it should not be added.
+
 \paragraph{Address partitioning example}\label{par:auto-018}
 Consider the same $(13,5,0)$ 64-bit cache.
 For the virtual address \texttt{0000\_1234\_ABCD\_5678}:
@@ -161,10 +182,26 @@ The \textit{average access time} is (Eq.~\eqref{eq:auto-029}):
 where $MR$ is \textit{miss ratio}.
 In Chapter 3 analysis, Eq.~\eqref{eq:auto-029} is the cache analogue of the CPU-time equation in Eq.~\eqref{eq:auto-002}.
 
+If multiple workloads share one machine and workload $i$ accounts for fraction $w_i$ of the accesses, then weighted average access time is
+\begin{equation}\label{eq:auto-029a}
+    AAT_{weighted}=\sum_i w_i \, AAT_i,
+\end{equation}
+with $\sum_i w_i=1$.
+This weighted form is the correct way to compare cache organizations against a non-uniform workload mix.
+
 Hit time is not a single gate delay.
 It includes row decoding, word-line drive, bit-line sensing, tag comparison, way selection, and word/byte selection.
 Cache-geometry choices alter these terms.
 Taller arrays hurt bit-line delay, wider arrays increase mux and comparator complexity, and higher associativity increases tag-compare and selection cost.
+
+\paragraph{Which change affects which AAT term?}\label{par:auto-018a}
+When a problem asks which of $HT$, $MR$, or $MP$ changes, the cleanest mapping is usually:
+\begin{enumerate}
+    \item \textbf{data-layout or tiling changes} primarily move \textit{miss ratio} because they change locality and conflict behavior,
+    \item \textbf{VIPT versus PIPT} primarily moves \textit{hit time} because it changes whether TLB lookup can overlap cache indexing, and
+    \item \textbf{write buffers} primarily reduce effective \textit{miss penalty} or visible lower-level service time on writes by decoupling cache progress from memory completion.
+\end{enumerate}
+This classification is approximate rather than absolute, but it is the right first-pass answer for most design analyses.
 
 
 \section{The Three C's of Misses}\label{sec:auto-025}
@@ -177,6 +214,12 @@ In practice, this taxonomy provides a diagnosis strategy.
 If misses are mainly conflict-driven, associativity or victim structures can help.
 If misses are mainly capacity-driven, larger effective storage or better blocking can help.
 If misses are mainly compulsory, prefetching and layout changes are primary tools.
+
+\paragraph{Sizing for a repeating working set}\label{par:auto-019a}
+For a repeating access pattern, the smallest cache that avoids capacity misses must hold every block that remains live across the reuse interval.
+If $N_{live}$ distinct blocks must stay resident until reuse, then the cache needs at least $N_{live}$ lines.
+That condition is necessary but not always sufficient in a direct-mapped or low-associativity cache, because several of those live blocks may still collide onto the same set.
+This is why trace analysis must separate ``enough total lines'' from ``enough placement freedom.''
 
 
 \section{Replacement Policies and Their Tradeoffs}\label{sec:auto-026}
@@ -192,6 +235,18 @@ Practical designs use approximations, tree-based encodings, or hybrid insertion 
 A notable policy distinction is insertion behavior: a line can be installed as \textit{most recently used (MRU)} (default in many demand-miss paths) or near LRU (useful for speculative prefetch lines to reduce pollution).
 Related insertion-policy abbreviations are \textit{most recently used insertion policy (MIP)} and \textit{least recently used insertion policy (LIP)}.
 
+\paragraph{Simulating LRU with timestamps}\label{par:auto-019b}
+One exact way to simulate LRU is to attach a ``last used'' timestamp to each line in a set.
+On every hit, update the touched line's timestamp to the current access time.
+On a miss, fill an invalid line if one exists; otherwise evict the valid line with the smallest timestamp because that line was touched least recently.
+This method is conceptually simple and is often the cleanest way to hand-simulate LRU on short traces.
+
+\paragraph{Exact LRU with a bit matrix}\label{par:auto-019c}
+Another exact representation for an $n$-way set is an $n\times n$ recency matrix.
+Entry $M[i][j]=1$ means way $i$ is more recent than way $j$.
+When way $k$ is accessed, set row $k$ to 1, set column $k$ to 0, and keep the diagonal in its fixed convention.
+After the update, the least-recently used way is the one whose off-diagonal row bits are all 0, because every other way is marked as newer than it.
+
 
 \section{Write Policies}\label{sec:auto-027}
 Write behavior has two independent decisions.
@@ -202,6 +257,15 @@ Write-back reduces memory traffic when repeated writes target the same line, but
 Because dirty data can live in cache before eviction, abrupt power loss can drop recently written values that have not yet reached lower levels.
 Write-through simplifies coherence visibility and durability behavior because lower memory is updated on each write hit, and it does not require dirty metadata at that cache level, but it increases memory bandwidth pressure.
 The common pairings are write-back plus write-allocate for reuse-heavy data paths, and write-through plus write-no-allocate for streaming paths with little read-after-write reuse.
+
+\paragraph{Reading write traces}\label{par:auto-020a}
+Write traces are easiest to interpret by separating three questions.
+First, does the access hit or miss in the current cache state?
+Second, does the policy allocate the block on a miss?
+Third, if a valid victim is evicted, is it dirty?
+In a write-back, write-allocate cache, a write miss usually installs the block and marks it dirty immediately.
+Each later dirty eviction contributes one writeback event.
+Dirty lines that remain in the cache at the end of the trace are not counted as writebacks unless the problem explicitly asks for a final flush.
 
 \paragraph{Valid and dirty bits: meaning, need, and size impact}\label{par:auto-020}
 Each cache line typically carries at least one \textit{valid bit}.
@@ -232,15 +296,31 @@ The cost includes increased hit time (due to the way-select multiplexer and para
 The third lever is \textbf{block size ($B$)}.
 Increasing $B$ reduces compulsory misses by exploiting spatial locality (fetching more useful data per miss).
 However, if $B$ becomes too large, it can increase conflict misses (by reducing the total number of blocks) and will always increase miss penalty (longer transfer time).
+So the statement ``increasing block size cannot improve miss ratio'' is false.
+With a fixed cache capacity, a larger block often improves miss ratio at first by capturing nearby useful data, but the improvement is not monotonic because fewer total lines remain available.
 
 \paragraph{Hardware Prefetching}\label{par:auto-021}
 Hardware prefetching targets compulsory and capacity effects by pulling data before demand.
 A \textit{$+1$ prefetcher} fetches block $i+1$ when block $i$ is accessed.
 A \textit{stride prefetcher} detects constant deltas (for example $i, i+k, i+2k$) and fetches the next predicted address.
 A \textit{Markov prefetcher} uses a correlation table to learn non-linear transitions; if address $A$ is often followed by $B$ then $C$, the predictor learns and issues those future blocks when $A$ appears.
+A \textit{hybrid prefetcher} combines a richer predictor such as Markov correlation with a simpler fallback such as next-block prefetching, so the machine can still make a reasonable guess when the correlation table has no useful entry.
 To prevent \textit{cache pollution} (evicting useful data for speculative data that might not be used), many designs use a \textit{prefetch buffer}.
 This is a small, separate storage area where prefetched lines sit until they are actually demanded by the CPU\@.
 If demanded, they are moved into the main cache.
+
+\paragraph{Prefetch insertion policy matters}\label{par:auto-021e}
+Prefetched lines are often installed with a low-priority policy such as \textit{least recently used insertion policy (LIP)} rather than as most-recently used lines.
+The goal is to avoid immediately evicting useful demand data for speculative lines that may never be touched.
+This helps in set-associative caches, but it does not eliminate the placement limitations of a direct-mapped cache.
+In a direct-mapped design, a $+1$ prefetch can still evict useful demand data if the prefetched block maps to the same line.
+
+\paragraph{Trace-driven prefetch statistics}\label{par:auto-021c}
+Detailed simulator outputs often distinguish three prefetch counters.
+\textit{Prefetches issued} count speculative requests launched by the prefetcher.
+A \textit{prefetch hit} means a later demand access found a line that was present only because of an earlier prefetch.
+A \textit{prefetch miss}, sometimes called a useless prefetch, means the prefetched line was evicted before any demand access used it.
+These counters matter because a prefetcher can lower demand misses and still be a poor design if it wastes bandwidth or pollutes the cache badly.
 
 
 \section{Reducing Miss Penalty}\label{sec:auto-029}
@@ -256,6 +336,16 @@ If critical-word position is uniformly distributed and transfer order is fixed f
     MP_{ER} \approx T_1 + \frac{N_{sb}-1}{2}T_f.
 \end{equation}
 Critical-word-first improves further by requesting the demanded sub-block first, then wrapping to complete the rest in the background.
+That benefit is only CPU-visible if the machine can resume execution as soon as the critical word arrives.
+Without early restart or an equivalent partial-consume mechanism, critical-word-first alone does not reduce the stall seen by the processor, because the core would still wait for the full block to complete before continuing.
+
+\paragraph{Non-uniform critical-word distributions}\label{par:auto-021a}
+The uniform approximation in Eq.~\eqref{eq:auto-032} is only one special case.
+If sub-block $k$ is demanded with probability $p_k$ and fixed-order transfer would deliver that word after $k$ follow-up transfers, then the early-restart penalty is
+\begin{equation}\label{eq:auto-032a}
+    MP_{ER}=\sum_{k=0}^{N_{sb}-1} p_k \left(T_1 + kT_f\right).
+\end{equation}
+Under the same simple model, critical-word-first with early restart reduces the CPU-visible penalty to approximately $T_1$ because the demanded sub-block is requested first and the rest of the block finishes in the background.
 
 Another major lever is adding lower cache levels.
 If L1 misses probe L2 before DRAM, L1 penalty becomes L2 average access time (Eq.~\eqref{eq:auto-033}):
@@ -264,10 +354,27 @@ If L1 misses probe L2 before DRAM, L1 penalty becomes L2 average access time (Eq
 \end{equation}
 This recursive form extends naturally to deeper hierarchies.
 
+\paragraph{Inclusive policy: subset, not equality}\label{par:auto-021f}
+If L2 is \textit{inclusive} of L1, then every line present in L1 must also be present in L2.
+The reverse is not required: L2 can contain many lines that are not currently in L1.
+So inclusivity means ``L1 is a subset of L2,'' not ``L1 and L2 contain exactly the same data.''
+
+\paragraph{Why many L2 ratios are read-only}\label{par:auto-021d}
+In a hierarchy where L1 uses write-back, write-allocate and L2 uses write-through, write-no-allocate, simulators often report separate L2 read and write traffic.
+Read hits and read misses form a meaningful reuse ratio because reads probe the resident L2 contents.
+Writes, by contrast, may simply reflect L1 writebacks or pass-through stores and may not allocate lines on a miss.
+For that reason, many reports define L2 hit ratio and miss ratio over \textit{reads only} rather than over total L2 traffic.
+
 Victim caches are also miss-penalty tools.
 A small fully associative buffer captures lines evicted from the primary cache.
 On a later conflict-driven re-reference, data can be swapped back quickly without going to DRAM\@.
 Conceptually, a victim cache provides a small amount of flexible associativity exactly where pressure appears.
+
+\paragraph{Victim cache versus L2}\label{par:auto-021b}
+A victim cache and an L2 do not solve exactly the same problem.
+A victim cache is usually the better value when misses are dominated by a small number of conflict patterns near the L1 boundary, because a few fully associative entries can undo repeated index collisions cheaply.
+A larger L2 is usually the better value when misses reflect broader capacity pressure or many different miss streams, because it filters a much wider set of misses rather than only recently evicted L1 lines.
+The right choice depends on whether the workload is mainly suffering from local conflicts or from a deeper shortage of effective capacity.
 
 Write buffers reduce stalls by decoupling cache writes from lower-memory completion.
 They are especially useful when a following miss would otherwise wait behind pending writes.
@@ -313,6 +420,15 @@ This constraint often forces minimum associativity for a given L1 size and page 
 For example, with $P=12$ (4\,KB pages) and $C=15$ (32\,KB L1), one needs $S\ge 3$, i.e., at least 8-way associativity.
 If $S=2$ (4-way), then $C-S=13>12$, so VIPT indexing would extend beyond page offset and synonym risk appears.
 
+\paragraph{Concrete VIPT Associativity Check}\label{par:auto-075a}
+Suppose $C=18$ and page size is 4\,KB, so $P=12$.
+To make the cache VIPT without indexing beyond the page offset, require
+\begin{equation}\label{eq:auto-089a}
+    C-S \le P \Rightarrow 18-S \le 12 \Rightarrow S \ge 6.
+\end{equation}
+So the minimum acceptable associativity field is $S=6$, which corresponds to $2^6=64$ ways.
+The arithmetic is simple; the main thing to remember is that the constraint is on \emph{index plus offset}, which in $(C,B,S)$ notation is exactly $C-S$.
+
 Write buffers can also improve effective hit behavior for writes by decoupling write completion from the immediate critical path and by forwarding recent write data when needed.
 This prevents some write-after-read and read-after-write timing stalls from stretching apparent hit latency.
 
@@ -343,8 +459,27 @@ For example:
 for (i=0; i<N; i++) for (j=0; j<N; j++) A[i][j] = B[j][i];
 // After tiling (where b is the tile size):
 for (ii=0; ii<N; ii+=b) for (jj=0; jj<N; jj+=b)
-    for (i=ii; i<ii+b; i++) for (j=jj; j<jj+b; j++) A[i][j] = B[j][i];\label{verb:verbatim}\label{verb:verbatim}\label{verb:verbatim}
+    for (i=ii; i<ii+b; i++) for (j=jj; j<jj+b; j++) A[i][j] = B[j][i];
 \end{verbatim}
+
+Choosing the tile factor is a working-set problem.
+The largest profitable tile is usually the largest one whose active data footprint still fits in the effective cache space while avoiding severe mapping conflicts.
+For direct-mapped or low-associativity caches, this means a tile can fail even when the byte count appears to fit, because the active blocks may still alias onto the same few sets.
+The practical rule is therefore: first check footprint size, then check placement conflicts.
+This is why tiled matrix multiplication often shows much better cache behavior than a naive matrix multiply, even when both perform the same arithmetic work.
+
+\paragraph{Concrete Tile-Factor Estimate}\label{par:auto-075b}
+Consider a cache with $(C,B,S)=(10,6,2)$, so total capacity is $2^{10}=1024$ bytes, block size is 64 bytes, and associativity is 4-way.
+If each matrix element is 8 bytes and the tiled working set keeps $TF$ rows of 32 elements active, then one tiled row occupies
+\begin{equation}\label{eq:auto-089b}
+    32 \times 8 = 256\ \text{bytes}.
+\end{equation}
+A footprint estimate for the tile is therefore $256 \times TF$ bytes.
+The largest tile that still fits in 1024 bytes is
+\begin{equation}\label{eq:auto-089c}
+    256 \times TF \le 1024 \Rightarrow TF \le 4.
+\end{equation}
+Here $TF=4$ is also structurally reasonable because each row occupies four 64-byte blocks, and the 4-way organization provides enough placement freedom to avoid immediate within-tile self-conflict.
 
 \textbf{Loop fusion} combines independent loops that touch related data to improve temporal locality.
 For example:
@@ -352,7 +487,7 @@ For example:
 for (i=0; i<N; i++) a[i] = b[i] + 1; // loop 1
 for (i=0; i<N; i++) c[i] = a[i] * 2; // loop 2
 // Fused:
-for (i=0; i<N; i++) { a[i] = b[i] + 1; c[i] = a[i] * 2; }\label{verb:verbatim2}\label{verb:verbatim2}\label{verb:verbatim2}
+for (i=0; i<N; i++) { a[i] = b[i] + 1; c[i] = a[i] * 2; }
 \end{verbatim}
 
 In practice, these compiler and data-layout techniques frequently determine whether hardware cache features help or saturate.
@@ -363,5 +498,5 @@ Chapter 3 develops cache memory from first principles to practical optimization.
 The chapter links SRAM/DRAM technology limits to hierarchical design, formalizes cache geometry with $(C,B,S)$ math, and uses AAT to connect structure to performance.
 Misses are interpreted through the three C's, while replacement and write policies define behavioral tradeoffs.
 Improvement strategies are organized by target term: miss ratio, miss penalty, or hit time.
-Prefetching, victim caches, write buffers, multi-level hierarchies, and VIPT constraints show how modern designs balance speed, capacity, and correctness.
+Prefetching, victim caches, write buffers, multi-level hierarchies, simulator-style hierarchy and prefetch counters, and VIPT constraints show how modern designs balance speed, capacity, and correctness.
 Finally, compiler and data-layout techniques complete the picture by showing that cache performance is a hardware-software co-design problem.
