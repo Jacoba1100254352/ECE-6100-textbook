@@ -97,6 +97,14 @@ If 80\% of runtime is parallelizable and the accelerated part can use 100{,}000 
 Even enormous parallel resources cannot overcome a significant serial fraction.
 This is why architectural proposals must report both the accelerated fraction and the achieved acceleration factor.
 
+\paragraph{Maximum-speedup interpretation}\label{par:auto-010a}
+When a problem states that a new mechanism speeds up ``25\% of a benchmark program,'' the 25\% must be interpreted as a fraction of the \emph{original execution time} of the whole benchmark unless stated otherwise.
+If that accelerated fraction were made infinitely fast, the maximum possible speedup would be
+\begin{equation}\label{eq:auto-012a}
+    S_{\max}=\frac{1}{1-0.25}=\frac{4}{3}\approx 1.33.
+\end{equation}
+This is the limiting-case form of Amdahl's bound: once the improved portion becomes arbitrarily fast, the remaining 75\% of the original runtime dominates completely.
+
 
 \section{Gustafson's Law and Why It Does Not Contradict Amdahl}\label{sec:auto-015}
 \textit{Gustafson's Law} addresses a different question: instead of fixing problem size, it assumes the workload scales with available processors.
@@ -142,6 +150,18 @@ But for one transaction of each workload, total throughput is determined by tota
 Under equal-work comparison, A is better.
 This is exactly why rates should be combined harmonically, not arithmetically.
 
+\paragraph{Weighted workload mixes}\label{par:auto-011a}
+Real benchmark suites are often not uniform.
+If workload $i$ contributes fraction $w_i$ of the jobs or requests, with $\sum_i w_i=1$, then the weighted average runtime is
+\begin{equation}\label{eq:auto-016a}
+    \bar{T}_{weighted}=\sum_i w_i T_i.
+\end{equation}
+For rates under the corresponding fixed-work interpretation, the comparable aggregate rate is
+\begin{equation}\label{eq:auto-016b}
+    R_{eq}=\frac{1}{\sum_i \frac{w_i}{R_i}}.
+\end{equation}
+These weighted forms are the correct way to combine benchmark results when workloads do not occur equally often.
+
 
 \section{Workload Dependence and Benchmarking}\label{sec:auto-017}
 Performance numbers are workload-dependent.
@@ -153,11 +173,24 @@ A web service, a game engine, and a scientific simulation stress very different 
 Chapter 2 methodology demands that architects evaluate on relevant traces and report assumptions explicitly; otherwise conclusions will not transfer to real systems.
 
 
+\section{Cost-Aware Performance Comparison}\label{sec:auto-017a}
+Raw speedup is not always the only decision metric.
+If machine $m$ costs $Cost_m$ and delivers speedup $S_m$ relative to a chosen baseline, two useful value measures are
+\begin{equation}\label{eq:auto-017b}
+    \text{speedup per dollar}=\frac{S_m}{Cost_m},
+    \qquad
+    \text{cost per unit speedup}=\frac{Cost_m}{S_m}.
+\end{equation}
+The first form is convenient when maximizing performance for a fixed budget.
+The second form is convenient when minimizing cost for a required performance gain.
+Both require the same discipline as every other Chapter 2 metric: use one baseline, one workload definition, and one aggregation method throughout the comparison.
+
+
 \section{Chapter 2 Summary}\label{sec:auto-018}
 Chapter 2 provides the framework for disciplined performance reasoning.
 Runtime and throughput are distinct objectives and must not be mixed casually.
 CPU time decomposes into IC, CPI, and cycle time, which allows precise reasoning about optimization impact.
 RISC and CISC are best evaluated as tradeoff points in Eq.~\eqref{eq:auto-002} rather than as absolute categories.
 Amdahl's Law gives hard limits for fixed-size speedup, while Gustafson's Law explains scaled-workload growth without contradiction.
-Finally, performance summaries require correct statistics: arithmetic means for time, harmonic means for rate.
+Finally, performance summaries require correct statistics: arithmetic means for time, harmonic means for rate, and weighted forms when the workload mix is not uniform.
 These tools form the quantitative core used in later chapters.

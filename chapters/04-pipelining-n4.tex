@@ -78,6 +78,13 @@ If one instruction needs data memory while another needs instruction fetch in th
 Common avoidance strategies are straightforward architectural provisioning: split L1 into separate instruction and data caches, add ports, duplicate critical units, or schedule around known bottlenecks.
 In modern designs, many obvious structural hazards are eliminated in hardware because their stall cost is predictable and severe.
 
+\paragraph{CPI impact example}\label{par:auto-022a}
+If 20\% of instructions incur one extra stall cycle due only to a structural hazard, then the average CPI becomes
+\begin{equation}\label{eq:auto-041a}
+    CPI = 1 + 0.2 \times 1 = 1.2.
+\end{equation}
+This is the same accounting pattern used for other hazards: identify the frequency of the event and multiply by its average stall contribution.
+
 
 \section{Data Hazards}\label{sec:auto-040}
 \textit{Data hazards} occur when the pipeline changes the order of read/write accesses to operands so that the order differs from the order in the original sequential program.
@@ -109,6 +116,12 @@ If a load instruction is followed immediately by an instruction that uses the lo
 This case requires a one-cycle load-use stall even with forwarding.
 Compilers attempt to schedule independent instructions into these ``load-delay'' slots to maintain performance.
 
+\subsection{Same-Cycle Register-File Write Then Read}\label{subsec:auto-006a}
+One subtle pipeline detail is the timing of register-file writes relative to reads in the same cycle.
+If the register file writes in the early part of the cycle and decode reads in the later part, then an instruction in ID can sometimes see a value written back by an older instruction in WB in that same cycle.
+If that timing is not supported, the machine needs either an explicit WB-to-ID bypass path or an extra stall.
+This detail matters when reading timing diagrams because two pipelines with the same five visible stage names can still differ by one cycle on closely spaced dependences.
+
 
 \section{Control Hazards}\label{sec:auto-041}
 \textit{Control hazards} occur because the fetch stream does not immediately know the correct next PC for branches and jumps.
@@ -126,11 +139,32 @@ A \textit{delay slot} ISA semantic says that one or more instructions after a br
 The compiler tries to fill these slots with useful independent work.
 This can reduce explicit branch stalls when suitable instructions exist, but becomes increasingly difficult as pipelines deepen and dependence constraints tighten.
 
+\paragraph{How software fills delay slots}\label{par:auto-025g}
+Delay-slot instructions execute whether the branch is taken or not.
+So a compiler may place an instruction into a delay slot only if doing so is safe on \emph{both} outcomes.
+The usual search order is:
+\begin{enumerate}
+    \item move an independent instruction from before the branch down into the slot,
+    \item if control-flow structure permits, move an instruction from a successor block only when it is safe for both paths, or
+    \item leave the slot as a \texttt{NOP} if no safe candidate exists.
+\end{enumerate}
+This is why branch schedules often still leave some slots unfilled: correctness takes priority over slot utilization.
+
 \subsection{Squash Slots with Likely Bits}\label{subsec:auto-008}
 Some designs expose \textit{squash-slot} behavior via branch-likely style semantics.
 The compiler places a candidate instruction near the branch and encodes likely behavior.
 Hardware keeps or squashes that instruction based on actual branch resolution and likely-bit policy.
 This improves performance when heuristics are good but complicates ISA semantics and compiler scheduling.
+
+\paragraph{How squash-slot filling differs}\label{par:auto-025h}
+Squash slots are more permissive than delay slots because wrong-path instructions may be discarded.
+If the machine assumes a branch is likely taken, the compiler can place instructions from the predicted taken path into those slots.
+If the prediction is wrong, hardware squashes them.
+So the key distinction is:
+\begin{itemize}
+    \item \textbf{delay slot:} instruction must be correct regardless of branch outcome,
+    \item \textbf{squash slot:} instruction only needs to be correct on the predicted path because hardware may cancel it.
+\end{itemize}
 
 
 \section{Branch Target Buffer (BTB)}\label{sec:auto-042}
@@ -151,6 +185,11 @@ Function returns are indirect branches whose targets are difficult for generic B
 A small hardware \textit{return-address stack (RAS)} records call return PCs and pops on return, producing very high return-target accuracy in common call/return patterns.
 This is one of the most cost-effective branch-target optimizations.
 
+\paragraph{BTBs still matter for unconditional control transfers}\label{par:auto-025i}
+A BTB is not useful only for conditional branches.
+Even if every control transfer is unconditional, fetch still benefits from knowing the target early.
+Without a BTB or some equivalent early-target mechanism, the pipeline may need to wait until later decode or execute logic computes the jump target, creating avoidable fetch bubbles.
+
 
 \section{Whether-To Branch: Direction Prediction}\label{sec:auto-043}
 Target prediction answers where a branch goes.
@@ -161,10 +200,209 @@ Compilers can also use profile-guided statistics to set likely-direction metadat
 Dynamic predictors improve further by learning runtime behavior (for example saturating counters and history-based schemes).
 The essential Chapter 4 lesson is that deeper pipelines require higher direction accuracy because misprediction penalty grows with the number of in-flight wrong-path stages.
 
+A very simple baseline is the \textit{always-taken} predictor.
+It ignores PC and history entirely and predicts that every conditional branch will be taken.
+This is crude, but it remains a useful reference point because many loop back-edges are taken most of the time.
+More sophisticated predictors should therefore be judged not only against one another, but also against simple baselines such as backward taken / forward not taken and always taken.
 
-\section{Timing-Diagram Interpretation (Appendix Reference)}\label{sec:auto-044}
-A full checklist for reading 5-stage timing diagrams is provided in Appendix~\ref{ch:timing-diagram-checklist}.
-That appendix covers structural, data, control, and memory cues, plus CPI and stall-attribution methods for worked traces.
+\section{Simple Dynamic Direction Predictors}\label{sec:auto-0430}
+The simplest dynamic predictors store a small amount of state per static branch or per BTB entry.
+
+\subsection{One-Bit Prediction}\label{subsec:auto-0100}
+A \textit{1-bit predictor} records only the last observed direction for a branch.
+In a compact BTB-style design, this may appear as a single prediction bit associated with the target entry.
+If the last outcome was taken, predict taken next time; if the last outcome was not taken, predict not taken.
+This adapts quickly, but it also flips too easily.
+For example, a loop-closing branch that is taken many times and then falls through once on loop exit will usually be mispredicted again on the next loop entry because the last outcome was not taken.
+
+\subsection{Smith Two-Bit Saturating Counters}\label{subsec:auto-0100a}
+A \textit{Smith predictor} replaces the single bit with a small saturating counter, most commonly two bits.
+The four counter states are commonly interpreted as strongly not taken, weakly not taken, weakly taken, and strongly taken.
+Prediction comes from the high-order tendency of the counter, while update moves the counter only one step toward the actual outcome.
+This hysteresis avoids overreacting to one unusual branch result.
+In the loop example above, a two-bit counter usually mispredicts only on the loop exit rather than on both the exit and the next re-entry.
+
+\section{Global and Local History Predictors}\label{sec:auto-043a}
+History-based predictors use recent branch outcomes to select among several learned taken/not-taken tendencies rather than relying on one counter per static branch.
+
+\subsection{GShare}\label{subsec:auto-010aa}
+\textit{GShare} uses a global history register (GHR) like other global-history predictors, but instead of concatenating PC bits and history bits it combines them with an exclusive-or (XOR).
+If the predictor uses $n$ index bits, then a common form is
+\begin{equation}\label{eq:pipe-gshare-index}
+    index = PC_{low}[n-1:0]\ \oplus\ GHR[n-1:0].
+\end{equation}
+The XOR can reduce some destructive aliasing patterns by spreading correlated PCs across the counter table more evenly than a plain concatenation.
+Conceptually, GShare and GSelect use the same ingredients; they differ mainly in how PC and history are mixed to form the table index.
+
+\subsection{GSelect}\label{subsec:auto-010a}
+\textit{GSelect} is a simple global-history predictor.
+It keeps a \textit{global history register (GHR)} containing the most recent branch outcomes and combines that history with a small hash of the current PC to index a table of saturating counters.
+If the PC hash contributes $p$ bits and the GHR contributes $h$ bits, then the predictor selects one of $2^{p+h}$ counters.
+Prediction comes from the selected counter, usually by treating the upper half of the counter states as taken and the lower half as not taken.
+After the true outcome is known, the predictor updates that same counter and then shifts the actual outcome into the GHR\@.
+The key idea is that one branch can learn differently depending on the recent behavior of other branches.
+
+\paragraph{Worked GSelect trace}\label{par:pipe-gselect-worked}
+A compact trace makes the lookup order explicit.
+Assume a 2-bit GHR whose rightmost bit is the newest outcome, a 1-bit PC hash equal to $PC[2]$, and 2-bit Smith counters where \texttt{00}/\texttt{01} predict not taken and \texttt{10}/\texttt{11} predict taken.
+Let every counter begin in state \texttt{10}, and let the initial GHR be \texttt{01}.
+For the four resolved branches below, prediction always uses the \emph{current} PC hash and the \emph{current} GHR\@.
+Only after that prediction is the selected counter updated and the actual outcome shifted into the GHR\@.
+
+{\small
+\begin{center}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+    \hline
+    Time & PC & Act.
+    & $PC[2]$ & $GHR_T$ & Ctr$_T$ & Pred.
+    & Ctr$_{T+1}$ & $GHR_{T+1}$ \\
+    \hline
+    $T_0$ & \texttt{0x2017} & N & \texttt{1} & \texttt{01} & \texttt{10} & T & \texttt{01} & \texttt{10} \\
+    \hline
+    $T_1$ & \texttt{0x2009} & T & \texttt{0} & \texttt{10} & \texttt{10} & T & \texttt{11} & \texttt{01} \\
+    \hline
+    $T_2$ & \texttt{0x2017} & T & \texttt{1} & \texttt{01} & \texttt{01} & N & \texttt{10} & \texttt{11} \\
+    \hline
+    $T_3$ & \texttt{0x2009} & N & \texttt{0} & \texttt{11} & \texttt{10} & T & \texttt{01} & \texttt{10} \\
+    \hline
+\end{tabular}
+\end{center}}
+
+After $T_3$, the final GHR is \texttt{10}.
+The visited counter at $(PC[2],GHR)=(0,\texttt{10})$ has been trained up to \texttt{11}, and the counter at $(0,\texttt{11})$ has been trained down to \texttt{01}.
+This is the mechanical rule to remember: read the counter indexed by the \emph{old} GHR, make the prediction, update that same counter with the actual outcome, then shift the actual outcome into the GHR\@.
+
+\subsection{Yeh/Patt}\label{subsec:auto-010b}
+\textit{Yeh/Patt} separates branch history into two levels.
+A first table, indexed by the branch PC, stores a short per-branch history pattern.
+That recorded history then indexes a second table of saturating counters.
+In other words, GSelect uses one shared global history for every branch, while Yeh/Patt gives each branch its own history entry before consulting the prediction counters.
+Prediction therefore proceeds in two steps:
+\begin{enumerate}
+    \item Use the branch PC to read the branch's recorded history.
+    \item Use that history to select the saturating counter that predicts taken or not taken.
+\end{enumerate}
+Update proceeds in the same order in reverse: first train the selected counter toward the actual outcome, then shift the actual outcome into that branch's local history register.
+This structure is especially useful when different static branches follow different repetitive patterns.
+
+\paragraph{Worked Yeh/Patt trace}\label{par:pipe-yehpatt-worked}
+Now assume a 2-bit history table indexed by $PC[3:2]$ and a shared pattern table of 2-bit Smith counters.
+Let every history-table entry begin at \texttt{00}, and let every pattern-table counter begin at \texttt{01}.
+The sequence below uses two PCs, \texttt{0x3B98} and \texttt{0x3B9F}, whose hashes are \texttt{10} and \texttt{11}, respectively.
+
+{\small
+\begin{center}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+    \hline
+    Time & PC & $PC[3:2]$ & Hist$_T$ & Ctr$_T$ & Pred.
+    & Act.
+    & Ctr$_{T+1}$ & Hist$_{T+1}$ \\
+    \hline
+    $T_0$ & \texttt{0x3B98} & \texttt{10} & \texttt{00} & \texttt{01} & N & N & \texttt{00} & \texttt{00} \\
+    \hline
+    $T_1$ & \texttt{0x3B9F} & \texttt{11} & \texttt{00} & \texttt{00} & N & T & \texttt{01} & \texttt{01} \\
+    \hline
+    $T_2$ & \texttt{0x3B98} & \texttt{10} & \texttt{00} & \texttt{01} & N & N & \texttt{00} & \texttt{00} \\
+    \hline
+    $T_3$ & \texttt{0x3B9F} & \texttt{11} & \texttt{01} & \texttt{01} & N & N & \texttt{00} & \texttt{10} \\
+    \hline
+\end{tabular}
+\end{center}}
+
+This trace shows the two-level structure clearly.
+At $T_1$, branch \texttt{0x3B9F} still reads local history \texttt{00}, so it trains the shared pattern entry for history \texttt{00}, even though it is a different static branch from \texttt{0x3B98}.
+At $T_3$, however, the same branch now reads local history \texttt{01}, so it consults and updates a different pattern-table counter.
+The history table is branch-specific; the pattern table is shared by history value.
+
+\section{Perceptron Direction Prediction}\label{sec:auto-043b}
+Perceptron prediction replaces small counter tables with a simple linear classifier.
+For one static branch, let the history bits be encoded as
+\begin{equation}\label{eq:pipe-perceptron-x}
+    x_i=
+    \begin{cases}
+        +1, & \text{if history bit }i\text{ is taken}\\
+        -1, & \text{if history bit }i\text{ is not taken}
+    \end{cases}
+\end{equation}
+and let $w_0$ be a bias weight.
+The predictor forms
+\begin{equation}\label{eq:pipe-perceptron-y}
+    y=w_0+\sum_{i=1}^{n} w_i x_i.
+\end{equation}
+If $y\ge 0$, it predicts taken; otherwise it predicts not taken.
+After the real outcome is known, a common training rule is to update when the prediction was wrong or when the confidence $|y|$ is below a threshold $\theta$.
+If the target value is $t=+1$ for taken and $t=-1$ for not taken, then the update is
+\begin{equation}\label{eq:pipe-perceptron-update}
+    w_0 \leftarrow w_0 + t,
+    \qquad
+    w_i \leftarrow w_i + t x_i.
+\end{equation}
+The perceptron predictor can learn longer correlations than small counter tables, but it costs more arithmetic and storage per prediction.
+
+\section{Hybrid and Tournament Predictors}\label{sec:auto-043c}
+A \textit{hybrid predictor} combines two or more component predictors and uses a chooser to decide which component to trust for a branch context.
+A common \textit{tournament predictor} stores a small table of saturating counters indexed by branch PC or by a short hash of PC and history.
+When the chooser leans one way, the machine uses one predictor family; when it leans the other way, it uses the competing family.
+
+The usual training rule is simple.
+If the component predictors disagree and one is correct while the other is wrong, the chooser is updated toward the correct component.
+If both are correct or both are wrong, the chooser often remains unchanged because that outcome did not distinguish which component was better for that context.
+This organization is useful when one predictor handles short repetitive patterns well while another captures longer correlations better.
+For example, a tournament design may arbitrate between a Yeh/Patt predictor and a perceptron predictor.
+
+\paragraph{Predictor-quality metrics}\label{par:auto-025e}
+Two branch-prediction ratios appear repeatedly in simulator output.
+If $N_{inst}$ is total dynamic instruction count, $N_{branch}$ is dynamic branch count, and $N_{correct}$ is the number of correct branch predictions, then
+\begin{equation}\label{eq:pipe-branch-fraction}
+    f_{branch}=\frac{N_{branch}}{N_{inst}}
+\end{equation}
+is the dynamic branch fraction and
+\begin{equation}\label{eq:pipe-branch-accuracy}
+    Acc_{branch}=\frac{N_{correct}}{N_{branch}}=1-\frac{N_{mispred}}{N_{branch}}
+\end{equation}
+is branch-prediction accuracy.
+These metrics answer different questions: branch fraction tells how often control-flow prediction matters, while prediction accuracy tells how often the predictor was correct when it mattered.
+
+\paragraph{Prediction and update timing}\label{par:auto-025f}
+Prediction happens near fetch, but the true branch outcome becomes known only later when the branch resolves or retires.
+A pipelined predictor therefore cannot always train itself using only its \emph{current} tables, because the history pattern, perceptron sum, or chooser state seen at update time may differ from the state that existed when the prediction was originally made.
+Practical hardware and simulators solve this by preserving a small prediction-time snapshot, such as the selected history entry or chooser index, until the branch is ready to update the predictor.
+
+\section{Timing-Diagram Interpretation}\label{sec:auto-044}
+Timing diagrams are not just bookkeeping artifacts.
+They are often enough to infer what forwarding paths, register-file timing rules, and structural resources a pipeline must have.
+A reliable reading order is:
+\begin{enumerate}
+    \item Identify true, anti-, and output dependences from the program text before looking at the diagram.
+    \item Mark every repeated stage occupancy in the diagram as a stall candidate.
+    \item For each stall candidate, decide whether the cause is data, structural, or control.
+    \item Infer which hardware feature would be required to remove that stall.
+\end{enumerate}
+
+\paragraph{Common structural cues}\label{par:auto-025a}
+If one instruction is fetching while another is accessing data memory in the same cycle without conflict, then the design must have either separate instruction and data paths or enough memory-porting to support both operations.
+If fetch pauses exactly when a load or store reaches MEM, a shared memory path is the likely cause.
+
+\paragraph{Common forwarding cues}\label{par:auto-025b}
+If a dependent ALU instruction reaches EX before the producer reaches WB, some bypass path must exist.
+If a load-use pair still suffers one bubble but longer ALU-to-ALU chains do not, the machine likely has EX/MEM-style forwarding but still cannot make load data available early enough for the immediately following EX stage.
+If a consumer in ID proceeds only when the producer is in WB, the design may be relying on WB-to-ID forwarding or on same-cycle register-file write-then-read timing rather than on an earlier bypass path.
+
+\paragraph{Register-file timing cue}\label{par:auto-025c}
+Suppose a producer writes back in cycle $k$ and a dependent consumer reads registers in ID in that same cycle $k$.
+If the consumer does not stall further, then the machine must support either same-cycle write-before-read behavior or an equivalent WB-stage bypass into decode.
+If the consumer waits one more cycle, then neither mechanism is present.
+
+\paragraph{Control-hazard cue}\label{par:auto-025d}
+Wrong-path instructions that appear briefly and are then crossed out or squashed indicate speculative fetch.
+A gap after a branch with no wrong-path work suggests conservative branch resolution rather than aggressive prediction.
+Likely-bit or squash-slot behavior is visible when an instruction after the branch is fetched speculatively but only conditionally allowed to complete.
+
+A fuller checklist remains in Appendix~\ref{ch:timing-diagram-checklist}, but these rules are the minimum set needed to infer pipeline structure from the kinds of timing traces used throughout this text.
 
 
 \section{Chapter 4 Summary}\label{sec:auto-045}
@@ -172,5 +410,8 @@ Chapter 4 frames pipelining as throughput engineering with explicit hazard manag
 The five-stage model clarifies stage roles (IF, ID, EX, MEM, WB), while speedup equations show why ideal gains are reduced by latch overhead and stalls.
 CPI is modeled as $1+\text{stalls}_{avg}$, with stalls explained by the interaction of program behavior and hazard structure.
 Structural hazards are reduced through resource provisioning; control hazards are addressed through delay/squash semantics and prediction structures.
-BTBs predict branch targets, RAS handles returns efficiently, and direction prediction determines whether control transfer occurs, with software heuristics like backward taken/forward not taken providing a baseline.
+BTBs predict branch targets, RAS handles returns efficiently, and direction prediction determines whether control transfer occurs, with software heuristics like backward taken/forward not taken and simple baselines like always taken providing reference points.
+Simple dynamic predictors such as one-bit prediction and Smith two-bit counters add robustness with very little hardware, while history-based predictors such as GShare, GSelect, and Yeh/Patt, neural-style schemes such as perceptrons, and hybrid tournament predictors refine that prediction further by learning correlations across prior branch outcomes.
+Because prediction and training happen at different times in the pipeline, practical predictors must also preserve enough prediction-time context to update correctly later.
+Timing diagrams then tie the whole chapter together by exposing which hazards, forwarding paths, and same-cycle register-file behaviors a concrete pipeline must implement.
 Together these ideas define practical pipeline performance analysis and design.

@@ -1,5 +1,5 @@
 \chapter{Formula Compendium (Grouped and Labeled)}\label{ch:formula-compendium}
-This appendix gathers the core formulas used across Chapters 1--6.
+This appendix gathers the core formulas used across Chapters 1--7.
 
 
 \section*{Chapter 1 Formula Set}\label{sec:auto-056}
@@ -191,7 +191,7 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
 \end{equation}
 
 
-\section*{Chapter 6 Formula Set (ILP, Superscalar, and Out-of-Order Execution)}\label{sec:ch6-formulas}
+\section*{Chapter 6 Formula Set (Dynamic ILP, Superscalar, and Out-of-Order Execution)}\label{sec:ch6-formulas}
 
 \paragraph{Chapter 6-F1 (IPC and CPI Relationship)}\label{par:ch6-formula-1}
 \begin{equation}\label{eq:ch5-formula-ipc-cpi}
@@ -257,7 +257,9 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
     \end{aligned}
 \end{equation}
 
-\paragraph{Chapter 6-F12 (Dependence Height)}\label{par:ch6-formula-12}
+\section*{Chapter 7 Formula Set (VLIW and Software Pipelining)}\label{sec:ch7-formulas}
+
+\paragraph{Chapter 7-F1 (Dependence Height)}\label{par:ch7-formula-1}
 \begin{equation}\label{eq:ch6-formula-height}
     height(i)=
     \begin{cases}
@@ -266,7 +268,22 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
     \end{cases}
 \end{equation}
 
-\paragraph{Chapter 6-F13 (Earliest Legal List-Scheduling Cycle)}\label{par:ch6-formula-13}
+\paragraph{Chapter 7-F2 (Earliest Legal List-Scheduling Cycle)}\label{par:ch7-formula-2}
 \begin{equation}\label{eq:ch6-formula-list-legal}
     cycle(i)=\min\!\left\{c\ \middle|\ \forall j\in pred(i),\ c\ge cycle(j)+lat(j),\ \text{and a compatible FU is free in }c \right\}.
+\end{equation}
+
+\paragraph{Chapter 7-F3 (Resource-Constrained Initiation Interval)}\label{par:ch7-formula-3}
+\begin{equation}\label{eq:ch6-formula-res-ii}
+    ResII=\max_t \left\lceil \frac{N_t}{U_t} \right\rceil
+\end{equation}
+
+\paragraph{Chapter 7-F4 (Recurrence-Constrained Initiation Interval)}\label{par:ch7-formula-4}
+\begin{equation}\label{eq:ch6-formula-rec-ii}
+    RecII=\max_c \left\lceil \frac{Lat(c)}{Dist(c)} \right\rceil
+\end{equation}
+
+\paragraph{Chapter 7-F5 (Minimum Initiation Interval Bound)}\label{par:ch7-formula-5}
+\begin{equation}\label{eq:ch6-formula-min-ii}
+    MII=\max(ResII,RecII),\qquad II\ge MII.
 \end{equation}

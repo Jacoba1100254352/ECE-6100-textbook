@@ -3,7 +3,7 @@
 
 \section{What Computer Architecture Is}\label{sec:auto-003}
 Computer architecture is the discipline of designing computing systems that execute real workloads efficiently under practical constraints.
-In this course context, architecture means deciding how a processor and memory system should be organized so that useful work is completed quickly, reliably, and within power and cost limits.
+In this text, architecture means deciding how a processor and memory system should be organized so that useful work is completed quickly, reliably, and within power and cost limits.
 It is important to separate this from neighboring fields.
 Architecture is not transistor fabrication, circuit layout, or process chemistry, even though those influence what architects can build.
 
@@ -20,6 +20,17 @@ Most performance techniques in modern processors can be traced to three closely 
 \textit{Speculation} increases performance by doing work early, before the machine is fully certain that this work will be needed.
 \textit{Prediction} estimates uncertain future behavior (for example branch direction or branch target) so speculative work is directed toward the most likely path.
 Prediction is not a third independent speedup method; it is a tool that makes speculation more selective and efficient.
+One useful informal nickname for this is ``2.5 tricks'' rather than three completely separate tricks.
+Parallelism is one direct source of speedup.
+Speculation is the second.
+Prediction is the ``half'' because it usually matters only by making speculation more effective.
+
+\paragraph{Classifying common optimizations}\label{par:auto-005a}
+This distinction is useful because many architectural features combine these ideas differently.
+Packed-word SIMD instructions and multicore processors are primarily forms of parallelism.
+A cache, a victim cache, or a write buffer relies largely on speculation without prediction: the machine keeps or moves data before it can prove the data will be needed immediately, trusting locality to make that early work useful.
+Branch prediction is speculation with prediction.
+Out-of-order superscalar execution combines both parallelism and speculation because the machine overlaps independent work while also allowing some work to proceed before the final architectural outcome is known.
 
 \subsection{Speculation Without Prediction}\label{subsec:auto-001}
 Speculation does not require a learned predictor.
@@ -66,6 +77,7 @@ This is the dominant form in desktop multitasking and cloud services, where many
 Flynn's taxonomy classifies parallel machines by counting instruction streams and data streams.
 In \textit{single instruction, single data (SISD)}, one instruction stream acts on one data stream, matching the traditional scalar uniprocessor model.
 In \textit{single instruction, multiple data (SIMD)}, one instruction stream is applied across many data elements in lockstep, which is highly effective for dense data-parallel computations such as vector math, image processing, and many graphics processing unit (GPU) kernels.
+The data values may differ across lanes, but the issued operation is the same across the whole SIMD group.
 
 In \textit{multiple instruction, multiple data (MIMD)}, multiple processing elements execute different instruction streams on different data streams.
 This is the dominant model for modern multicore central processing units (CPUs), distributed servers, and cluster systems because it supports general-purpose, irregular workloads.
@@ -75,11 +87,20 @@ This is the dominant model for modern multicore central processing units (CPUs),
 SIMD and MIMD solve different problems.
 SIMD is efficient when the same operation must be applied repeatedly to large collections of data.
 Its lockstep execution naturally provides synchronization across lanes, which reduces control overhead.
+If different cores or lanes truly follow different code paths at the same time, the machine is no longer acting like classical SIMD for that region; that behavior belongs to MIMD or to a SIMT-style execution model with divergence handling.
 MIMD is more flexible because each processor can follow its own control path, but this flexibility introduces synchronization and communication costs that must be managed explicitly by hardware and software.
 
 Modern GPUs often use a hybrid model sometimes called \textit{single instruction, multiple threads (SIMT)}.
 SIMT provides a SIMD-like execution efficiency for the hardware while allowing a MIMD-like programming model where each thread appears to have its own scalar program counter.
 The hardware manages the divergence and convergence of these threads, grouping those on the same path into SIMD-style execution units.
+
+\paragraph{Representative workload mappings}\label{par:auto-007a}
+Simple examples help fix the taxonomy.
+A small embedded controller such as a thermostat is usually best viewed as SISD\@.
+A dense image transform that applies the same arithmetic to many pixels is a classic SIMD workload.
+A cloud-service cluster is naturally MIMD because many processors or machines execute different control paths for different requests.
+Some tasks, such as brute-force hash search, can be built in several ways: a lockstep array of identical workers looks SIMD-like, while a farm of largely independent workers looks MIMD\@.
+The important step is to identify whether the machine is reusing one instruction stream across many data elements or allowing many instruction streams to proceed independently.
 
 \subsection{Where pipelining fits}\label{subsec:auto-004}
 Pipelining is orthogonal to Flynn's taxonomy.
