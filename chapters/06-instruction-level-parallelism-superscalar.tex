@@ -4,7 +4,7 @@
 In basic single-issue pipelines, designers often treat cycles per instruction (CPI) near 1 as a practical lower bound.
 Superscalar execution challenges that assumption by allowing multiple instructions to make progress in the same cycle.
 This broader goal is usually described as instruction-level parallelism (ILP).
-In this context, it is helpful to consider instructions per cycle (IPC), the inverse relationship shown in Eq.~\eqref{eq:ilp-ipc-cpi}:
+In this context, instructions per cycle (IPC) is the natural companion metric, as shown in Eq.~\eqref{eq:ilp-ipc-cpi}:
 \begin{equation}\label{eq:ilp-ipc-cpi}
     IPC=\frac{1}{CPI}.
 \end{equation}
@@ -25,16 +25,16 @@ The retire rate cannot exceed the weakest of these rates, because retirement is 
 
 
 \section{Historical Motivation}\label{sec:ilp-history}
-Historically, supercomputer scalar units demonstrated that out-of-order mechanisms could deliver $IPC>1$ long before that became mainstream in commodity processors.
-The core lesson is that pipeline stalls are reduced by combining several mechanisms, not by relying on any single mechanism alone.
-Instead, they are managed through coordinated fetch, scheduling, execution, and retirement policies.
-Modern superscalar designs revive this idea by combining hazard management with the ability to issue more instructions per cycle and with stronger speculation.
+Historically, supercomputer scalar units showed that out-of-order mechanisms could deliver $IPC>1$ long before that became mainstream in commodity processors.
+The central lesson is that high throughput comes from combining several mechanisms rather than relying on any one of them in isolation.
+Stalls are reduced through coordinated fetch, scheduling, execution, and retirement policies.
+Modern superscalar designs extend the same idea by combining hazard management with wider issue and stronger speculation.
 
 
 \section{Superscalar Pipeline View}\label{sec:ilp-pipeline-model}
-A practical superscalar model can be explained with five main logical units plus a final retirement/commit action.
+A practical superscalar model can be described with five main logical units plus a final retirement or commit action.
 Figure~\ref{fig:ilp-superscalar-pipeline} provides a compact visual summary of how these units interact in the overall datapath.
-In that figure, the boxed labels denote the main structures or stages, while the smaller labels on the right denote the dominant action on the adjacent arrow bundle: fetch, dispatch, fire or issue, complete, and retire or commit.
+In that figure, the boxed labels denote the main structures or stages, while the smaller labels on the right identify the dominant action on the adjacent arrow bundle: fetch, dispatch, fire or issue, complete, and retire or commit.
 The front end is drawn as separate Branch Handling and Instruction Fetch boxes, but together they still represent the single logical instruction fetch (IF) unit described below.
 
 \paragraph{1. Branch Handling and Instruction Fetch (IF)}\label{par:ilp-fetch}
@@ -43,7 +43,7 @@ Its goal is to produce multiple candidate instructions per cycle.
 
 \paragraph{2. Dispatch and Decode (DISP)}\label{par:ilp-dispatch}
 This unit decodes incoming instructions in program order and dispatches them toward the scheduling structures.
-Dispatch is where architectural intent is still clearly in order, which is important for precise recovery.
+Dispatch is where program order is still explicit, which matters for precise recovery.
 
 \paragraph{3. Scheduling}\label{par:ilp-schedule}
 Scheduling assigns ready instructions to available FUs in time.
@@ -54,7 +54,7 @@ FUs perform arithmetic, memory, and control operations with operation-specific l
 Multiple FUs allow parallel progress.
 
 \paragraph{5. State Update (SU)}\label{par:ilp-state-update}
-State update collects completed results, handles squash/recovery, and prepares instructions for precise architectural completion.
+State update gathers completed results, handles squash or recovery, and prepares instructions for precise architectural completion.
 This unit supports squash/recovery when speculation is wrong.
 The final outgoing flow from this unit is the retirement or commit action, where results become architecturally visible in program order.
 In Fig.~\ref{fig:ilp-superscalar-pipeline}, retirement is represented by the final outgoing arrows below State Update rather than by a separate boxed stage.
@@ -147,7 +147,7 @@ In Fig.~\ref{fig:ilp-superscalar-pipeline}, retirement is represented by the fin
 
     \end{tikzpicture}
     }
-    \caption{Generic logical superscalar pipeline view illustrating one possible organization. It is not itself specific to FICI, FICO, or FOCO; those classifications depend on how firing and completion are implemented. Boxed elements denote the main structures or stages, while the right-side annotations denote the adjacent flow actions: fetch, dispatch, fire or issue, complete, and retire or commit. Representative side structures and queues are also shown.}
+    \caption{Logical superscalar pipeline view illustrating one representative organization. The figure is not specific to FICI, FICO, or FOCO; those classifications depend on the firing and completion policy. Boxed elements denote major structures or stages, while the right-side annotations denote the adjacent flow actions.}
     \label{fig:ilp-superscalar-pipeline}
 \end{figure}
 
@@ -179,18 +179,18 @@ A compact way to classify designs is by fire order and complete order.
 
 
 \section{Scoreboarding Intuition (FICO Style)}\label{sec:ilp-scoreboard}
-A scoreboard tracks whether sources, destinations, and required function units are currently available.
+A scoreboard tracks whether source operands, destinations, and required function units are currently available.
 A simplified FICO-style fire condition is shown in Eq.~\eqref{eq:ilp-fire-condition}.
 \begin{equation}\label{eq:ilp-fire-condition}
     \text{Fire if }\neg busy(src_1)\ \wedge\ \neg busy(src_2)\ \wedge\ \neg busy(dest)\ \wedge\ \neg busy(FU_{needed}).
 \end{equation}
 When an instruction fires, destination and function-unit busy state are set.
-When the instruction completes, those busy states are cleared according to implementation timing rules.
-The result is correct execution with modest hardware complexity, but some parallel opportunities are still left unused compared with more aggressive out-of-order firing.
+When the instruction completes, those busy states are cleared according to the implementation timing rules.
+The result is correct execution with moderate hardware complexity, but some parallel opportunities remain unused compared with more aggressive out-of-order firing.
 
 
 \section{Function Units and Latency}\label{sec:ilp-latency}
-Superscalar benefit depends on the latency balance and available unit count.
+Superscalar benefit depends on the latency mix and on the number of available units.
 In many designs, arithmetic logic unit (ALU) operations have short latency, multiply operations take more cycles, and memory accesses vary widely depending on cache behavior.
 The key point is that latency and throughput are related but not identical.
 An operation may have a long latency and still support good throughput if the corresponding FU is pipelined and can accept a new instruction every cycle.
@@ -199,7 +199,7 @@ Memory operations are especially important here.
 A cache hit may behave like a modest fixed-latency operation, while a cache miss can hold resources for many extra cycles and expose whether the machine can continue doing useful independent work during the delay.
 
 Unit count matters for the same reason.
-If the machine has only one ALU, one multiplier, and one load/store path, the scheduler has only a few choices.
+If the machine has only one ALU, one multiplier, and one load/store path, the scheduler has few choices.
 Adding more execution resources, including additional FUs such as ALUs, multipliers, or more load/store capacity, gives the scheduler more flexibility to overlap different instruction classes and reduce structural conflicts.
 Designers therefore optimize both unit availability and scheduling policy, not just raw clock frequency.
 The practical goal is not merely to make individual operations fast, but to ensure that the mix of latencies, FU counts, and pipeline structure supports high average IPC on realistic workloads.
@@ -231,8 +231,7 @@ In real designs, however, divide often has high latency and is less deeply pipel
 
 
 \section{Worked FICO Timing Example}\label{sec:ilp-fico-example}
-The scoreboard idea becomes clearer with a concrete schedule.
-Consider the following seven-instruction sequence:
+The following seven-instruction sequence illustrates the scoreboard idea in a concrete schedule:
 \begin{align*}
     A&:\ \texttt{ADD}\ R1,R2,R3 \\
     B&:\ \texttt{MUL}\ R5,R1,R4 \\
@@ -265,8 +264,7 @@ Repeated DISP entries indicate that the instruction is blocked in the in-order f
         G & ADD $R4, R3, R5$ &  &  &  & IF & DISP & DISP & DISP & DISP & EX & SU \\
         \hline
     \end{tabular}}
-    \caption{Timing table for a simplified FICO schedule.
-    Repeated DISP entries show that the instruction remains blocked in the in-order dispatch-and-fire path while waiting for data or hardware to become available.}
+    \caption{Timing table for a simplified FICO schedule. Repeated DISP entries indicate that an instruction remains blocked in the in-order dispatch-and-fire path while waiting for data or hardware to become available.}
     \label{tab:ilp-fico-timing}
 \end{table}
 
@@ -279,7 +277,7 @@ This is why B spends an extra cycle in DISP in Table~\ref{tab:ilp-fico-timing}: 
 Cycles 4--6 expose the main weakness of FICO\@.
 D is genuinely blocked because it needs $R5$ from B, so its repeated DISP entries reflect a real RAW dependence.
 E, however, is independent of D and could use the multiplier, yet it still cannot fire early because the machine will not let younger instructions pass an older blocked instruction in the dispatch path.
-That is the key limitation of fire-in-order scheduling: some stalls are caused by true dependencies, but others are caused by the policy itself.
+That is the key limitation of fire-in-order scheduling: some stalls come from true dependencies, but others come from the policy itself.
 
 Cycles 7--9 show both overlap and continued restrictions.
 E eventually occupies the multiplier while F and G reach the ALU later, so the machine does achieve some parallel execution and some out-of-order completion.
@@ -291,12 +289,12 @@ The example therefore illustrates why FICO is attractive as a first superscalar 
 \textit{Register renaming} is the introduction of additional physical register identities so later writes do not falsely block earlier reads or writes.
 Conceptually, renaming transforms many WAR/WAW hazards into non-hazards while preserving program meaning.
 The dependency pressure that remains is primarily RAW, which reflects true data flow.
-In a typical implementation, the registers named by the instruction set architecture (ISA) are the \textit{architected registers}, while the larger hidden pool used by the machine is the \textit{physical register file}.
+In a typical implementation, the registers named by the instruction set architecture (ISA) are the \textit{architected registers}, while the larger hidden pool used internally by the machine is the \textit{physical register file}.
 The architected registers are the names the programmer sees in assembly language and that the ISA defines as part of the visible machine state.
 The physical register file contains additional hidden storage used internally by the processor to hold renamed versions of those values.
 
 This distinction matters because several in-flight instructions may all refer to the same architected destination at different moments in time.
-Rather than repeatedly reusing one architectural name and creating false WAR/WAW conflicts, the machine can assign a different physical register to each new write while still preserving the illusion of a small fixed architectural register set.
+Rather than repeatedly reusing one architectural name and creating false WAR/WAW conflicts, the machine can assign a different physical register to each new write while still preserving the illusion of a small fixed architected register set.
 Older instructions can continue reading the older physical version, while younger instructions are redirected to the newer one.
 A \textit{register alias table (RAT)} maps each architected register name to the physical register that currently holds its most recent value.
 When dispatch renames a destination, it allocates a fresh physical register and updates the RAT so younger instructions will refer to the new location rather than the older one.
@@ -426,8 +424,7 @@ Each cell shows the dominant structure label first---dispatch (DISP), reservatio
         \rowlabel{CDB} &  &  &  &  & \stagecell{CDB}{\textit{C}} &  & \stagecell{CDB}{\textit{A} then \textit{D}} \\
         \hline
     \end{tabular}}
-    \caption{Compact cycle table for the four-instruction Tomasulo trace.
-    The table emphasizes logical ordering rather than exact micro-timing details.}
+    \caption{Compact cycle table for the four-instruction Tomasulo trace. The table emphasizes logical ordering rather than exact micro-timing details.}
     \label{fig:ilp-tomasulo-cycle-table}
 \end{figure}
 \begin{description}
@@ -517,9 +514,9 @@ That requirement is usually stated as the \textit{precise exception} property in
     \end{aligned}
 \end{equation}
 
-This was not always required in the same way.
-In Tomasulo's original floating-point setting on the IBM System/360 Model 91, the out-of-order machinery covered a narrower part of the processor and the machine could tolerate \textit{imprecise exceptions} in situations that modern general-purpose cores cannot.
-Once out-of-order execution extended to ordinary integer, load/store, and control-flow instructions under virtual memory, recovery to an exact sequential state changed from optional to mandatory.
+This requirement was not always imposed in the same way.
+In Tomasulo's original floating-point setting on the IBM System/360 Model 91, the out-of-order machinery covered a narrower part of the processor, and the machine could tolerate \textit{imprecise exceptions} in situations that modern general-purpose cores cannot.
+Once out-of-order execution extended to ordinary integer, load/store, and control-flow instructions under virtual memory, recovery to an exact sequential state became mandatory rather than optional.
 
 
 \section{Reorder Buffers and Retirement}\label{sec:ilp-rob}
@@ -532,7 +529,7 @@ In simple form, retirement follows Eq.~\eqref{eq:ilp-rob-retire}.
 \begin{equation}\label{eq:ilp-rob-retire}
     retire \Leftarrow ready(ROB_{head})\wedge \neg exception(ROB_{head}).
 \end{equation}
-If the machine can retire at most $W_{retire}$ instructions per cycle, then a single cycle may commit up to the oldest $W_{retire}$ consecutive ready non-excepting entries from the ROB head, but it may not skip over an older unready or excepting entry.
+If the machine can retire at most $W_{retire}$ instructions per cycle, then one cycle may commit up to the oldest $W_{retire}$ consecutive ready non-excepting entries from the ROB head, but it may not skip over an older unready or excepting entry.
 Retire width therefore limits architecturally visible IPC even when execution hardware has already completed more work internally.
 If the instruction at the ROB head is marked as an exception, the machine instead flushes younger speculative work and transfers control to the retry or handler PC, as shown in Eq.~\eqref{eq:ilp-rob-exception-rule}.
 \begin{equation}\label{eq:ilp-rob-exception-rule}
@@ -544,15 +541,15 @@ If the instruction at the ROB head is marked as an exception, the machine instea
 For example, a page-faulting load is usually retried after the operating system resolves the fault, whereas a trap-like event may resume at the following instruction.
 
 \paragraph{ROB with bypass or forwarding}\label{par:ilp-rob-bypass}
-Some designs let dispatch search the ROB from youngest to oldest to find the most recent in-flight producer of a source register.
+Some designs let dispatch search the ROB from youngest to oldest for the most recent in-flight producer of a source register.
 If the matching entry is ready, dispatch can copy the value directly.
 If it exists but is not ready, dispatch copies the tag or ROB identity and waits.
 If no matching entry exists, the value must already have retired, so dispatch reads it from the architected register file.
 This is often described as a ROB with bypass or forwarding.
-It is powerful, but the search itself is associative and can become part of the critical timing path.
+It is effective, but the search itself is associative and can become part of the critical timing path.
 
 \paragraph{Worked tag-based ROB-bypass trace}\label{par:ilp-rob-bypass-worked}
-The lookup rule becomes clearer on a tiny tag-based example.
+The following tag-based example makes the lookup rule explicit.
 Assume the architected register file initially holds committed ready values for $R1$, $R2$, and $R3$, and that dispatch allocates ROB tags in program order.
 Consider:
 
@@ -584,7 +581,7 @@ At dispatch, the source resolution is:
 \end{tabular}
 \end{center}}
 
-The important point is that dispatch always takes the newest in-flight producer.
+The key rule is that dispatch always takes the newest in-flight producer.
 So \textit{B} does not read the old committed $R1$ value; it waits on tag A\@.
 Likewise, \textit{C} does not read the old committed $R3$ value; it waits on tag B\@.
 After all three instructions have dispatched, the in-flight structures look like Table~\ref{tab:ilp-rob-bypass-worked}.
@@ -623,17 +620,17 @@ After all three instructions have dispatched, the in-flight structures look like
     \label{tab:ilp-rob-bypass-worked}
 \end{table}
 
-From this point, execution is straightforward.
+From this point onward, execution follows the dependence chain directly.
 \textit{A} completes first and marks ROB entry A ready, which wakes \textit{B}.
 \textit{B} then completes and marks ROB entry B ready, which wakes \textit{C}.
 \textit{C} completes last.
 Retirement still occurs strictly in order \textit{A}, then \textit{B}, then \textit{C}, so after the last retirement both the scheduling queue and the ROB are empty.
-The final committed mapping is simply the architected register file updated by the retired results, with $R3$ holding the value produced by \textit{B} and $R1$ holding the younger value produced by \textit{C}.
-For any such trace, once the total elapsed cycles are known, the fragment IPC is just retired instructions divided by elapsed cycles over the chosen measurement interval.
+After retirement, the architected register file holds the retired results, with $R3$ containing the value produced by \textit{B} and $R1$ containing the younger value produced by \textit{C}.
+For any such trace, once the total elapsed cycles are known, fragment IPC is retired instructions divided by elapsed cycles over the chosen measurement interval.
 
 \paragraph{Freeing physical registers}\label{par:ilp-freeing-pregs}
 Renamed machines also need a rule for reclaiming old physical registers.
-The exact policy differs across implementations, but the common principle is simple: an old physical register cannot return to the free list until no older in-flight instruction can still need it.
+The exact policy differs across implementations, but the underlying principle is simple: an old physical register cannot return to the free list until no older in-flight instruction can still need it.
 Common implementations describe this with use counters, pending-free bits, or retirement-based reclamation.
 For example, if an architected register was formerly mapped to physical register $P23$ and rename later redirects that architected name to $P27$, the old $P23$ mapping cannot be recycled immediately.
 It becomes reclaimable only after no older instruction can still read it and the newer mapping has safely become the committed architectural version.
@@ -646,7 +643,7 @@ The architected register file is updated only when that ROB entry reaches the he
 This separation is what allows the machine to execute aggressively while still presenting precise sequential state to software.
 
 \paragraph{Worked PRegs/RAT/ROB end-state trace}\label{par:ilp-preg-rob-worked}
-The bookkeeping becomes much clearer on a tiny trace.
+The following short trace makes the bookkeeping easier to follow.
 Assume the initial mappings are $R0\rightarrow P0$, $R1\rightarrow P1$, $R2\rightarrow P2$, and $R3\rightarrow P3$, with $P4$ through $P7$ free.
 Assume two-wide fetch and dispatch, two-wide retirement, two 1-cycle ALUs, one 1-cycle LSU, and a back-to-front cycle evaluation so that Execute can mark a destination physical register ready before Schedule runs later in the same cycle.
 Consider the following sequence:
@@ -673,7 +670,7 @@ One legal cycle-by-cycle interpretation is:
     \item[Cycle 7.] \textit{C} retires, so the architected copy of $R2$ now comes from $P6$ and old mapping $P2$ can be freed.
 \end{description}
 
-The exact cycle numbers can shift by one under a different but internally consistent simulator ordering, but the final renamed state is the same.
+The exact cycle numbers can shift by one under a different but internally consistent simulator ordering, but the final renamed state does not change.
 
 {\small
 \begin{center}
@@ -681,7 +678,7 @@ The exact cycle numbers can shift by one under a different but internally consis
 \begin{tabular}{|c|c|c|c|c|c|}
     \hline
     Instr.
-    & FU & Dest PReg & Src \#1 & Src \#2 & Final status \\
+    & FU & Dest physical reg. & Src \#1 & Src \#2 & Final status \\
     \hline
     \textit{A} & LSU & $P4$ & $P1$ & n/a & completed and retired \\
     \hline
@@ -695,7 +692,7 @@ The exact cycle numbers can shift by one under a different but internally consis
 
 \begin{tabular}{|c|c|c|c|}
     \hline
-    ROB entry & Dest AReg & Prev PReg & Final status \\
+    ROB entry & Dest architected reg. & Prev physical reg. & Final status \\
     \hline
     \textit{A} & $R3$ & $P3$ & retired \\
     \hline
@@ -709,7 +706,7 @@ The exact cycle numbers can shift by one under a different but internally consis
 
 \begin{tabular}{|c|c|}
     \hline
-    AReg & Final PReg \\
+    Architected reg. & Final physical reg. \\
     \hline
     $R0$ & $P0$ \\
     \hline
@@ -723,7 +720,7 @@ The exact cycle numbers can shift by one under a different but internally consis
 \hspace{1.5em}
 \begin{tabular}{|c|c|c|}
     \hline
-    PReg & Ready & Free \\
+    Physical reg. & Ready & Free \\
     \hline
     $P0$ & 1 & 0 \\
     \hline
@@ -744,7 +741,7 @@ The exact cycle numbers can shift by one under a different but internally consis
 \end{tabular}
 \end{center}}
 
-Three rules are doing all the work here.
+Three rules determine the outcome.
 Dispatch allocates the next free physical destination and records the previous architectural mapping in the ROB\@.
 Completion makes the speculative destination ready for younger consumers.
 Retirement is the event that both updates the architected view and frees the previous physical mapping.
@@ -777,7 +774,7 @@ The machine then chooses a new boundary and repeats the process.
 
 If an exception occurs, the machine restores the golden copy and continues from that last coherent point.
 It may then re-execute younger instructions sequentially or under tighter control until it reaches the faulting instruction and handles the event precisely.
-This can reduce some of the timing pressure associated with aggressive ROB bypass logic, though it introduces its own bookkeeping and copying costs.
+This can reduce some of the timing pressure associated with aggressive ROB-bypass logic, though it introduces its own bookkeeping and copying costs.
 
 
 \section{Speculation Without and With Prediction}\label{sec:ilp-speculation}
@@ -799,22 +796,21 @@ The attacker then measures timing differences to infer information that should n
 Shared-core execution can make this worse.
 With \textit{hyperthreading}, or more generally simultaneous multithreading, two threads share parts of one physical core.
 That increases the opportunity for one thread to observe side effects caused by another thread's speculative activity.
-The security lesson is therefore broader than any single named vulnerability: microarchitectural cleanup matters, not just architectural rollback.
+The security lesson is broader than any single named vulnerability: microarchitectural cleanup matters, not just architectural rollback.
 
 
 \section{Implementation Pressure}\label{sec:ilp-implementation-pressure}
 Once out-of-order execution moved from isolated examples into full commercial processors, these mechanisms had to satisfy real timing, area, power, and verification constraints.
 That practical pressure is one reason the field explored multiple recovery styles rather than converging immediately on a single universal design.
 
-The architectural lesson is straightforward.
-Elegant scheduling ideas are not enough by themselves.
+The architectural lesson is that elegant scheduling ideas are not sufficient by themselves.
 ROB bypass logic, associative searches, speculative-state tracking, and recovery control all stress timing closure and verification.
 As out-of-order windows grow wider and deeper, state management and recovery logic become first-order design problems rather than secondary implementation details.
 
 
 \section{Interpreting Out-of-Order Processor Statistics}\label{sec:ilp-sim-stats}
 Trace-driven superscalar simulators often report more than cycles and IPC\@.
-Those counters are useful only if their meanings and denominators are clear.
+Those counters are useful only when their meanings and denominators are clear.
 
 \paragraph{Fetched versus retired instructions}\label{par:ilp-fetched-vs-retired}
 The architecturally meaningful IPC uses retired instructions, not fetched instructions.
@@ -835,10 +831,10 @@ If scheduling queues remain lightly used but \textit{no-fire cycles} are high, t
 
 \paragraph{Isolating control and memory effects}\label{par:ilp-isolate-effects}
 Many simulators also offer a no-miss or no-misprediction mode.
-Such a configuration does not model real execution, but it is analytically useful because it isolates pure width, scheduling, and dependence limits from penalties caused by cache misses and bad control-flow prediction.
+Such a configuration does not model real execution, but it is analytically useful because it isolates pure width, scheduling, and dependence limits from penalties caused by cache misses and poor control-flow prediction.
 
 \section{Chapter 6 Summary}\label{sec:chapter6-summary-ilp}
-Instruction-level parallelism turns $CPI<1$ into a concrete microarchitectural target.
+Chapter 6 develops dynamic instruction-level parallelism as a concrete microarchitectural path to $CPI<1$.
 Superscalar design achieves this by widening the pipeline's effective throughput and managing dependencies, hazards, and speculative state carefully.
 FICO-style scoreboarding illustrates the basic mechanism, while renaming, Tomasulo-style wakeup and result broadcast, and stronger out-of-order policies push performance further.
 Once the machine executes and completes work out of order, however, scheduling is no longer enough by itself.

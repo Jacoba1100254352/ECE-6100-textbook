@@ -195,7 +195,7 @@ Cache-geometry choices alter these terms.
 Taller arrays hurt bit-line delay, wider arrays increase mux and comparator complexity, and higher associativity increases tag-compare and selection cost.
 
 \paragraph{Which change affects which AAT term?}\label{par:auto-018a}
-When a problem asks which of $HT$, $MR$, or $MP$ changes, the cleanest mapping is usually:
+When a problem asks which of $HT$, $MR$, or $MP$ changes, the most useful first-pass mapping is usually:
 \begin{enumerate}
     \item \textbf{data-layout or tiling changes} primarily move \textit{miss ratio} because they change locality and conflict behavior,
     \item \textbf{VIPT versus PIPT} primarily moves \textit{hit time} because it changes whether TLB lookup can overlap cache indexing, and
@@ -239,7 +239,7 @@ Related insertion-policy abbreviations are \textit{most recently used insertion 
 One exact way to simulate LRU is to attach a ``last used'' timestamp to each line in a set.
 On every hit, update the touched line's timestamp to the current access time.
 On a miss, fill an invalid line if one exists; otherwise evict the valid line with the smallest timestamp because that line was touched least recently.
-This method is conceptually simple and is often the cleanest way to hand-simulate LRU on short traces.
+This method is conceptually simple and is often the most direct way to hand-simulate LRU on short traces.
 
 \paragraph{Exact LRU with a bit matrix}\label{par:auto-019c}
 Another exact representation for an $n$-way set is an $n\times n$ recency matrix.

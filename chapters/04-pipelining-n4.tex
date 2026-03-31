@@ -16,7 +16,7 @@ Instruction Fetch (IF) reads the instruction from the instruction memory hierarc
 Instruction Decode (ID) decodes opcode and operands and reads source registers.
 Execute (EX) performs ALU work and effective-address calculation.
 Memory (MEM) performs data-memory access for loads and stores.
-Write Back (WB) writes results to the architectural register file.
+Write Back (WB) writes results to the architected register file.
 
 Even instructions that do not logically need memory often still occupy the MEM stage in a basic in-order five-stage design so that all instructions remain aligned in a uniform stage progression.
 This simplifies control and preserves in-order retirement semantics.
@@ -243,7 +243,7 @@ After the true outcome is known, the predictor updates that same counter and the
 The key idea is that one branch can learn differently depending on the recent behavior of other branches.
 
 \paragraph{Worked GSelect trace}\label{par:pipe-gselect-worked}
-A compact trace makes the lookup order explicit.
+The following trace makes the lookup order explicit.
 Assume a 2-bit GHR whose rightmost bit is the newest outcome, a 1-bit PC hash equal to $PC[2]$, and 2-bit Smith counters where \texttt{00}/\texttt{01} predict not taken and \texttt{10}/\texttt{11} predict taken.
 Let every counter begin in state \texttt{10}, and let the initial GHR be \texttt{01}.
 For the four resolved branches below, prediction always uses the \emph{current} PC hash and the \emph{current} GHR\@.
@@ -313,7 +313,7 @@ The sequence below uses two PCs, \texttt{0x3B98} and \texttt{0x3B9F}, whose hash
 \end{tabular}
 \end{center}}
 
-This trace shows the two-level structure clearly.
+This trace makes the two-level structure explicit.
 At $T_1$, branch \texttt{0x3B9F} still reads local history \texttt{00}, so it trains the shared pattern entry for history \texttt{00}, even though it is a different static branch from \texttt{0x3B98}.
 At $T_3$, however, the same branch now reads local history \texttt{01}, so it consults and updates a different pattern-table counter.
 The history table is branch-specific; the pattern table is shared by history value.
@@ -414,4 +414,4 @@ BTBs predict branch targets, RAS handles returns efficiently, and direction pred
 Simple dynamic predictors such as one-bit prediction and Smith two-bit counters add robustness with very little hardware, while history-based predictors such as GShare, GSelect, and Yeh/Patt, neural-style schemes such as perceptrons, and hybrid tournament predictors refine that prediction further by learning correlations across prior branch outcomes.
 Because prediction and training happen at different times in the pipeline, practical predictors must also preserve enough prediction-time context to update correctly later.
 Timing diagrams then tie the whole chapter together by exposing which hazards, forwarding paths, and same-cycle register-file behaviors a concrete pipeline must implement.
-Together these ideas define practical pipeline performance analysis and design.
+Together, these ideas define practical pipeline performance analysis and design.

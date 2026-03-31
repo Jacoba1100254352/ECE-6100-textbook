@@ -1,33 +1,48 @@
-\chapter{Integrated Review and Cache Simulation Concepts}\label{ch:auto-006}
+\chapter{Integrated Synthesis and Cache Simulation Concepts}\label{ch:auto-006}
 
 
 \section{Chapter Purpose}\label{sec:auto-046}
-This chapter integrates the concepts from Chapters 1--4 into a single combined overview.
+This chapter draws together the main ideas from Chapters 1--4.
+The goal is not to repeat those chapters in full, but to show how performance metrics, hazards, memory behavior, and simulation-oriented abstractions fit into a single analysis framework.
 
 
 \section{Integrated Themes from Chapters 1 and 2}\label{sec:auto-047}
-Core concept clusters include classifying optimizations as parallelism, speculation, or both; distinguishing throughput from runtime and selecting the correct metric; interpreting $\text{CPU time}=\text{IC}\times\text{CPI}\times\text{CT}$ as a tradeoff framework; applying Amdahl's law for fixed-size speedup limits; interpreting Gustafson's law for scaled-size behavior; and using arithmetic means for times versus harmonic means for rates.
+The first two chapters establish the measurement framework used throughout the rest of the book.
+An architectural change should first be classified by what it is trying to improve: parallelism, speculation, or some combination of the two.
+Its performance impact must then be evaluated with the correct metric, usually runtime for one job or throughput for a stream of jobs.
+The central CPU-time equation,
+\[
+\text{CPU time}=\text{IC}\times\text{CPI}\times\text{CT},
+\]
+turns that reasoning into a concrete tradeoff among instruction count, pipeline efficiency, and clock period.
+Within that framework, Amdahl's law bounds fixed-size speedup, Gustafson's law explains scaled-size behavior, and the choice between arithmetic and harmonic means determines whether a summary is mathematically meaningful.
 
 \paragraph{Worked check}\label{par:auto-026}
-If an optimization accelerates 30\% of runtime by $2\times$, total speedup is
+Consider an optimization that accelerates 30\% of runtime by $2\times$. The total speedup is
 \begin{equation}\label{eq:auto-045}
     S=\frac{1}{(1-0.3)+\frac{0.3}{2}}=\frac{1}{0.85}\approx 1.176.
 \end{equation}
 The unaccelerated fraction remains in the denominator and bounds overall speedup.
 
 \paragraph{Worked check: maximum possible speedup}\label{par:auto-026a}
-If a mechanism accelerates 25\% of the original benchmark runtime and that portion is made arbitrarily fast, the maximum total speedup is
+Consider a mechanism that accelerates 25\% of the original benchmark runtime and makes that portion arbitrarily fast. The maximum total speedup is
 \begin{equation}\label{eq:auto-045a}
     S_{\max}=\frac{1}{1-0.25}=\frac{4}{3}\approx 1.33.
 \end{equation}
-This is the cleanest way to read the \emph{maximum} speedup of a partial optimization.
+This is the standard way to interpret the \emph{maximum} speedup of a partial optimization.
 
 
 \section{Integrated Themes from Chapter 3}\label{sec:auto-048}
-Core concept clusters include computing sets, ways, and tag/index/offset widths from $(C,B,S)$; interpreting compulsory, conflict, and capacity misses; analyzing replacement and write-policy behavior; applying $AAT=HT+MR\cdot MP$; and relating cache size, block size, and associativity to hit time, miss ratio, and miss penalty.
+Chapter 3 adds the memory-hierarchy side of the performance model.
+That means translating a cache specification such as $(C,B,S)$ into sets, ways, and tag/index/offset fields; distinguishing compulsory, conflict, and capacity misses; and understanding how replacement and write policies alter observed traffic.
+It also means using
+\[
+AAT=HT+MR\cdot MP
+\]
+as a compact summary of hierarchy behavior while remembering that cache size, block size, and associativity can influence all three terms in different ways.
 
 \paragraph{Worked check}\label{par:auto-027}
-For a cache with $HT=1.8$ ns, $MR=0.06$, and $MP=28$ ns (Eq.~\eqref{eq:auto-046}):
+Consider a cache with $HT=1.8$ ns, $MR=0.06$, and $MP=28$ ns (Eq.~\eqref{eq:auto-046}):
 \begin{equation}\label{eq:auto-046}
     AAT = 1.8 + 0.06\cdot 28 = 3.48\ \text{ns}.
 \end{equation}
@@ -51,8 +66,10 @@ In this trace it can prefetch block $0x420$ early enough to remove one first-ite
 This is the key design lesson of the trace: next-block prefetching and victim caching address different miss mechanisms.
 
 
-\section{Worked Checks for Chapter 4}\label{sec:auto-049}
-Core concept clusters from Chapter 4 include reading timing diagrams to infer hazards and hardware support, distinguishing separate instruction and data-memory paths from shared-memory structural hazards, identifying which bypass paths are present, checking whether the register file supports same-cycle write-then-read behavior, and simulating branch predictors such as always taken, one-bit and Smith-counter schemes, GShare, GSelect, Yeh/Patt, perceptrons, and hybrid tournament predictors.
+\section{Integrated Themes from Chapter 4}\label{sec:auto-049}
+Chapter 4 connects pipeline structure to observed performance.
+Reading a timing diagram is therefore an exercise in inference: the reader is reconstructing hazards, bypass paths, memory behavior, and branch-handling policy from visible stage occupancy.
+The same chapter also introduces the progression from static branch handling to dynamic predictors such as always taken, one-bit and Smith-counter schemes, GShare, GSelect, Yeh/Patt, perceptrons, and hybrid tournament predictors.
 
 \subsection*{Pipeline Speedup}\label{subsec:auto-012}
 Assume a 5-stage design where each stage has 250 ps logic delay and pipeline-register overhead is 30 ps.
@@ -74,7 +91,7 @@ This illustrates how even moderate branch penalties raise CPI above the ideal va
 \subsection*{Software Branch Handling}\label{subsec:auto-013a}
 When a branch has delay slots, every instruction moved into those slots must be safe regardless of whether the branch is taken.
 When a branch instead has squash slots under an ``assume taken'' policy, the compiler may place instructions from the predicted taken path there, because wrong-path entries will be canceled.
-So the safe rule is simple:
+The resulting placement rule is:
 \begin{enumerate}
     \item fill delay slots only with path-independent instructions,
     \item fill squash slots from the predicted path when profitable, and
@@ -93,24 +110,25 @@ Here \textit{most recently used insertion policy (MIP)} and \textit{least recent
 
 
 \section{Hierarchy Semantics in the Model}\label{sec:auto-051}
-\textbf{L1/L2 abstraction:} L1 accesses are modeled independently from L2 internals, and L2 requests are modeled as arriving from an upper-level requester.
-\textbf{Write-strategy contrast:} \textit{write-back, write-allocate (WBWA)} behavior in L1 emphasizes dirty-state tracking and deferred propagation, while \textit{write-through, write-no-allocate (WTWNA)} behavior in L2 emphasizes immediate lower-level visibility and no allocation on write misses.
+The hierarchy model treats L1 accesses separately from L2 internals, while L2 requests are viewed as arriving from an upper-level requester.
+This separation makes it easier to reason about statistics at each level without conflating local policy with downstream timing.
 
-\textbf{Miss-servicing order effects:} ordering choices in read-miss repair and writeback events influence replacement-state evolution and therefore downstream statistics.
-\textbf{Disabled-level interpretation:} a disabled L2 can be represented as an always-miss transit layer with zero L2 hit time in AAT terms.
+Write strategy also changes the meaning of those statistics.
+\textit{Write-back, write-allocate (WBWA)} behavior in L1 emphasizes dirty-state tracking and deferred propagation, whereas \textit{write-through, write-no-allocate (WTWNA)} behavior in L2 emphasizes immediate lower-level visibility and no allocation on write misses.
+
+The ordering of read-miss repair and writeback events can also matter.
+Different servicing orders change replacement-state evolution and therefore alter downstream hit, miss, and writeback counts.
+If a lower level is disabled in the model, it is often best understood as an always-miss transit layer whose contribution to AAT is only the cost of passing requests to the next active level.
 
 
 \section{Prefetching Concepts}\label{sec:auto-052}
-\textbf{$+1$ prefetching:} predicts the next sequential block ($X+1$) after a demand miss on block $X$.
+\textit{$+1$ prefetching} predicts the next sequential block ($X+1$) after a demand miss on block $X$.
+\textit{Markov prefetching} instead models miss-stream transitions as a finite-state table, associates each source miss block with a bounded set of likely successors and their frequencies, and selects a prediction from the highest-frequency successor under a deterministic tie-break rule.
+\textit{Hybrid prefetching} combines correlation-based prediction with sequential fallback when correlation information is absent.
 
-\textbf{Markov prefetching:}
-represents miss-stream transitions as a finite-state table, associates each source miss block with a bounded set of likely successor blocks and frequencies, and selects a prediction from the highest-frequency successor under a deterministic tie-break rule.
-
-\textbf{Hybrid prefetching:} combines correlation-based prediction with sequential fallback when correlation information is absent.
-
-\textbf{Prefetch usefulness tracking:}
-a prefetch metadata bit distinguishes demand-filled lines from prefetched lines.
-First demand use of a prefetched line contributes to prefetch-hit interpretation, while eviction before demand use contributes to prefetch-miss interpretation.
+To interpret prefetch behavior correctly, the simulator must also distinguish demand-filled lines from prefetched lines.
+A prefetch metadata bit provides that distinction.
+The first demand use of a prefetched line contributes to prefetch-hit interpretation, while eviction before first demand use contributes to prefetch-miss interpretation.
 
 
 \section{Statistics and AAT Interpretation}\label{sec:auto-053}
@@ -131,12 +149,13 @@ This form emphasizes that higher-level penalty is the lower-level average access
 \section{Conceptual Tradeoffs Across Parameters}\label{sec:auto-054}
 Increasing $C$ generally reduces capacity misses but tends to raise hit time.
 Increasing $S$ reduces conflict misses but increases lookup complexity.
-Increasing $B$ can exploit spatial locality but may increase pollution and miss penalty.
+Increasing $B$ can exploit spatial locality but may also increase pollution and miss penalty.
 More aggressive prefetching can reduce compulsory misses yet increase bandwidth pressure and useless fills.
 
 
 \section{Chapter 5 Summary}\label{sec:auto-055}
-Integrated themes, pipeline analysis, and cache simulation models reinforce the same central idea: architecture performance is governed by measurable tradeoffs among latency, throughput, locality, and prediction quality.
-The simulation concepts provide a concrete way to observe those tradeoffs in controlled workloads.
-That same simulator mindset extends naturally to branch-prediction accuracy, fetched-versus-retired instruction counts, queue pressure, and reorder-buffer pressure, which are interpreted more fully in Chapter 6.
+Chapter 5 draws together the earlier performance, pipeline, and memory ideas into one simulation-oriented view.
+Pipeline timing and cache behavior are not separate topics; they are two views of the same broader question of where cycles are spent and why.
+The simulation concepts in this chapter provide a concrete way to observe those tradeoffs in controlled workloads.
+That same simulator-oriented reasoning extends naturally to branch-prediction accuracy, fetched-versus-retired instruction counts, queue pressure, and reorder-buffer pressure, which are developed further in Chapter 6.
 A grouped formula index for the full text is provided in Appendix~\ref{ch:formula-compendium}.

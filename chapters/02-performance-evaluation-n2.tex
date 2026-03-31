@@ -4,7 +4,7 @@
 \section{Why Performance Evaluation Matters}\label{sec:auto-010}
 Architecture decisions are only meaningful if they are evaluated with the right metric.
 A design that improves one metric can degrade another, and a design that looks fast on one workload can be slow on the workload that actually matters.
-The central objective of Chapter 2 is therefore methodological: define performance correctly, choose representative workloads, and use mathematically correct summaries when comparing alternatives.
+The goal of this chapter is therefore methodological: define performance correctly, choose representative workloads, and use mathematically correct summaries when comparing alternatives.
 
 
 \section{Throughput vs. Runtime}\label{sec:auto-011}
@@ -42,7 +42,7 @@ For instruction mixes, total cycles are computed directly (Eq.~\eqref{eq:auto-00
 \end{equation}
 
 \paragraph{Worked example}\label{par:auto-009}
-Suppose a workload executes 76 loads at 6 cycles each, 30 stores at 4 cycles each, 300 adds at 1 cycle each, and 58 multiplies at 5 cycles each.
+Consider a workload that executes 76 loads at 6 cycles each, 30 stores at 4 cycles each, 300 adds at 1 cycle each, and 58 multiplies at 5 cycles each.
 Then total cycles are
 \begin{equation}\label{eq:auto-005}
     76\cdot6 + 30\cdot4 + 300\cdot1 + 58\cdot5 = 1166.
@@ -90,7 +90,7 @@ The limit as $s\to\infty$ is
 This bound is the key insight: the unaccelerated fraction eventually dominates.
 
 \paragraph{Worked example}\label{par:auto-010}
-If 80\% of runtime is parallelizable and the accelerated part can use 100{,}000 processors ideally ($s=100{,}000$), then
+Consider a case in which 80\% of runtime is parallelizable and the accelerated part can use 100{,}000 processors ideally ($s=100{,}000$). Then
 \begin{equation}\label{eq:auto-012}
     S=\frac{1}{0.2+\frac{0.8}{100000}}\approx 5.0.
 \end{equation}
