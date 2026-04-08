@@ -241,11 +241,57 @@ On every hit, update the touched line's timestamp to the current access time.
 On a miss, fill an invalid line if one exists; otherwise evict the valid line with the smallest timestamp because that line was touched least recently.
 This method is conceptually simple and is often the most direct way to hand-simulate LRU on short traces.
 
+\paragraph{Worked cache-trace decode}\label{par:auto-019bb}
+Consider a cache with $(C,B,S)=(6,4,1)$.
+Then the cache has $2^{6-4}=4$ lines, arranged as $2^{6-4-1}=2$ sets with 2 ways per set.
+So the offset is 4 bits, the index is 1 bit, and the remaining upper bits form the tag.
+Now consider the access sequence \texttt{0x24}, \texttt{0x34}, \texttt{0x2C}, \texttt{0x44}.
+Because the offset is 4 bits, the block numbers are \texttt{0x2}, \texttt{0x3}, \texttt{0x2}, and \texttt{0x4}.
+Using the low-order bit of the block number as the set index, those accesses map to set 0, set 1, set 0, and set 0, with tags 1, 1, 1, and 2, respectively.
+The first two accesses are compulsory misses, the third is a hit on the already resident block for \texttt{0x24}, and the fourth is another miss because it introduces a different tag into set 0.
+This is the basic hand-simulation loop: decode block, split into set and tag, check the resident ways, then update replacement state.
+
+\paragraph{Worked timestamp-LRU trace}\label{par:auto-019d}
+Consider a 2-way set with two accesses already resident:
+\begin{center}
+\begin{tabular}{|c|c|}
+    \hline
+    Tag & Timestamp \\
+    \hline
+    A & 4 \\
+    \hline
+    B & 7 \\
+    \hline
+\end{tabular}
+\end{center}
+If the next access is a hit on A at time 8, then A's timestamp becomes 8 while B remains at 7.
+If the following access is a miss at time 9 and no invalid line exists, then B is evicted because it has the smaller timestamp and is therefore the least recently used line.
+This is the mechanical rule to remember: every hit refreshes exactly one timestamp, and every full-set miss evicts the smallest timestamp.
+
 \paragraph{Exact LRU with a bit matrix}\label{par:auto-019c}
 Another exact representation for an $n$-way set is an $n\times n$ recency matrix.
 Entry $M[i][j]=1$ means way $i$ is more recent than way $j$.
 When way $k$ is accessed, set row $k$ to 1, set column $k$ to 0, and keep the diagonal in its fixed convention.
 After the update, the least-recently used way is the one whose off-diagonal row bits are all 0, because every other way is marked as newer than it.
+
+\paragraph{Worked bit-matrix update}\label{par:auto-019e}
+For a 4-way set, suppose the current access is to way 2.
+Then row 2 is set to 1 against the other ways and column 2 is cleared:
+\begin{center}
+\begin{tabular}{|c|cccc|}
+    \hline
+    & 0 & 1 & 2 & 3 \\
+    \hline
+    0 & -- & ? & 0 & ? \\
+    1 & ? & -- & 0 & ? \\
+    2 & 1 & 1 & -- & 1 \\
+    3 & ? & ? & 0 & -- \\
+    \hline
+\end{tabular}
+\end{center}
+The question marks keep their previous values because the relative recency order among the untouched ways does not change.
+After several accesses, the LRU way is the row whose off-diagonal entries are all 0.
+That row is the one that every other way claims to be newer than.
 
 
 \section{Write Policies}\label{sec:auto-027}
@@ -266,6 +312,18 @@ Third, if a valid victim is evicted, is it dirty?
 In a write-back, write-allocate cache, a write miss usually installs the block and marks it dirty immediately.
 Each later dirty eviction contributes one writeback event.
 Dirty lines that remain in the cache at the end of the trace are not counted as writebacks unless the problem explicitly asks for a final flush.
+
+\paragraph{Worked dirty-eviction trace}\label{par:auto-020b}
+Consider a write-back, write-allocate cache whose relevant set can hold only two lines.
+Suppose the set is initially empty and the access sequence is
+\[
+W(A),\ W(B),\ W(A),\ R(C),
+\]
+with $C$ mapping to the same full set as $A$ and $B$.
+The first write to $A$ is a miss, so $A$ is allocated and marked dirty.
+The first write to $B$ does the same for $B$.
+The second write to $A$ is a hit and leaves $A$ dirty.
+When $C$ is later accessed, one of the dirty lines $A$ or $B$ must be evicted; that eviction produces a writeback because the victim holds modified data that has not yet reached the next level.
 
 \paragraph{Valid and dirty bits: meaning, need, and size impact}\label{par:auto-020}
 Each cache line typically carries at least one \textit{valid bit}.
@@ -347,12 +405,37 @@ If sub-block $k$ is demanded with probability $p_k$ and fixed-order transfer wou
 \end{equation}
 Under the same simple model, critical-word-first with early restart reduces the CPU-visible penalty to approximately $T_1$ because the demanded sub-block is requested first and the rest of the block finishes in the background.
 
+\paragraph{Worked miss-penalty comparison}\label{par:auto-021aa}
+Consider a 32-byte block on an 8-byte bus, so the miss repairs 4 words.
+Suppose each requested word transfer takes 70 ns and transfers are serialized.
+Baseline repair waits for all 4 words, so the visible miss penalty is
+\begin{equation}\label{eq:auto-032b}
+    MP_{full}=4\times 70 = 280\ \text{ns}.
+\end{equation}
+With early restart under a uniform critical-word position, the demanded word arrives after 1, 2, 3, or 4 transfers with equal probability, so the average visible penalty is
+\begin{equation}\label{eq:auto-032c}
+    MP_{ER}=\frac{70+140+210+280}{4}=175\ \text{ns}.
+\end{equation}
+With critical-word-first plus early restart, the demanded word is requested first, so the processor-visible penalty returns to approximately one transfer time, 70 ns, while the rest of the block completes in the background.
+
 Another major lever is adding lower cache levels.
 If L1 misses probe L2 before DRAM, L1 penalty becomes L2 average access time (Eq.~\eqref{eq:auto-033}):
 \begin{equation}\label{eq:auto-033}
     AAT_{L1} = HT_{L1} + MR_{L1}\cdot AAT_{L2}.
 \end{equation}
 This recursive form extends naturally to deeper hierarchies.
+
+\paragraph{Worked two-level AAT example}\label{par:auto-021ac}
+Suppose $HT_{L1}=1$ cycle, $MR_{L1}=0.08$, $HT_{L2}=8$ cycles, $MR_{L2,read}=0.25$, and $DRAM\_TIME=60$ cycles.
+Then
+\begin{equation}\label{eq:auto-033a}
+    AAT_{L2}=8+0.25\times 60=23\ \text{cycles}.
+\end{equation}
+That lower-level average time becomes the miss penalty seen by L1, so
+\begin{equation}\label{eq:auto-033b}
+    AAT_{L1}=1+0.08\times 23=2.84\ \text{cycles}.
+\end{equation}
+The main reasoning pattern is recursive rather than additive-by-guess: first solve the lower level, then substitute that average behavior upward.
 
 \paragraph{Inclusive policy: subset, not equality}\label{par:auto-021f}
 If L2 is \textit{inclusive} of L1, then every line present in L1 must also be present in L2.
@@ -500,3 +583,20 @@ Misses are interpreted through the three C's, while replacement and write polici
 Improvement strategies are organized by target term: miss ratio, miss penalty, or hit time.
 Prefetching, victim caches, write buffers, multi-level hierarchies, simulator-style hierarchy and prefetch counters, and VIPT constraints show how modern designs balance speed, capacity, and correctness.
 Finally, compiler and data-layout techniques complete the picture by showing that cache performance is a hardware-software co-design problem.
+
+
+\section{Practice Questions}\label{sec:ch3-practice}
+The following questions reinforce the main ideas of Chapter 3 and are intended for self-checking after the summary.
+\begin{enumerate}
+    \item A physically indexed, physically tagged cache has total capacity 32 KiB, block size 64 B, associativity 4-way, and 48-bit addresses. Compute the number of sets, the number of offset bits, the number of index bits, and the number of tag bits. Then compute the total tag-store size if each line stores a valid bit and a dirty bit in addition to the tag.
+    \item For each of the following changes, state whether it primarily targets \emph{hit time}, \emph{miss ratio}, or \emph{miss penalty}: adding a victim cache, adding a write buffer, increasing associativity, increasing block size, and using critical-word-first with early restart.
+    \item Explain the difference between critical-word-first and early restart. Why does critical-word-first by itself not guarantee a reduction in processor-visible miss penalty?
+    \item A system uses 32-byte blocks, an 8-byte memory bus, and serialized memory transfers. A miss first incurs a 70 ns round trip for the requested word, and each additional word also requires 70 ns. The cache hit time is 10 ns and the hit rate is 15\%. Compute the average access time under three cases: baseline repair with no early use of returned data, early restart with a uniform probability of needing any of the four words in the block, and critical-word-first with early restart.
+    \item Consider a $(C,B,S)=(6,4,2)$ cache with LRU replacement and the access stream \texttt{0x589e}, \texttt{0xa7a1}, \texttt{0x3767}, \texttt{0xcce2}, \texttt{0xa7aa}, \texttt{0xff4d}, \texttt{0x376c}, \texttt{0x5892}. For each access, determine the set, tag, hit or miss outcome, and final contents of the tag store after the full trace.
+    \item A 4-way set uses an exact LRU bit-matrix implementation. Starting from a state in which way 0 is least recently used and way 3 is most recently used, update the matrix for the hit sequence $2\rightarrow 0\rightarrow 3\rightarrow 1\rightarrow 2$. Which way is least recently used at the end?
+    \item A VIPT L1 cache has capacity 64 KiB, block size 64 B, and page size 4 KiB. Compute the minimum associativity required so that the set index fits entirely within the page offset.
+    \item A miss stream repeatedly alternates between two blocks that map to the same direct-mapped L1 set. Would a small victim cache or a simple $+1$ prefetcher be the more natural first fix? Explain why.
+    \item A tiled matrix kernel keeps three $b\times b$ tiles of double-precision data active at once. If the effective L1 capacity available to the tiles is 24 KiB, what is the largest integer tile size $b$ that satisfies the footprint constraint $3b^2\cdot 8 \le 24\text{ KiB}$?
+    \item A two-level hierarchy has $HT_{L1}=1$ cycle, $MR_{L1}=0.08$, $HT_{L2}=8$ cycles, $MR_{L2,read}=0.25$, and $DRAM\_TIME=60$ cycles. Compute $AAT_{L2}$ and then $AAT_{L1}$.
+    \item A write-back, write-allocate cache receives the sequence: write block A, write block B, write block A again, then access block C, which maps to the same full set as A and B and forces an eviction. Describe when dirty state is created and whether the eviction causes a writeback.
+\end{enumerate}

@@ -3,17 +3,19 @@
 
 
 \section*{How to Use This Text}\label{sec:auto-001}
-Chapters 1 through 7 provide topic depth with definitions, equations, and worked examples.
+Chapters 1 through 8 provide topic depth with definitions, equations, and worked examples.
 Chapter 5 provides integrated synthesis and cache-simulation context.
 Chapter 6 develops dynamic instruction-level parallelism mechanisms such as superscalar scheduling and out-of-order execution.
 Chapter 7 develops compiler-scheduled instruction-level parallelism through very long instruction word (VLIW) execution and software pipelining.
+Chapter 8 develops multiprocessor organization, coherence, and parallel programming models.
 
-\section*{Cross-Chapter Reading Paths}\label{sec:exam2-alignment}
+\section*{Cross-Chapter Reading Paths}\label{sec:cross-chapter-reading-paths}
 \begin{enumerate}
     \item Readers who want the performance-and-memory foundation should begin with Chapters 1 through 3 and then read the first part of Chapter 4.
     \item Readers focused on control hazards, prediction, and data hazards should concentrate on the middle and later sections of Chapter 4.
     \item Readers focused on instruction-level parallelism should read Chapter 6 for dynamic ILP and Chapter 7 for compiler-scheduled ILP\@.
     \item Readers focused on simulator-style interpretation and consolidated worked checks should use Chapter 5 alongside the detailed discussions in Chapters 3, 4, and 6.
+    \item Readers focused on thread-level parallelism, coherence, and shared-memory multiprocessors should continue from Chapters 1 and 2 into Chapter 8.
 \end{enumerate}
 
 
@@ -39,3 +41,6 @@ Coverage includes cycles per instruction (CPI) versus instructions per cycle (IP
 
 \paragraph{Chapter 7: Compiler-Scheduled ILP and Software Pipelining}\label{par:scope-ch7}
 Coverage includes compiler-scheduled very long instruction word (VLIW) execution, dependence-graph and list-scheduling ideas, zero-no-op multi-op encoding with tail and pause fields, software pipelining and iterative modulo scheduling, and memory disambiguation.
+
+\paragraph{Chapter 8: Multiprocessors, Interconnects, and Cache Coherence}\label{par:scope-ch8}
+Coverage includes shared-memory versus message-passing organization, standalone multiprocessors versus accelerator systems, buses versus point-to-point links, the cache-coherence problem and its formal properties, shared-cache versus directory-based versus snooping solutions, MSI coherence states and transactions, transient coherence states, and shared-memory versus message-passing programming examples.

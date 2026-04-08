@@ -1,5 +1,5 @@
 \chapter{Glossary of Core Definitions}\label{ch:auto-007}
-This appendix collects first-pass definitions used throughout Chapters 1--7.
+This appendix collects first-pass definitions used throughout Chapters 1--8.
 
 \begin{description}
     \item[\textit{Parallelism}] Doing multiple useful operations concurrently to increase throughput.
@@ -10,9 +10,30 @@ This appendix collects first-pass definitions used throughout Chapters 1--7.
     \item[\textit{Polycyclic Scheduling}] Early name for overlapping multiple loop iterations in one compact repeating schedule.
     \item[\textit{Software Pipelining}] Loop-scheduling technique that overlaps operations from different iterations and emits a prologue, steady-state kernel, and epilogue.
     \item[\textit{Thread-Level Parallelism (TLP)}] Concurrent execution of multiple threads on one or more cores.
+    \item[\textit{Processing Element (PE)}] One independently executing processor, core, or execution agent within a multiprocessor system.
     \item[\textit{Digital Signal Processor (DSP)}] Processor class optimized for regular numeric workloads such as filtering, radio, and image-processing kernels.
     \item[\textit{SIMD}] One instruction stream operating on multiple data elements in lockstep.
     \item[\textit{MIMD}] Multiple instruction streams operating on multiple data streams independently.
+    \item[\textit{Shared Memory}] Multiprocessor organization in which all participating processors conceptually operate in one common address space.
+    \item[\textit{Message Passing}] Multiprocessor organization in which processors communicate by explicitly sending data between private memories.
+    \item[\textit{Partitioned Global Address Space (PGAS)}] Memory model with a global address space in which some regions are much more expensive to access than others.
+    \item[\textit{Accelerator}] Specialized processing engine, often attached to a host CPU through an external link and using distinct memory.
+    \item[\textit{Bus}] Shared observable broadcast medium across which all attached agents can see the same transactions.
+    \item[\textit{Point-to-Point Interconnect}] Link organization in which packets move between specific endpoints rather than across one shared observable medium.
+    \item[\textit{Cache Coherence}] Property that keeps multiple cached copies of the same location mutually consistent enough to preserve shared-memory semantics.
+    \item[\textit{Snooping Coherence}] Coherence method in which each cache monitors shared interconnect traffic and reacts when another processor requests a block it holds.
+    \item[\textit{Directory-Based Coherence}] Coherence method in which a directory tracks which caches currently hold a block and coordinates invalidations or forwarding.
+    \item[\textit{MSI}] Coherence protocol whose stable states are modified, shared, and invalid.
+    \item[\textit{GetS}] Coherence request for a shared readable copy of a block.
+    \item[\textit{GetM}] Coherence request for exclusive writable ownership of a block.
+    \item[\textit{WriteBack}] Propagation of a dirty cache block to lower memory.
+    \item[\textit{Intervene}] Snooper action in which a cache supplies data directly in response to another processor's request.
+    \item[\textit{Abort}] Snooper response instructing a requester to wait or retry because ownership transfer is not yet complete.
+    \item[\textit{Transient State}] Intermediate coherence state used while a block is waiting for a request or ownership transfer to complete.
+    \item[\textit{Critical Section}] Region of code that must not be executed concurrently by multiple threads if shared data is to remain correct.
+    \item[\textit{Lock}] Synchronization primitive that grants exclusive access to a critical section.
+    \item[\textit{Data Race}] Incorrect unsynchronized overlap of conflicting accesses to shared state.
+    \item[\textit{Embarrassingly Parallel}] Workload whose useful work is effectively all parallelizable and therefore scales nearly ideally if resources permit.
     \item[\textit{Pipelining}] Temporal parallelism where different stages process different instructions simultaneously.
     \item[\textit{Superscalar (Multi-Issue)}] Pipeline organization that can issue more than one instruction per cycle.
     \item[\textit{Register Renaming}] Introduction of additional physical register identities so later writes do not falsely block earlier reads or writes.
@@ -144,9 +165,13 @@ This appendix collects first-pass definitions used throughout Chapters 1--7.
     \item[MP] Miss Penalty
     \item[MR] Miss Ratio
     \item[MRU] Most Recently Used
+    \item[MSI] Modified, Shared, Invalid
     \item[OS] Operating System
     \item[PC] Program Counter
+    \item[PCIe] Peripheral Component Interconnect Express
+    \item[PE] Processing Element
     \item[PFN] Physical Frame Number
+    \item[PGAS] Partitioned Global Address Space
     \item[PIPT] Physically Indexed, Physically Tagged
     \item[RAS] Return-Address Stack
     \item[RAT] Register Alias Table

@@ -45,6 +45,19 @@ For $M$ instructions in an $N$-stage pipeline (ignoring hazards), total cycles a
 \end{equation}
 This shows fill and drain overhead is more visible for short instruction sequences.
 
+\paragraph{Worked pipeline-speedup calculation}\label{par:auto-022b}
+Suppose an unpipelined implementation has effective $CPI=5$, and a 5-stage pipelined version keeps the same clock period.
+The ideal maximum speedup is therefore 5.
+If 25\% of instructions now experience one extra stall cycle, the pipelined CPI becomes
+\begin{equation}\label{eq:auto-038a}
+    CPI_{pipe}=1+0.25\times 1=1.25.
+\end{equation}
+The corresponding speedup relative to the original $CPI=5$ design is then
+\begin{equation}\label{eq:auto-038b}
+    \frac{5}{1.25}=4,
+\end{equation}
+which is below the ideal bound because hazards consume part of the pipelined throughput gain.
+
 
 \section{CPI Model and Stall Accounting}\label{sec:auto-037}
 In steady state without hazards, ideal CPI is 1 (Eq.~\eqref{eq:auto-039}):
@@ -184,6 +197,21 @@ This can still be acceptable if the table is sized well and collision rate is lo
 Function returns are indirect branches whose targets are difficult for generic BTB logic.
 A small hardware \textit{return-address stack (RAS)} records call return PCs and pops on return, producing very high return-target accuracy in common call/return patterns.
 This is one of the most cost-effective branch-target optimizations.
+
+\paragraph{Worked BTB/RAS trace}\label{par:auto-025j}
+Assume the BTB is indexed by $PC[7:4]$ and the RAS is initially empty.
+Now consider the short control-flow sequence
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+    \texttt{0x4000:} & \texttt{CALL 0x4A00} \\
+    \texttt{0x4A00:} & \texttt{BREQZ R1,0x4AF0} (taken) \\
+    \texttt{0x4AF8:} & \texttt{RET}
+\end{tabular}
+\end{center}
+The call pushes return address \texttt{0x4004} onto the RAS and creates or refreshes a BTB entry for the call target \texttt{0x4A00}.
+The conditional branch updates its BTB entry with the taken target \texttt{0x4AF0}.
+The return then pops the top of the RAS and predicts target \texttt{0x4004}.
+The main bookkeeping distinction is that the BTB remembers branch and jump targets by PC, while the RAS handles the nested call-return discipline explicitly.
 
 \paragraph{BTBs still matter for unconditional control transfers}\label{par:auto-025i}
 A BTB is not useful only for conditional branches.
@@ -343,6 +371,25 @@ If the target value is $t=+1$ for taken and $t=-1$ for not taken, then the updat
 \end{equation}
 The perceptron predictor can learn longer correlations than small counter tables, but it costs more arithmetic and storage per prediction.
 
+\paragraph{Worked perceptron update}\label{par:auto-025k}
+Suppose the active perceptron has weights $[1,2,-1,0,1]$, where the first value is the bias $w_0$, and suppose the current 4-bit global history is \texttt{1010}.
+Using taken $=+1$ and not taken $=-1$, that history becomes
+\[
+x=[+1,-1,+1,-1].
+\]
+The perceptron output is therefore
+\begin{equation}\label{eq:pipe-perceptron-example}
+    y=1+2(+1)+(-1)(-1)+0(+1)+1(-1)=3.
+\end{equation}
+Because $y\ge 0$, the prediction is taken.
+If the true outcome is not taken, then the prediction is wrong and training must occur with target $t=-1$.
+The updated weights become
+\[
+w_0\leftarrow 1-1=0,\qquad
+[w_1,w_2,w_3,w_4]\leftarrow [2,-1,0,1]+[-1,+1,-1,+1]=[1,0,-1,2].
+\]
+After the same outcome is shifted into the history register, the new GHR becomes \texttt{0100} if the newest bit is placed on the right.
+
 \section{Hybrid and Tournament Predictors}\label{sec:auto-043c}
 A \textit{hybrid predictor} combines two or more component predictors and uses a chooser to decide which component to trust for a branch context.
 A common \textit{tournament predictor} stores a small table of saturating counters indexed by branch PC or by a short hash of PC and history.
@@ -415,3 +462,24 @@ Simple dynamic predictors such as one-bit prediction and Smith two-bit counters 
 Because prediction and training happen at different times in the pipeline, practical predictors must also preserve enough prediction-time context to update correctly later.
 Timing diagrams then tie the whole chapter together by exposing which hazards, forwarding paths, and same-cycle register-file behaviors a concrete pipeline must implement.
 Together, these ideas define practical pipeline performance analysis and design.
+
+
+\section{Practice Questions}\label{sec:ch4-practice}
+The following questions reinforce the main ideas of Chapter 4 and are intended for self-checking after the summary.
+\begin{enumerate}
+    \item An unpipelined design has $CPI=5$. A new implementation uses five pipeline stages. What is the maximum possible speedup if the pipelined clock period is unchanged? Then compute the new CPI if 25\% of instructions suffer a single-cycle stall.
+    \item A scalar pipeline has base $CPI=1$. Structural hazards add an average of $0.05\times 1$ cycles per instruction, load-use hazards add $0.12\times 1$, and branch mispredictions add $0.15\times 2$. Compute the final CPI.
+    \item For the sequence below, list the RAW, WAR, and WAW dependences. Then identify which forwarding path is most important for reducing stalls.
+    \begin{quote}
+    \texttt{LW R1, 0(R2)}\\
+    \texttt{ADD R3, R1, R4}\\
+    \texttt{SUB R5, R3, R6}\\
+    \texttt{SW R5, 0(R7)}
+    \end{quote}
+    \item A timing diagram shows that instruction fetch continues in the same cycle that another instruction accesses data memory, that a dependent ALU consumer reaches EX before the producer reaches WB, and that a decode-stage consumer can read a value in the same cycle an older instruction writes it back. What does each of these observations imply about the hardware organization?
+    \item Explain the distinct roles of the branch target buffer (BTB), return-address stack (RAS), and direction predictor. Why does a BTB remain useful even when the branch direction is trivial?
+    \item A BTB is indexed by \texttt{PC[7:4]}. The return-address stack is initially empty. Simulate this short instruction stream: \texttt{0x4000: CALL 0x4A00}, \texttt{0x4A00: BREQZ R1,0x4AF0} (taken), \texttt{0x4AF8: RET}, \texttt{0x4004: ADD}. State the BTB effect of each control instruction and the final contents of the top of the RAS.
+    \item A GSelect predictor uses a 2-bit global history register and indexes the predictor table with \texttt{PC[2]} and the current GHR. The row for \texttt{PC[2]=0} is \texttt{[01,10,11,00]} for GHR \texttt{00,01,10,11}, the row for \texttt{PC[2]=1} is \texttt{[10,01,00,11]}, and the initial GHR is \texttt{01}. Simulate the following two branches: \texttt{(0x2004,T)} and \texttt{(0x2008,N)}. For each, give the prediction, the updated counter, and the new GHR.
+    \item A Yeh/Patt predictor uses \texttt{PC[3:2]} to index a history table, and each history register is 2 bits wide. Explain how the history-table lookup and the pattern-table lookup differ from the indexing rule used in GSelect. Then state one situation in which Yeh/Patt can distinguish branches that simple global-history indexing tends to alias together.
+    \item A perceptron predictor uses $G=4$ bits of global history. The active perceptron has weights $[1,2,-1,0,1]$, the current GHR is \texttt{1010}, and the next actual branch outcome is not taken. Compute the output $y$, state the prediction, determine whether training occurs, and give the new GHR after update. You may assume the project-style threshold rule $\theta=\lfloor 1.93G+14\rfloor$.
+\end{enumerate}

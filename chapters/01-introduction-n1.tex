@@ -123,6 +123,19 @@ If a pipeline has $k$ stages and processes $n$ elements, a serial implementation
 \end{equation}
 The result is substantial throughput gain for long vectors even though single-element latency is not eliminated.
 
+\paragraph{Worked vector-throughput example}\label{par:auto-007b}
+Suppose a vector arithmetic pipeline has 6 stages and the program processes 100 elements.
+A non-pipelined implementation would spend
+\begin{equation}\label{eq:auto-001a}
+    nk = 100\times 6 = 600\ \text{cycles}
+\end{equation}
+to process the vector.
+The pipelined form instead needs approximately
+\begin{equation}\label{eq:auto-001b}
+    k+n-1 = 6+100-1 = 105\ \text{cycles}.
+\end{equation}
+The difference is the standard vector-pipeline gain: the pipeline still pays 6-stage latency for the first element, but after fill it can accept and complete additional elements at a much higher steady-state rate.
+
 \paragraph{Chaining}\label{par:auto-008}
 Vector chaining improves this further.
 If a second vector operation consumes results from a first operation, the hardware can forward early produced elements directly into the consumer pipeline instead of waiting for the full vector to complete.
@@ -146,3 +159,14 @@ The chapter frames nearly all speedup mechanisms as forms of parallelism or spec
 Flynn's taxonomy provides a clean language for distinguishing SISD, SIMD, MISD, and MIMD machines, especially the practical differences between SIMD efficiency and MIMD flexibility.
 Finally, the chapter distinguishes packed-word SIMD from pipelined vector execution and shows why chaining is valuable in vector data paths.
 Together, these ideas form the conceptual base used throughout the rest of the book.
+
+
+\section{Practice Questions}\label{sec:ch1-practice}
+The following questions reinforce the main ideas of Chapter 1 and are intended for self-checking after the summary.
+\begin{enumerate}
+    \item For each of the following techniques, state whether it primarily exploits \emph{parallelism}, \emph{speculation without prediction}, \emph{speculation with prediction}, or more than one of these ideas: packed-word SIMD, a cache, a branch predictor, and out-of-order execution with branch prediction.
+    \item Classify each of the following workloads using Flynn's taxonomy, and give a one-sentence justification for each answer: a dense image convolution engine, a cloud-service cluster that handles independent requests, a small thermostat controller, and a brute-force hash search implemented as many independent workers.
+    \item Explain why pipelining is orthogonal to Flynn's taxonomy. Give one example of a pipelined SISD design and one example of pipelining inside a wider SIMD or MIMD system.
+    \item A vector arithmetic pipeline has 6 stages and processes a vector of 100 elements. Compute the approximate cycle count for a serial implementation and for a pipelined implementation. Then explain how chaining could reduce producer-consumer delay for two dependent vector operations.
+    \item Distinguish packed-word SIMD from classic pipelined vector execution. In particular, explain what is fixed by register width in packed SIMD and what is streamed through the pipeline in classic vector execution.
+\end{enumerate}

@@ -1,0 +1,418 @@
+\chapter[Multiprocessor Fundamentals]{Multiprocessor Architecture Fundamentals: Shared Memory, Interconnects, and Cache Coherence}\label{ch:multiprocessors}
+
+\section{From Instruction-Level to Thread-Level Parallelism}\label{sec:mp-intro}
+Once a machine has already exploited as much instruction-level parallelism as is practical, the next major source of speedup is to execute more than one thread of control at the same time.
+This moves the discussion from single-core scheduling into \textit{multiprocessor} design.
+At this point the most visible form of parallelism is \textit{thread-level parallelism (TLP)}: the programmer or runtime system must decide how to divide work across multiple processing elements.
+Unlike instruction-level parallelism, thread-level parallelism is visible to software and therefore directly affects correctness, synchronization, and programmability.
+
+Historically, architecture texts often used the term \textit{processing element (PE)} for one independently executing processor in a larger machine.
+Modern commercial systems more often use \textit{core}, but the older PE terminology remains useful because it applies equally well to CPUs, accelerator lanes, and other specialized execution agents.
+Table~\ref{tab:mp-grain-size} places multiprocessors in the broader grain-size view of parallelism.
+\begin{table}[t]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|l|p{2.1in}|p{1.45in}|}
+        \hline
+        Parallelism level & Typical mechanism & Visibility to the programmer \\
+        \hline
+        Instruction-level & superscalar issue, out-of-order execution, VLIW & usually hidden \\
+        \hline
+        Data-level & SIMD vectors, packed operations, vector pipelines & partly visible through data layout or intrinsics \\
+        \hline
+        Thread-level & multiple threads or PEs executing concurrently & directly visible \\
+        \hline
+    \end{tabular}
+    \caption{Common grain sizes of parallelism. Multiprocessor programming is primarily concerned with the thread level.}
+    \label{tab:mp-grain-size}
+\end{table}
+
+At the architecture-classification level, two familiar Flynn terms continue to matter:
+\begin{itemize}
+    \item \textit{single instruction, multiple data (SIMD)} machines apply the same operation to multiple data elements at once.
+    \item \textit{multiple instruction, multiple data (MIMD)} machines allow different PEs to execute different instructions on different data at the same time.
+\end{itemize}
+Modern shared-memory multiprocessors are usually discussed as MIMD machines.
+That does not exclude SIMD units inside each core; it only means that the overall machine permits several independently executing instruction streams.
+
+
+\section{Memory Organization and System Structure}\label{sec:mp-memory-organization}
+A multiprocessor can be classified along another axis besides SIMD versus MIMD: how the memory system is organized.
+The two clean endpoints are \textit{shared memory} and \textit{message passing}.
+
+In a \textit{shared-memory} machine, all PEs conceptually operate in one common address space.
+A pointer value can identify the same logical object for every PE, and communication occurs when one PE writes data that another PE later reads.
+This model is attractive because it is easy to think about, but it immediately raises the cache-coherence problem once private caches are introduced.
+
+In a \textit{message-passing} machine, each PE has its own private memory, and data movement occurs through explicit communication operations such as \texttt{send()} and \texttt{receive()}.
+This model avoids coherence traffic because data is copied intentionally from one memory to another, but it forces the program to expose that communication directly.
+Between these extremes lies the \textit{partitioned global address space (PGAS)} idea, where a single address space exists but some portions are substantially more expensive to access than others.
+
+Figure~\ref{fig:mp-standalone-vs-accelerator} contrasts two common organizations.
+A standalone shared-memory multiprocessor integrates several PEs around a common memory system and runs the operating system and application code directly.
+An accelerator organization instead separates a host processor from a specialized parallel engine; the host launches work on the accelerator and explicitly copies data to and from accelerator memory.
+\begin{figure}[t]
+    \centering
+    \small
+    \begin{minipage}[t]{0.46\textwidth}
+        \centering
+        \textbf{Standalone shared-memory multiprocessor}\par
+        \vspace{0.5ex}
+        \resizebox{\linewidth}{!}{%
+        \begin{tikzpicture}[every node/.style={font=\small}, >=Latex]
+            \node[draw, minimum width=0.85in, minimum height=0.4in] (pe0) at (0,1.2) {PE 0};
+            \node[draw, minimum width=0.85in, minimum height=0.4in] (pe1) at (1.4,1.2) {PE 1};
+            \node[draw, minimum width=0.85in, minimum height=0.4in] (pe2) at (2.8,1.2) {PE 2};
+            \node[draw, minimum width=0.85in, minimum height=0.4in] (pe3) at (4.2,1.2) {PE 3};
+            \node[draw, rounded corners, minimum width=4.9in, minimum height=0.55in] (ic) at (2.1,0.15) {Shared interconnect / coherence fabric};
+            \node[draw, minimum width=2.0in, minimum height=0.5in] (mem) at (2.1,-1.0) {Shared memory system};
+            \draw[->] (pe0.south) -- (0,0.43);
+            \draw[->] (pe1.south) -- (1.4,0.43);
+            \draw[->] (pe2.south) -- (2.8,0.43);
+            \draw[->] (pe3.south) -- (4.2,0.43);
+            \draw[->] (2.1,-0.13) -- (mem.north);
+        \end{tikzpicture}
+        }
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \textbf{Host plus accelerator organization}\par
+        \vspace{0.5ex}
+        \resizebox{\linewidth}{!}{%
+        \begin{tikzpicture}[every node/.style={font=\small}, >=Latex]
+            \node[draw, minimum width=1.35in, minimum height=0.45in] (cpu) at (0,1.2) {Host CPU};
+            \node[draw, minimum width=1.45in, minimum height=0.45in] (hmem) at (0,-0.1) {Host memory};
+            \node[draw, minimum width=1.7in, minimum height=0.45in] (link) at (2.3,0.55) {PCIe or similar link};
+            \node[draw, minimum width=1.65in, minimum height=0.45in] (acc) at (4.7,1.2) {Accelerator PEs};
+            \node[draw, minimum width=1.65in, minimum height=0.45in] (amem) at (4.7,-0.1) {Accelerator memory};
+            \draw[->] (cpu.south) -- (hmem.north);
+            \draw[->] (cpu.east) -- (link.west);
+            \draw[->] (link.east) -- (acc.west);
+            \draw[->] (acc.south) -- (amem.north);
+        \end{tikzpicture}
+        }
+    \end{minipage}
+    \caption{Two common multiprocessor organizations. The left machine keeps all PEs in one shared-memory system. The right machine uses an accelerator with distinct memory, so software must explicitly move data across the interconnect.}
+    \label{fig:mp-standalone-vs-accelerator}
+\end{figure}
+
+Accelerators include graphics processors, machine-learning accelerators, and many other specialized engines.
+Their memories are often kept separate for protection, compatibility, and implementation reasons.
+The cost of that separation is explicit data motion: the host must copy inputs to the accelerator, launch the parallel work, and copy results back.
+
+
+\section{Interconnects: Shared Buses and Point-to-Point Links}\label{sec:mp-interconnects}
+The interconnect between PEs matters just as much as the PE count.
+In this text, a \textit{bus} means a \textit{shared observable broadcast medium}: all agents attached to the bus can observe the transactions sent across it.
+That observability is the key property used later by snooping coherence.
+
+A \textit{point-to-point interconnect} behaves differently.
+A packet is sent from one endpoint to another over a dedicated link, and unrelated agents do not automatically see that traffic.
+Modern peripheral links such as \textit{PCI Express (PCIe)} fit this model even though informal conversation sometimes calls them buses.
+PCIe uses differential pairs rather than one shared bundle of broadcast wires, so it scales better than a traditional shared bus but does not naturally support global observation of every memory transaction.
+
+This distinction matters because some coherence mechanisms require every cache to observe every relevant request.
+Snooping works naturally on a shared observable medium.
+Directory-based coherence does not require broadcast visibility because a separate directory structure explicitly tracks who has each block.
+
+
+\section{The Cache-Coherence Problem}\label{sec:mp-coherence-problem}
+Shared memory becomes difficult as soon as each PE receives a private cache.
+Without additional coordination, different caches can hold different copies of the same memory location and update them independently.
+That breaks the programmer's illusion of one shared value.
+
+Consider a memory location $x$ whose initial value is 1.
+Assume three PEs each read $x$ and therefore bring a copy into their private caches.
+Now suppose the following operations occur in program order:
+\begin{enumerate}
+    \item $P_0$ writes $x\leftarrow 22$.
+    \item $P_1$ writes $x\leftarrow 44$.
+    \item $P_2$ executes \texttt{x++}.
+\end{enumerate}
+If the caches do not coordinate, then $P_2$ may still read its stale local copy of 1, increment it, and write back 2.
+The program order suggests that the increment should apply to the most recent visible value and therefore produce 45, but an incoherent cache system can easily produce 2 instead.
+Table~\ref{tab:mp-incoherent-example} summarizes the failure.
+\begin{table}[t]
+    \centering
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|l|l|}
+        \hline
+        Step & Event & Locally visible value of $x$ \\
+        \hline
+        0 & Initial memory value & memory holds 1 \\
+        \hline
+        1 & $P_0$, $P_1$, and $P_2$ all cache $x$ & each cache now holds 1 \\
+        \hline
+        2 & $P_0$ writes $x\leftarrow 22$ in its cache & $P_0$ sees 22 \\
+        \hline
+        3 & $P_1$ writes $x\leftarrow 44$ in its cache & $P_1$ sees 44 \\
+        \hline
+        4 & $P_2$ executes \texttt{x++} using its stale cache copy & $P_2$ sees 2 \\
+        \hline
+    \end{tabular}
+    \caption{An incoherent-cache scenario. Each PE can observe a different value of the same logical variable.}
+    \label{tab:mp-incoherent-example}
+\end{table}
+
+Simply using write-through caches does not solve the problem.
+Write-through ensures that memory is updated promptly, but it does not inform the other caches that their local copies have become stale.
+The real issue is not whether memory eventually receives the write; it is whether all cached copies remain mutually consistent.
+
+A coherent cache system is normally expected to satisfy three properties:
+\begin{enumerate}
+    \item \textbf{Read-after-write semantics for one processor.} If a PE writes a value and no one else writes that location in the meantime, a later read by the same PE should return the value it wrote.
+    \item \textbf{Eventual visibility to other processors.} If one PE writes a location and another PE later reads it, then after sufficient time has passed and assuming no intervening writes, the reader must eventually observe the value that was written.
+    \item \textbf{Consistent ordering of writes.} All PEs must observe writes to the same location in a consistent causal order.
+\end{enumerate}
+The second property is intentionally phrased in terms of \textit{sufficient time} rather than instant propagation.
+Physical systems cannot propagate signals across large chips or boards instantaneously.
+Coherence therefore promises eventual agreement and a consistent write story, not magic zero-time updates.
+
+
+\section{Coherence Solution Families}\label{sec:mp-coherence-families}
+Architecturally, there are three standard ways to solve the coherence problem.
+
+The first is a \textit{shared-cache} design in which all PEs communicate through one common cache structure.
+This avoids inter-cache inconsistency because there is only one place that holds the shared block state.
+The weakness is scalability: once the shared cache becomes the bottleneck, adding more PEs does not produce linear speedup even for embarrassingly parallel workloads.
+
+The second is \textit{directory-based coherence}.
+A directory tracks which caches currently hold each block and coordinates invalidations, forwarded data, or ownership transfers.
+This can scale better than a pure broadcast bus because the system does not require every cache to observe every request.
+
+The third is \textit{snooping coherence}.
+Here each cache has a \textit{snooper}: logic that knows both what is currently in that cache and what transactions are appearing on the shared interconnect.
+If the interconnect is a shared observable medium, the snooper can react immediately when another PE requests a block that this cache currently owns or shares.
+The remainder of this chapter develops the classic snooping approach because it exposes the central state-machine ideas clearly.
+
+
+\section{Snooping Coherence and the MSI Protocol}\label{sec:mp-msi}
+A classic starting point for snooping coherence is the \textit{MSI} protocol.
+Each cached block is marked as \textit{modified (M)}, \textit{shared (S)}, or \textit{invalid (I)}.
+The meaning of those states is summarized in Table~\ref{tab:mp-msi-state-meanings}.
+\begin{table}[t]
+    \centering
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|l|l|l|}
+        \hline
+        State & My copy & Other caches & Memory copy \\
+        \hline
+        M & dirty and writable & no one else has a valid copy & stale \\
+        \hline
+        S & clean & others may also hold clean copies & correct \\
+        \hline
+        I & not valid in this cache & unspecified & unspecified \\
+        \hline
+    \end{tabular}
+    \caption{Meaning of the three MSI states for one cache block.}
+    \label{tab:mp-msi-state-meanings}
+\end{table}
+
+Two kinds of bus requests are especially important:
+\begin{itemize}
+    \item \texttt{GetS}: request shared read permission for a block.
+    \item \texttt{GetM}: request exclusive access with intent to write.
+\end{itemize}
+A dirty eviction produces a \texttt{WriteBack} transaction.
+Snoopers may also perform two high-level actions:
+\begin{itemize}
+    \item \textit{abort}: tell the requester to wait or retry because another cache still owns the necessary data or permission.
+    \item \textit{intervene}: supply the data directly rather than letting memory respond.
+\end{itemize}
+Table~\ref{tab:mp-msi-bus-actions} summarizes the basic bus-level vocabulary.
+\begin{table}[t]
+    \centering
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|l|p{4.2in}|}
+        \hline
+        Transaction or action & Meaning \\
+        \hline
+        \texttt{GetS} & Read miss requesting a clean shared copy. \\
+        \hline
+        \texttt{GetM} & Read-for-ownership requesting exclusive writable access. \\
+        \hline
+        \texttt{WriteBack} & Dirty block is written back to memory on eviction or ownership handoff. \\
+        \hline
+        abort & Requester must wait or retry because another cache is still handling the block. \\
+        \hline
+        intervene & A snooping cache supplies the current data value directly. \\
+        \hline
+    \end{tabular}
+    \caption{Common bus transactions and snooper responses in a snooping MSI system.}
+    \label{tab:mp-msi-bus-actions}
+\end{table}
+
+From the requesting PE's perspective, the stable-state behavior is simple.
+If a block is invalid and the PE reads it, the cache issues \texttt{GetS} and moves to \texttt{S} when the data arrives.
+If a block is invalid and the PE writes it, the cache issues \texttt{GetM} and moves to \texttt{M} when ownership arrives.
+If a block is already shared and the PE wants to write, the cache must first upgrade through \texttt{GetM} so that all other copies are invalidated.
+Table~\ref{tab:mp-msi-requester} gives one compact summary.
+\begin{table}[t]
+    \centering
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|l|l|l|}
+        \hline
+        Current state & Local event & Bus action & Next state \\
+        \hline
+        I & read miss & \texttt{GetS} & S \\
+        \hline
+        I & write miss & \texttt{GetM} & M \\
+        \hline
+        S & read hit & none & S \\
+        \hline
+        S & write hit & \texttt{GetM} & M \\
+        \hline
+        M & read hit & none & M \\
+        \hline
+        M & write hit & none & M \\
+        \hline
+        S & replacement & none & I \\
+        \hline
+        M & replacement & \texttt{WriteBack} & I \\
+        \hline
+    \end{tabular}
+    \caption{Stable-state MSI behavior from the requesting cache's perspective.}
+    \label{tab:mp-msi-requester}
+\end{table}
+
+From the snooper's perspective, the same bus requests mean something different.
+If a cache in state \texttt{S} sees another PE request \texttt{GetM}, it must invalidate its own copy and move to \texttt{I}.
+If a cache in state \texttt{M} sees \texttt{GetS}, it must ensure that the most recent data becomes visible and then downgrade to \texttt{S}.
+If it sees \texttt{GetM} while in \texttt{M}, it must give up ownership entirely and move to \texttt{I}.
+Table~\ref{tab:mp-msi-snooper} summarizes the stable-state snooping behavior.
+\begin{table}[t]
+    \centering
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|l|l|l|}
+        \hline
+        Current state & Snooped event & Action & Next state \\
+        \hline
+        I & sees \texttt{GetS} or \texttt{GetM} & none & I \\
+        \hline
+        S & sees \texttt{GetS} & none & S \\
+        \hline
+        S & sees \texttt{GetM} & invalidate local copy & I \\
+        \hline
+        M & sees \texttt{GetS} & provide or write back data, downgrade & S \\
+        \hline
+        M & sees \texttt{GetM} & provide or write back data, invalidate & I \\
+        \hline
+    \end{tabular}
+    \caption{Stable-state MSI behavior from the snooper's perspective.}
+    \label{tab:mp-msi-snooper}
+\end{table}
+
+
+\section{Transient States and a Worked Two-Cache Trace}\label{sec:mp-msi-trace}
+Real buses and coherence fabrics are not instantaneous, so caches often need \textit{transient states} while waiting for a request to complete.
+A common notation concatenates the path of the transition.
+For example, \texttt{IM} means that the cache started in \texttt{I}, issued a request whose destination is \texttt{M}, and is still waiting for that request to complete.
+Likewise, \texttt{SM} means a shared block has requested an upgrade to modified state but has not yet received final ownership.
+
+Table~\ref{tab:mp-msi-trace} walks through a short two-cache scenario that mirrors the classic classroom introduction to MSI:
+\begin{enumerate}
+    \item $P_1$ has a read miss and obtains a shared copy.
+    \item $P_2$ then has a read miss and also obtains a shared copy.
+    \item $P_1$ writes the block and upgrades from \texttt{S} to \texttt{M}.
+    \item $P_2$ then tries to write the same block, initially receives an abort, enters transient state \texttt{IM}, and retries after $P_1$ writes back or hands off the dirty value.
+\end{enumerate}
+\begin{table}[t]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|p{1.25in}|p{0.95in}|p{0.95in}|p{1.95in}|}
+        \hline
+        Step & Event & Bus activity & $P_1$ state & $P_2$ state \\
+        \hline
+        1 & $P_1$ read miss & \texttt{GetS} & $I\rightarrow S$ & $I\rightarrow I$ \\
+        \hline
+        2 & $P_2$ read miss & \texttt{GetS} & $S\rightarrow S$ & $I\rightarrow S$ \\
+        \hline
+        3 & $P_1$ write hit on shared block & \texttt{GetM} & $S\rightarrow M$ & snoops \texttt{GetM}: $S\rightarrow I$ \\
+        \hline
+        4 & $P_2$ write miss while $P_1$ owns block & \texttt{GetM}, abort & snoops \texttt{GetM}: $M\rightarrow I$ with \texttt{WriteBack} or intervention & $I\rightarrow IM$ \\
+        \hline
+        5 & $P_2$ retries after ownership transfer & retry \texttt{GetM} & $I\rightarrow I$ & $IM\rightarrow M$ \\
+        \hline
+    \end{tabular}
+    \caption{One worked MSI trace showing stable states, a transient \texttt{IM} state, and a write-ownership transfer between two caches.}
+    \label{tab:mp-msi-trace}
+\end{table}
+
+The important insight is that the coherence protocol is maintaining one simple invariant: a writable dirty copy must be unique.
+Whenever one cache acquires \texttt{M}, all competing copies must either become invalid or be updated into a clean shared form before execution continues.
+
+
+\section{Programming Models: Shared Memory and Message Passing}\label{sec:mp-programming-models}
+The architecture choices above are reflected directly in parallel programming models.
+A shared-memory program typically divides the data among threads, lets each thread compute a local partial result, and then uses explicit synchronization to merge those results safely.
+The following example uses a lock to protect a critical section that updates a global sum:
+\begin{verbatim}
+float X[64];
+float globalSum = 0;
+
+Thread 0: sum X[0:15] locally, then lock(L); globalSum += local0; unlock(L);
+Thread 1: sum X[16:31] locally, then lock(L); globalSum += local1; unlock(L);
+Thread 2: sum X[32:47] locally, then lock(L); globalSum += local2; unlock(L);
+Thread 3: sum X[48:63] locally, then lock(L); globalSum += local3; unlock(L);
+\end{verbatim}
+The lock prevents a lost update in the critical section.
+Without it, two threads might read the same old value of \texttt{globalSum}, add their local sums independently, and then overwrite one another.
+That kind of latent synchronization bug is one reason shared memory is powerful but dangerous.
+
+A message-passing version of the same idea avoids shared writable state:
+\begin{verbatim}
+Thread 0: compute local0; send(local0, 4);
+Thread 1: compute local1; send(local1, 4);
+Thread 2: compute local2; send(local2, 4);
+Thread 3: compute local3; send(local3, 4);
+
+Thread 4:
+  globalSum = 0;
+  for (i = 0; i < 4; i++)
+    globalSum += receive(i);
+\end{verbatim}
+In this formulation, synchronization is implicit in the blocking \texttt{receive()} operation.
+The collector thread waits until the required messages arrive.
+The advantage is portability: this model works across independent machines with separate memories.
+The cost is explicit communication overhead and a more demanding programming model.
+
+
+\section{Scaling and Architectural Limits}\label{sec:mp-scaling}
+Amdahl's Law still governs the big picture.
+If the parallelizable fraction is 1, then the application is often called \textit{embarrassingly parallel}, and the ideal speedup curve is linear in the PE count.
+Real machines fall short of that ideal once a shared resource saturates.
+A single shared cache saturates quickly.
+A shared interconnect can also become a bottleneck.
+Even a well-designed coherence protocol can lose efficiency if the workload repeatedly bounces writable blocks between PEs.
+
+This is why the interconnect, the memory model, and the programming style cannot be separated cleanly.
+A coherence protocol is not only a correctness mechanism; it also determines how much communication traffic the machine must generate in order to preserve the illusion of one shared memory.
+
+
+\section{Chapter 8 Summary}\label{sec:chapter8-summary}
+Chapter 8 moves from instruction-level techniques to multiprocessor architecture.
+The central classifications are SIMD versus MIMD, shared memory versus message passing, and shared observable buses versus point-to-point links.
+Accelerator systems introduce another common organization by separating host and accelerator memory and therefore requiring explicit data movement.
+Private caches make shared memory fast enough to be attractive, but they also create the cache-coherence problem.
+Coherence requires local read-after-write correctness, eventual visibility to other processors, and a consistent ordering of writes.
+Shared caches, directory protocols, and snooping protocols are the three standard solution families.
+The MSI snooping protocol demonstrates the core state-machine ideas: blocks move among modified, shared, and invalid states in response to local requests and snooped bus traffic, with transient states used while ownership transfers are still in flight.
+Finally, the programming model seen by software reflects these architectural choices directly: shared memory relies on synchronization such as locks, while message passing relies on explicit communication and blocking receives.
+
+
+\section{Practice Questions}\label{sec:ch8-practice}
+The following questions reinforce the main ideas of Chapter 8 and are intended for self-checking after the summary.
+\begin{enumerate}
+    \item Explain the difference between SIMD and MIMD. Then explain why a machine with multiple independent cores and a SIMD unit inside each core is still classified overall as MIMD.
+    \item Compare a shared-memory multiprocessor with a message-passing multiprocessor. What does the programmer gain and lose in each model?
+    \item Why is a traditional shared bus a natural fit for snooping coherence, while a point-to-point link such as PCIe is not naturally a broadcast snooping medium?
+    \item In the incoherent-cache example with initial value $x=1$, explain why the sequence ``$P_0$ writes 22; $P_1$ writes 44; $P_2$ executes \texttt{x++}'' can produce 2 instead of 45.
+    \item State the three standard coherence properties in words and explain why one of them must be phrased in terms of ``sufficient time'' rather than instant visibility.
+    \item For one cache block in an MSI protocol, explain what it means for that block to be in states \texttt{M}, \texttt{S}, and \texttt{I}. In particular, explain what memory does or does not know in each case.
+    \item Starting from both caches in state \texttt{S} for the same block, show the state changes when one cache performs a write hit. Which bus transaction occurs, and what must the other cache do?
+    \item What does the transient state \texttt{IM} mean? Give a short scenario in which a cache would enter \texttt{IM} rather than moving immediately from \texttt{I} to \texttt{M}.
+    \item Why does a single shared-cache design fail to scale linearly even for a highly parallel workload?
+    \item In the array-sum examples, explain why the shared-memory version needs a lock around the update of \texttt{globalSum}, while the message-passing version does not require the same kind of critical section.
+\end{enumerate}

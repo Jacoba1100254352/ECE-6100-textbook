@@ -842,3 +842,17 @@ The core must also maintain precise architectural state through mechanisms such 
 Modern processors therefore combine ILP techniques with careful recovery, retirement, and microarchitectural side-effect control.
 Simulator-visible counters such as fetched-versus-retired instructions, misprediction counts, miss counts, queue occupancy, and ROB pressure then provide a practical way to diagnose which limits are dominating a given design point.
 These ideas together form the bridge from classic five-stage thinking to modern high-throughput scalar cores.
+
+
+\section{Practice Questions}\label{sec:ch6-practice}
+The following questions reinforce the main ideas of Chapter 6 and are intended for self-checking after the summary.
+\begin{enumerate}
+    \item Explain why a superscalar machine can achieve $CPI<1$ without violating the meaning of a clock cycle. Then state the corresponding condition on instructions per cycle (IPC).
+    \item In a FICO-style machine with one ALU and one load/store unit, consider the sequence \texttt{LW R1,0(R2)} followed by \texttt{ADD R3,R1,R4}. Describe the earliest cycle in which the add can fire if the load takes two cycles to complete and there is no forwarding of the load result before it is ready.
+    \item Consider Tomasulo with tags and a ROB with bypass for the sequence \texttt{LW R1,0(R3)}; \texttt{ADD R3,R2,R1}; \texttt{ADD R1,R3,R2}. When the second and third instructions dispatch, which of their source operands come from the register file and which come from the youngest older ROB producer?
+    \item In a renamed machine, the current mapping of architected register \texttt{R1} points to physical register \texttt{P10}. A new instruction \texttt{ADD R1,R2,R3} dispatches and receives destination physical register \texttt{P24}. What mapping change occurs immediately at dispatch, and why can \texttt{P10} not be freed at that same moment?
+    \item Distinguish the event of broadcasting a result on the common data bus from the event of updating precise architected state at retirement. Why is this distinction essential once execution and completion occur out of order?
+    \item A simulator reports 1{,}600 fetched instructions, 1{,}200 retired instructions, 1{,}000 cycles, 220 no-fire cycles, and 90 ROB-blocked dispatch cycles. Compute IPC using the architecturally meaningful instruction count. Then explain what the gap between fetched and retired instructions suggests and what the ROB-blocked count suggests.
+    \item Explain why register renaming removes false dependences but does not remove true dependences. Give one short example of each case.
+    \item Compare reorder-buffer recovery with checkpoint/repair recovery. What state must each approach preserve so that the machine can return to a precise point after a misprediction or exception?
+\end{enumerate}

@@ -61,6 +61,29 @@ which yields a speedup of
 \end{equation}
 The example illustrates a recurring theme: accelerating only one instruction class can help, but total improvement depends on how often that class occurs.
 
+\paragraph{Worked machine-comparison example}\label{par:auto-009a}
+Now consider three machines that all execute the same source-level program.
+Machine J runs at 5.1 GHz with $CPI=3.0$.
+Machine K runs at 5.5 GHz with $CPI=3.7$ and the same dynamic instruction count as J\@.
+Machine G runs at 6.1 GHz with $CPI=3.2$ but requires $1.5\times$ as many dynamic instructions.
+Using Eq.~\eqref{eq:auto-003}, the J-versus-K comparison is
+\begin{equation}\label{eq:auto-008a}
+    \frac{T_K}{T_J}=\frac{3.7/5.5}{3.0/5.1}\approx 1.146,
+\end{equation}
+so K is slower even though its clock is faster.
+For J versus G, runtimes are proportional to
+\begin{equation}\label{eq:auto-008c}
+    T_J \propto \frac{1.0\times 3.0}{5.1}, \qquad
+    T_G \propto \frac{1.5\times 3.2}{6.1}.
+\end{equation}
+Numerically,
+\begin{equation}\label{eq:auto-008b}
+    T_J \propto 0.588,\qquad
+    T_G \propto 0.787.
+\end{equation}
+So the faster clock does not rescue Machine G\@: the larger dynamic instruction count dominates and Machine J is faster overall.
+This is the central Chapter 2 discipline: compare complete CPU time, not any single factor in isolation.
+
 
 \section{RISC vs. CISC Through the Performance Equation}\label{sec:auto-013}
 \textit{Reduced instruction set computer (RISC)} and \textit{complex instruction set computer (CISC)} are best understood as design tradeoffs, not as a simple ``better/worse'' ranking.
@@ -162,6 +185,15 @@ For rates under the corresponding fixed-work interpretation, the comparable aggr
 \end{equation}
 These weighted forms are the correct way to combine benchmark results when workloads do not occur equally often.
 
+\paragraph{Worked weighted-runtime example}\label{par:auto-011b}
+Suppose three workloads occur with weights $0.50$, $0.30$, and $0.20$, and one machine runs them in 4 s, 9 s, and 6 s, respectively.
+Then the weighted average runtime is
+\begin{equation}\label{eq:auto-016c}
+    \bar{T}_{weighted}=0.50(4)+0.30(9)+0.20(6)=5.9\ \text{s}.
+\end{equation}
+The same arithmetic form should \emph{not} be applied blindly to rates.
+If the reported numbers were throughputs, the fixed-work interpretation would instead require the weighted harmonic form in Eq.~\eqref{eq:auto-016b}.
+
 
 \section{Workload Dependence and Benchmarking}\label{sec:auto-017}
 Performance numbers are workload-dependent.
@@ -185,6 +217,22 @@ The first form is convenient when maximizing performance for a fixed budget.
 The second form is convenient when minimizing cost for a required performance gain.
 Both require the same discipline as every other Chapter 2 metric: use one baseline, one workload definition, and one aggregation method throughout the comparison.
 
+\paragraph{Worked value-comparison example}\label{par:auto-011c}
+Suppose Server A costs \$4{,}000 and delivers speedup 1.25, while Server B costs \$5{,}400 and delivers speedup 1.55.
+Their speedup per dollar values are
+\begin{equation}\label{eq:auto-017c}
+    \frac{1.25}{4000}=3.125\times 10^{-4},\qquad
+    \frac{1.55}{5400}\approx 2.87\times 10^{-4},
+\end{equation}
+so Server A gives slightly more performance per dollar.
+Their cost per unit speedup values are
+\begin{equation}\label{eq:auto-017d}
+    \frac{4000}{1.25}=3200,\qquad
+    \frac{5400}{1.55}\approx 3483.87,
+\end{equation}
+which leads to the same conclusion under the reciprocal metric.
+This example is intentionally simple: the point is to show that cost-aware comparisons are still just ratio comparisons once a common baseline is fixed.
+
 
 \section{Chapter 2 Summary}\label{sec:auto-018}
 Chapter 2 provides the framework for disciplined performance reasoning.
@@ -194,3 +242,17 @@ RISC and CISC are best evaluated as tradeoff points in Eq.~\eqref{eq:auto-002} r
 Amdahl's Law gives hard limits for fixed-size speedup, while Gustafson's Law explains scaled-workload growth without contradiction.
 Finally, performance summaries require correct statistics: arithmetic means for time, harmonic means for rate, and weighted forms when the workload mix is not uniform.
 These tools form the quantitative core used in later chapters.
+
+
+\section{Practice Questions}\label{sec:ch2-practice}
+The following questions reinforce the main ideas of Chapter 2 and are intended for self-checking after the summary.
+\begin{enumerate}
+    \item Machine A executes a workload with $IC=1.2\times 10^9$, $CPI=1.5$, and clock rate $2.4$ GHz. Machine B executes the same workload with $IC=0.9\times 10^9$, $CPI=1.9$, and clock rate $3.0$ GHz. Compute the runtime of both machines and the speedup of the faster machine over the slower one.
+    \item Two machines execute the same program. Machine J runs at $5.1$ GHz with $CPI=3.0$. Machine K runs at $5.5$ GHz with $CPI=3.7$. Compute the speedup of K over J. Then consider Machine G, which runs at $6.1$ GHz with $CPI=3.2$ but requires $1.5\times$ as many dynamic instructions as J for the same work. Compute the speedup of G over J.
+    \item A benchmark mix contains three workloads with weights $0.50$, $0.30$, and $0.20$. On one machine, their runtimes are 4 s, 9 s, and 6 s. Compute the weighted average runtime. Then explain why the same weighted arithmetic mean would be inappropriate if the reported quantities were throughputs instead of runtimes.
+    \item A proposed optimization accelerates the branch-recovery portion of a program, which currently accounts for 30\% of total runtime, by a factor of 4. Use Amdahl's Law to compute the overall speedup. Then compute the maximum possible speedup if that portion were made infinitely fast.
+    \item A program spends 20\% of its time in vectorizable code. Suppose an added accelerator makes only that portion run four times faster. Compute the overall speedup. Then explain why adding more parallel hardware gives diminishing returns when the accelerated fraction is fixed.
+    \item A parallel machine runs a scaled problem with serial fraction $0.10$ on 16 processors. Compute the speedup predicted by Gustafson's Law. Then explain why this result does not contradict Amdahl's Law.
+    \item For each of the following, state whether arithmetic mean, harmonic mean, or a weighted variant is the correct aggregation method, and explain why: runtimes for an equal-work benchmark suite, throughputs for an equal-work benchmark suite, and runtimes for a production workload mix with known fractions.
+    \item Two candidate servers cost \$4{,}000 and \$5{,}400 and deliver speedups of 1.25 and 1.55 relative to the same baseline. Compute speedup per dollar and cost per unit speedup for both systems. State which system is preferable under each metric.
+\end{enumerate}

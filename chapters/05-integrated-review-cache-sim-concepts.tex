@@ -88,6 +88,24 @@ If branch frequency is 18\% and each branch contributes an average of 1.6 stall 
 \end{equation}
 This illustrates how even moderate branch penalties raise CPI above the ideal value of 1.
 
+\subsection*{Integrated CPI Accounting}\label{subsec:auto-013b}
+Suppose a scalar core has base $CPI=1$.
+Loads are 30\% of all instructions, the L1 data-cache miss ratio on loads is 5\%, and each such miss adds 20 cycles.
+Branches are 18\% of all instructions, the misprediction rate is 10\%, and each misprediction adds 2 cycles.
+Then the added CPI from load misses is
+\begin{equation}\label{eq:auto-048a}
+    0.30\times 0.05\times 20 = 0.30,
+\end{equation}
+while the added CPI from branch mispredictions is
+\begin{equation}\label{eq:auto-048b}
+    0.18\times 0.10\times 2 = 0.036.
+\end{equation}
+So the total CPI estimate is
+\begin{equation}\label{eq:auto-048c}
+    CPI \approx 1 + 0.30 + 0.036 = 1.336.
+\end{equation}
+This kind of combined accounting is the most useful way to compare bottlenecks: all stall mechanisms are translated into the common unit of cycles per retired instruction.
+
 \subsection*{Software Branch Handling}\label{subsec:auto-013a}
 When a branch has delay slots, every instruction moved into those slots must be safe regardless of whether the branch is taken.
 When a branch instead has squash slots under an ``assume taken'' policy, the compiler may place instructions from the predicted taken path there, because wrong-path entries will be canceled.
@@ -130,6 +148,13 @@ To interpret prefetch behavior correctly, the simulator must also distinguish de
 A prefetch metadata bit provides that distinction.
 The first demand use of a prefetched line contributes to prefetch-hit interpretation, while eviction before first demand use contributes to prefetch-miss interpretation.
 
+\paragraph{Worked prefetch-counter interpretation}\label{par:auto-027c}
+Suppose a simulator reports 120 prefetched lines, 70 prefetch hits, and 25 prefetched lines evicted before first use.
+The 70 prefetch hits show that many speculative fills were in fact useful: later demand accesses avoided ordinary misses because of earlier prefetching.
+The 25 unused evictions show that some prefetched lines consumed bandwidth and space without helping demand accesses.
+The remaining prefetched lines are ambiguous without more context, because some may still be resident and not yet demanded.
+This is why prefetch usefulness is not judged by one counter alone; both benefit and waste must be read together.
+
 
 \section{Statistics and AAT Interpretation}\label{sec:auto-053}
 Typical hierarchy statistics include access counts, hit/miss counts, hit/miss ratios, writeback counts, and prefetch effectiveness counters.
@@ -159,3 +184,15 @@ Pipeline timing and cache behavior are not separate topics; they are two views o
 The simulation concepts in this chapter provide a concrete way to observe those tradeoffs in controlled workloads.
 That same simulator-oriented reasoning extends naturally to branch-prediction accuracy, fetched-versus-retired instruction counts, queue pressure, and reorder-buffer pressure, which are developed further in Chapter 6.
 A grouped formula index for the full text is provided in Appendix~\ref{ch:formula-compendium}.
+
+
+\section{Practice Questions}\label{sec:ch5-practice}
+The following questions reinforce the integrated ideas of Chapter 5 and are intended for self-checking after the summary.
+\begin{enumerate}
+    \item A hierarchy reports $HT_{L1}=1$, $MR_{L1}=0.10$, $HT_{L2}=7$, $MR_{L2,read}=0.20$, and $DRAM\_TIME=80$. Compute $AAT_{L2}$ and $AAT_{L1}$. Then explain why the L1 miss penalty is modeled as the lower-level \emph{average} access time rather than as a fixed constant.
+    \item A simulator reports 120 prefetched lines, 70 prefetch hits, and 25 prefetched lines evicted before first use. What do these three counters say about prefetch usefulness and prefetch waste? What additional information would you want before concluding that the prefetcher is a net win?
+    \item In a hierarchy that uses write-through, write-no-allocate behavior at the lower level, why is it often more meaningful to report the lower-level miss ratio over \emph{reads only} rather than over all accesses?
+    \item Two cache configurations have the same capacity and associativity. Configuration A has lower hit time but higher miss ratio. Configuration B has higher hit time but lower miss ratio. Explain why the better design cannot be chosen correctly without computing or estimating average access time.
+    \item Explain why the servicing order of read-miss repair and writeback traffic can change later hierarchy statistics even when the high-level policy choices are unchanged.
+    \item A scalar core has base $CPI=1$. Loads are 30\% of all instructions, the L1 data-cache miss ratio on loads is 5\%, and each such miss adds 20 stall cycles. Branches are 18\% of all instructions, the branch misprediction rate is 10\%, and each misprediction adds 2 cycles. Estimate the total CPI and identify which source of stalls contributes more.
+\end{enumerate}

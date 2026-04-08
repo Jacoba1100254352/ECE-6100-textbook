@@ -296,6 +296,22 @@ The code that drains the remaining work after loop exit is the \textit{epilogue}
 The distance in cycles between the start of successive iterations is the \textit{initiation interval (II)}.
 Once the schedule reaches steady state, the loop begins a new iteration every $II$ cycles, so the throughput is $1/II$ iterations per cycle.
 
+\paragraph{Unrolling view before compaction}\label{par:ilp-swpipe-unroll-view}
+One useful way to understand software pipelining is to look first at a small explicit unrolling.
+Suppose a loop body consists of five ops $A,B,C,D,E$, where $E$ is the loop-closing branch.
+A two-times unrolled form can be sketched conceptually as
+\[
+A,\ B,\ C,\ D,\ E^\ast,\ A',\ B',\ C',\ D',\ E',
+\]
+where $E^\ast$ is the inverted early-exit branch that leaves the loop if the second copy should not begin.
+This makes the scheduling opportunity visible: once the loop is unrolled, the compiler can interleave $A'$ with still-pending work from the first copy instead of waiting for the whole first iteration to drain first.
+Software pipelining then takes the next step and \emph{compacts} that overlapping pattern into a finite prologue, a repeating kernel, and a finite epilogue rather than materializing a large explicitly unrolled body.
+
+\paragraph{Which dependences matter most in the first sketch}\label{par:ilp-swpipe-dep-simplify}
+In early cyclic-scheduling sketches, it is common to draw only true dependences and the loop-carried recurrences that constrain them.
+Anti-dependence and output-dependence edges are still real constraints in the full compiler problem, but they are often omitted from the first visualization because software renaming can frequently remove them.
+The scheduling bottlenecks that determine $RecII$ come from the true cyclic constraints, so those are the ones worth emphasizing first.
+
 
 \section{Iterative Modulo Scheduling}\label{sec:ilp-iterative-modulo-scheduling}
 A practical way to construct these schedules is \textit{Iterative Modulo Scheduling (IMS)}.
@@ -438,3 +454,17 @@ Tail-bit and pause-field encoding then translate that schedule into a compact in
 Software pipelining extends the same idea across loop iterations by constructing a prologue, steady-state kernel, and epilogue around a chosen initiation interval.
 Memory disambiguation remains the key correctness limit: compile-time scheduling can move loads and stores only when aliasing is understood well enough to preserve program behavior.
 Together, these techniques show how compiler scheduling can approach the performance of aggressive ILP hardware while trading hardware complexity for compile-time analysis.
+
+
+\section{Practice Questions}\label{sec:ch7-practice}
+The following questions reinforce the main ideas of Chapter 7 and are intended for self-checking after the summary.
+\begin{enumerate}
+    \item For the sequence \texttt{LW R1,X}; \texttt{ADD R2,R1,R3}; \texttt{ADD R1,R4,R5}; \texttt{MUL R6,R2,R1}, draw the data dependence graph and label the pure, anti-, and output dependences.
+    \item Using appropriate latencies for load, add, and multiply, compute the dependence height of each instruction in the previous question. Then list the instructions in descending order of dependence height.
+    \item Assume a VLIW machine with at most one ALU op, one MUL op, and one memory op per multi-op. Produce one legal list schedule for the instruction sequence in Question 1.
+    \item A VLIW schedule contains the following multi-ops: row 1 has a single load; row 2 has an add and a multiply; row 3 is empty because of a dependence delay; row 4 has a store. Explain how a tail-bit plus pause-field encoding can represent this schedule without inserting explicit no-op instructions into every unused slot.
+    \item A loop contains 3 ALU/branch operations, 1 multiply, and 3 memory operations per iteration. The machine has 1 ALU, 1 MUL, and 1 memory unit. Compute $ResII$. Then explain how a loop-carried recurrence could still force $MII$ above that resource bound.
+    \item For the loop in Question 5, suppose the strongest loop-carried recurrence has total latency 4 and distance 1. Compute $RecII$ and $MII$.
+    \item Explain why a modulo reservation table for initiation interval $II$ has exactly $II$ rows, and explain the role of the mapping from cycle $x$ in the unrolled schedule to row $x \bmod II$.
+    \item Under what conditions may a compiler legally move a load ahead of an older store? Explain why this question is fundamentally a memory-disambiguation problem rather than only a functional-unit scheduling problem.
+\end{enumerate}
