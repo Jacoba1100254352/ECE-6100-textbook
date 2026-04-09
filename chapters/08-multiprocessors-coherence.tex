@@ -54,45 +54,38 @@ A standalone shared-memory multiprocessor integrates several PEs around a common
 An accelerator organization instead separates a host processor from a specialized parallel engine; the host launches work on the accelerator and explicitly copies data to and from accelerator memory.
 \begin{figure}[t]
     \centering
-    \small
-    \begin{minipage}[t]{0.46\textwidth}
-        \centering
-        \textbf{Standalone shared-memory multiprocessor}\par
-        \vspace{0.5ex}
-        \resizebox{\linewidth}{!}{%
-        \begin{tikzpicture}[every node/.style={font=\small}, >=Latex]
-            \node[draw, minimum width=0.85in, minimum height=0.4in] (pe0) at (0,1.2) {PE 0};
-            \node[draw, minimum width=0.85in, minimum height=0.4in] (pe1) at (1.4,1.2) {PE 1};
-            \node[draw, minimum width=0.85in, minimum height=0.4in] (pe2) at (2.8,1.2) {PE 2};
-            \node[draw, minimum width=0.85in, minimum height=0.4in] (pe3) at (4.2,1.2) {PE 3};
-            \node[draw, rounded corners, minimum width=4.9in, minimum height=0.55in] (ic) at (2.1,0.15) {Shared interconnect / coherence fabric};
-            \node[draw, minimum width=2.0in, minimum height=0.5in] (mem) at (2.1,-1.0) {Shared memory system};
-            \draw[->] (pe0.south) -- (0,0.43);
-            \draw[->] (pe1.south) -- (1.4,0.43);
-            \draw[->] (pe2.south) -- (2.8,0.43);
-            \draw[->] (pe3.south) -- (4.2,0.43);
-            \draw[->] (2.1,-0.13) -- (mem.north);
-        \end{tikzpicture}
+    \begin{tikzpicture}[
+        x=1in,
+        y=1in,
+        >=Latex,
+        every node/.style={font=\small, align=center},
+        pe/.style={draw, minimum width=0.48in, minimum height=0.30in},
+        widebox/.style={draw, rounded corners=2pt, minimum height=0.42in, align=center},
+        box/.style={draw, minimum width=1.05in, minimum height=0.34in, align=center},
+        membox/.style={draw, minimum width=1.20in, minimum height=0.34in, align=center}
+    ]
+        \node[font=\bfseries] at (1.35,1.55) {Standalone shared-memory multiprocessor};
+        \node[pe] (pe0) at (0.22,1.00) {PE 0};
+        \node[pe] (pe1) at (0.97,1.00) {PE 1};
+        \node[pe] (pe2) at (1.72,1.00) {PE 2};
+        \node[pe] (pe3) at (2.47,1.00) {PE 3};
+        \node[widebox, minimum width=3.05in] (ic) at (1.35,0.30) {Shared interconnect\\coherence fabric};
+        \node[draw, minimum width=1.75in, minimum height=0.38in] (mem) at (1.35,-0.50) {Shared memory system};
+        \foreach \n in {pe0,pe1,pe2,pe3} {
+            \draw[->, line width=0.4pt] (\n.south) -- ++(0,-0.18) -| (ic.north);
         }
-    \end{minipage}\hfill
-    \begin{minipage}[t]{0.49\textwidth}
-        \centering
-        \textbf{Host plus accelerator organization}\par
-        \vspace{0.5ex}
-        \resizebox{\linewidth}{!}{%
-        \begin{tikzpicture}[every node/.style={font=\small}, >=Latex]
-            \node[draw, minimum width=1.35in, minimum height=0.45in] (cpu) at (0,1.2) {Host CPU};
-            \node[draw, minimum width=1.45in, minimum height=0.45in] (hmem) at (0,-0.1) {Host memory};
-            \node[draw, minimum width=1.7in, minimum height=0.45in] (link) at (2.3,0.55) {PCIe or similar link};
-            \node[draw, minimum width=1.65in, minimum height=0.45in] (acc) at (4.7,1.2) {Accelerator PEs};
-            \node[draw, minimum width=1.65in, minimum height=0.45in] (amem) at (4.7,-0.1) {Accelerator memory};
-            \draw[->] (cpu.south) -- (hmem.north);
-            \draw[->] (cpu.east) -- (link.west);
-            \draw[->] (link.east) -- (acc.west);
-            \draw[->] (acc.south) -- (amem.north);
-        \end{tikzpicture}
-        }
-    \end{minipage}
+        \draw[->, line width=0.4pt] (ic.south) -- (mem.north);
+
+        \node[font=\bfseries] at (4.95,1.55) {Host plus accelerator organization};
+        \node[box] (cpu) at (4.20,1.00) {Host CPU};
+        \node[box] (acc) at (5.70,1.00) {Accelerator PEs};
+        \node[membox] (hmem) at (4.20,-0.05) {Host memory};
+        \node[membox] (amem) at (5.70,-0.05) {Accelerator memory};
+        \draw[<->, line width=0.5pt] (cpu.east) -- (acc.west);
+        \node[font=\scriptsize, fill=white, inner sep=1pt] at (4.95,1.20) {PCIe or similar link};
+        \draw[->, line width=0.4pt] (cpu.south) -- (hmem.north);
+        \draw[->, line width=0.4pt] (acc.south) -- (amem.north);
+    \end{tikzpicture}
     \caption{Two common multiprocessor organizations. The left machine keeps all PEs in one shared-memory system. The right machine uses an accelerator with distinct memory, so software must explicitly move data across the interconnect.}
     \label{fig:mp-standalone-vs-accelerator}
 \end{figure}
