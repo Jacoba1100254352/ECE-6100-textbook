@@ -202,11 +202,11 @@ This is one of the most cost-effective branch-target optimizations.
 Assume the BTB is indexed by $PC[7:4]$ and the RAS is initially empty.
 Now consider the short control-flow sequence
 \begin{center}
-\begin{tabular}{@{}ll@{}}
-    \texttt{0x4000:} & \texttt{CALL 0x4A00} \\
-    \texttt{0x4A00:} & \texttt{BREQZ R1,0x4AF0} (taken) \\
-    \texttt{0x4AF8:} & \texttt{RET}
-\end{tabular}
+    \begin{tabular}{@{}ll@{}}
+        \texttt{0x4000:} & \texttt{CALL 0x4A00}             \\
+        \texttt{0x4A00:} & \texttt{BREQZ R1,0x4AF0} (taken) \\
+        \texttt{0x4AF8:} & \texttt{RET}
+    \end{tabular}
 \end{center}
 The call pushes return address \texttt{0x4004} onto the RAS and creates or refreshes a BTB entry for the call target \texttt{0x4A00}.
 The conditional branch updates its BTB entry with the taken target \texttt{0x4AF0}.
@@ -233,6 +233,7 @@ It ignores PC and history entirely and predicts that every conditional branch wi
 This is crude, but it remains a useful reference point because many loop back-edges are taken most of the time.
 More sophisticated predictors should therefore be judged not only against one another, but also against simple baselines such as backward taken / forward not taken and always taken.
 
+
 \section{Simple Dynamic Direction Predictors}\label{sec:auto-0430}
 The simplest dynamic predictors store a small amount of state per static branch or per BTB entry.
 
@@ -249,6 +250,7 @@ The four counter states are commonly interpreted as strongly not taken, weakly n
 Prediction comes from the high-order tendency of the counter, while update moves the counter only one step toward the actual outcome.
 This hysteresis avoids overreacting to one unusual branch result.
 In the loop example above, a two-bit counter usually mispredicts only on the loop exit rather than on both the exit and the next re-entry.
+
 
 \section{Global and Local History Predictors}\label{sec:auto-043a}
 History-based predictors use recent branch outcomes to select among several learned taken/not-taken tendencies rather than relying on one counter per static branch.
@@ -277,25 +279,25 @@ Let every counter begin in state \texttt{10}, and let the initial GHR be \texttt
 For the four resolved branches below, prediction always uses the \emph{current} PC hash and the \emph{current} GHR\@.
 Only after that prediction is the selected counter updated and the actual outcome shifted into the GHR\@.
 
-{\small
+    {\small
 \begin{center}
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{|c|c|c|c|c|c|c|c|c|}
-    \hline
-    Time & PC & Act.
-    & $PC[2]$ & $GHR_T$ & Ctr$_T$ & Pred.
-    & Ctr$_{T+1}$ & $GHR_{T+1}$ \\
-    \hline
-    $T_0$ & \texttt{0x2017} & N & \texttt{1} & \texttt{01} & \texttt{10} & T & \texttt{01} & \texttt{10} \\
-    \hline
-    $T_1$ & \texttt{0x2009} & T & \texttt{0} & \texttt{10} & \texttt{10} & T & \texttt{11} & \texttt{01} \\
-    \hline
-    $T_2$ & \texttt{0x2017} & T & \texttt{1} & \texttt{01} & \texttt{01} & N & \texttt{10} & \texttt{11} \\
-    \hline
-    $T_3$ & \texttt{0x2009} & N & \texttt{0} & \texttt{11} & \texttt{10} & T & \texttt{01} & \texttt{10} \\
-    \hline
-\end{tabular}
+    \setlength{\tabcolsep}{4pt}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+        \hline
+        Time & PC & Act.
+        & $PC[2]$ & $GHR_T$ & Ctr$_T$ & Pred.
+        & Ctr$_{T+1}$ & $GHR_{T+1}$ \\
+        \hline
+        $T_0$ & \texttt{0x2017} & N & \texttt{1} & \texttt{01} & \texttt{10} & T & \texttt{01} & \texttt{10} \\
+        \hline
+        $T_1$ & \texttt{0x2009} & T & \texttt{0} & \texttt{10} & \texttt{10} & T & \texttt{11} & \texttt{01} \\
+        \hline
+        $T_2$ & \texttt{0x2017} & T & \texttt{1} & \texttt{01} & \texttt{01} & N & \texttt{10} & \texttt{11} \\
+        \hline
+        $T_3$ & \texttt{0x2009} & N & \texttt{0} & \texttt{11} & \texttt{10} & T & \texttt{01} & \texttt{10} \\
+        \hline
+    \end{tabular}
 \end{center}}
 
 After $T_3$, the final GHR is \texttt{10}.
@@ -320,31 +322,32 @@ Now assume a 2-bit history table indexed by $PC[3:2]$ and a shared pattern table
 Let every history-table entry begin at \texttt{00}, and let every pattern-table counter begin at \texttt{01}.
 The sequence below uses two PCs, \texttt{0x3B98} and \texttt{0x3B9F}, whose hashes are \texttt{10} and \texttt{11}, respectively.
 
-{\small
+    {\small
 \begin{center}
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{|c|c|c|c|c|c|c|c|c|}
-    \hline
-    Time & PC & $PC[3:2]$ & Hist$_T$ & Ctr$_T$ & Pred.
-    & Act.
-    & Ctr$_{T+1}$ & Hist$_{T+1}$ \\
-    \hline
-    $T_0$ & \texttt{0x3B98} & \texttt{10} & \texttt{00} & \texttt{01} & N & N & \texttt{00} & \texttt{00} \\
-    \hline
-    $T_1$ & \texttt{0x3B9F} & \texttt{11} & \texttt{00} & \texttt{00} & N & T & \texttt{01} & \texttt{01} \\
-    \hline
-    $T_2$ & \texttt{0x3B98} & \texttt{10} & \texttt{00} & \texttt{01} & N & N & \texttt{00} & \texttt{00} \\
-    \hline
-    $T_3$ & \texttt{0x3B9F} & \texttt{11} & \texttt{01} & \texttt{01} & N & N & \texttt{00} & \texttt{10} \\
-    \hline
-\end{tabular}
+    \setlength{\tabcolsep}{4pt}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+        \hline
+        Time & PC & $PC[3:2]$ & Hist$_T$ & Ctr$_T$ & Pred.
+        & Act.
+        & Ctr$_{T+1}$ & Hist$_{T+1}$ \\
+        \hline
+        $T_0$ & \texttt{0x3B98} & \texttt{10} & \texttt{00} & \texttt{01} & N & N & \texttt{00} & \texttt{00} \\
+        \hline
+        $T_1$ & \texttt{0x3B9F} & \texttt{11} & \texttt{00} & \texttt{00} & N & T & \texttt{01} & \texttt{01} \\
+        \hline
+        $T_2$ & \texttt{0x3B98} & \texttt{10} & \texttt{00} & \texttt{01} & N & N & \texttt{00} & \texttt{00} \\
+        \hline
+        $T_3$ & \texttt{0x3B9F} & \texttt{11} & \texttt{01} & \texttt{01} & N & N & \texttt{00} & \texttt{10} \\
+        \hline
+    \end{tabular}
 \end{center}}
 
 This trace makes the two-level structure explicit.
 At $T_1$, branch \texttt{0x3B9F} still reads local history \texttt{00}, so it trains the shared pattern entry for history \texttt{00}, even though it is a different static branch from \texttt{0x3B98}.
 At $T_3$, however, the same branch now reads local history \texttt{01}, so it consults and updates a different pattern-table counter.
 The history table is branch-specific; the pattern table is shared by history value.
+
 
 \section{Perceptron Direction Prediction}\label{sec:auto-043b}
 Perceptron prediction replaces small counter tables with a simple linear classifier.
@@ -375,7 +378,7 @@ The perceptron predictor can learn longer correlations than small counter tables
 Suppose the active perceptron has weights $[1,2,-1,0,1]$, where the first value is the bias $w_0$, and suppose the current 4-bit global history is \texttt{1010}.
 Using taken $=+1$ and not taken $=-1$, that history becomes
 \[
-x=[+1,-1,+1,-1].
+    x=[+1,-1,+1,-1].
 \]
 The perceptron output is therefore
 \begin{equation}\label{eq:pipe-perceptron-example}
@@ -385,10 +388,11 @@ Because $y\ge 0$, the prediction is taken.
 If the true outcome is not taken, then the prediction is wrong and training must occur with target $t=-1$.
 The updated weights become
 \[
-w_0\leftarrow 1-1=0,\qquad
-[w_1,w_2,w_3,w_4]\leftarrow [2,-1,0,1]+[-1,+1,-1,+1]=[1,0,-1,2].
+    w_0\leftarrow 1-1=0,\qquad
+    [w_1,w_2,w_3,w_4]\leftarrow [2,-1,0,1]+[-1,+1,-1,+1]=[1,0,-1,2].
 \]
 After the same outcome is shifted into the history register, the new GHR becomes \texttt{0100} if the newest bit is placed on the right.
+
 
 \section{Hybrid and Tournament Predictors}\label{sec:auto-043c}
 A \textit{hybrid predictor} combines two or more component predictors and uses a chooser to decide which component to trust for a branch context.
@@ -418,6 +422,7 @@ These metrics answer different questions: branch fraction tells how often contro
 Prediction happens near fetch, but the true branch outcome becomes known only later when the branch resolves or retires.
 A pipelined predictor therefore cannot always train itself using only its \emph{current} tables, because the history pattern, perceptron sum, or chooser state seen at update time may differ from the state that existed when the prediction was originally made.
 Practical hardware and simulators solve this by preserving a small prediction-time snapshot, such as the selected history entry or chooser index, until the branch is ready to update the predictor.
+
 
 \section{Timing-Diagram Interpretation}\label{sec:auto-044}
 Timing diagrams are not just bookkeeping artifacts.
@@ -459,6 +464,7 @@ CPI is modeled as $1+\text{stalls}_{avg}$, with stalls explained by the interact
 Structural hazards are reduced through resource provisioning; control hazards are addressed through delay/squash semantics and prediction structures.
 BTBs predict branch targets, RAS handles returns efficiently, and direction prediction determines whether control transfer occurs, with software heuristics like backward taken/forward not taken and simple baselines like always taken providing reference points.
 Simple dynamic predictors such as one-bit prediction and Smith two-bit counters add robustness with very little hardware, while history-based predictors such as GShare, GSelect, and Yeh/Patt, neural-style schemes such as perceptrons, and hybrid tournament predictors refine that prediction further by learning correlations across prior branch outcomes.
+Operationally, those predictors are best understood as table- or vector-update procedures: identify the prediction-time index or history, read the predictor state, make the prediction, and only later train using the correct saved context.
 Because prediction and training happen at different times in the pipeline, practical predictors must also preserve enough prediction-time context to update correctly later.
 Timing diagrams then tie the whole chapter together by exposing which hazards, forwarding paths, and same-cycle register-file behaviors a concrete pipeline must implement.
 Together, these ideas define practical pipeline performance analysis and design.
@@ -467,19 +473,40 @@ Together, these ideas define practical pipeline performance analysis and design.
 \section{Practice Questions}\label{sec:ch4-practice}
 The following questions reinforce the main ideas of Chapter 4 and are intended for self-checking after the summary.
 \begin{enumerate}
-    \item An unpipelined design has $CPI=5$. A new implementation uses five pipeline stages. What is the maximum possible speedup if the pipelined clock period is unchanged? Then compute the new CPI if 25\% of instructions suffer a single-cycle stall.
-    \item A scalar pipeline has base $CPI=1$. Structural hazards add an average of $0.05\times 1$ cycles per instruction, load-use hazards add $0.12\times 1$, and branch mispredictions add $0.15\times 2$. Compute the final CPI.
-    \item For the sequence below, list the RAW, WAR, and WAW dependences. Then identify which forwarding path is most important for reducing stalls.
+    \item An unpipelined design has $CPI=5$.
+    A new implementation uses five pipeline stages.
+    What is the maximum possible speedup if the pipelined clock period is unchanged?
+    Then compute the new CPI if 25\% of instructions suffer a single-cycle stall.
+    \item A scalar pipeline has base $CPI=1$.
+    Structural hazards add an average of $0.05\times 1$ cycles per instruction, load-use hazards add $0.12\times 1$, and branch mispredictions add $0.15\times 2$.
+    Compute the final CPI\@.
+    \item For the sequence below, list the RAW, WAR, and WAW dependences.
+    Then identify which forwarding path is most important for reducing stalls.
     \begin{quote}
-    \texttt{LW R1, 0(R2)}\\
-    \texttt{ADD R3, R1, R4}\\
-    \texttt{SUB R5, R3, R6}\\
-    \texttt{SW R5, 0(R7)}
+        \texttt{LW R1, 0(R2)}\\
+        \texttt{ADD R3, R1, R4}\\
+        \texttt{SUB R5, R3, R6}\\
+        \texttt{SW R5, 0(R7)}
     \end{quote}
-    \item A timing diagram shows that instruction fetch continues in the same cycle that another instruction accesses data memory, that a dependent ALU consumer reaches EX before the producer reaches WB, and that a decode-stage consumer can read a value in the same cycle an older instruction writes it back. What does each of these observations imply about the hardware organization?
-    \item Explain the distinct roles of the branch target buffer (BTB), return-address stack (RAS), and direction predictor. Why does a BTB remain useful even when the branch direction is trivial?
-    \item A BTB is indexed by \texttt{PC[7:4]}. The return-address stack is initially empty. Simulate this short instruction stream: \texttt{0x4000: CALL 0x4A00}, \texttt{0x4A00: BREQZ R1,0x4AF0} (taken), \texttt{0x4AF8: RET}, \texttt{0x4004: ADD}. State the BTB effect of each control instruction and the final contents of the top of the RAS.
-    \item A GSelect predictor uses a 2-bit global history register and indexes the predictor table with \texttt{PC[2]} and the current GHR. The row for \texttt{PC[2]=0} is \texttt{[01,10,11,00]} for GHR \texttt{00,01,10,11}, the row for \texttt{PC[2]=1} is \texttt{[10,01,00,11]}, and the initial GHR is \texttt{01}. Simulate the following two branches: \texttt{(0x2004,T)} and \texttt{(0x2008,N)}. For each, give the prediction, the updated counter, and the new GHR.
-    \item A Yeh/Patt predictor uses \texttt{PC[3:2]} to index a history table, and each history register is 2 bits wide. Explain how the history-table lookup and the pattern-table lookup differ from the indexing rule used in GSelect. Then state one situation in which Yeh/Patt can distinguish branches that simple global-history indexing tends to alias together.
-    \item A perceptron predictor uses $G=4$ bits of global history. The active perceptron has weights $[1,2,-1,0,1]$, the current GHR is \texttt{1010}, and the next actual branch outcome is not taken. Compute the output $y$, state the prediction, determine whether training occurs, and give the new GHR after update. You may assume the project-style threshold rule $\theta=\lfloor 1.93G+14\rfloor$.
+    \item A timing diagram shows that instruction fetch continues in the same cycle that another instruction accesses data memory, that a dependent ALU consumer reaches EX before the producer reaches WB, and that a decode-stage consumer can read a value in the same cycle an older instruction writes it back.
+    What does each of these observations imply about the hardware organization?
+    \item Explain the distinct roles of the branch target buffer (BTB), return-address stack (RAS), and direction predictor.
+    Why does a BTB remain useful even when the branch direction is trivial?
+    \item A BTB is indexed by \texttt{PC[7:4]}.
+    The return-address stack is initially empty.
+    Simulate this short instruction stream: \texttt{0x4000: CALL 0x4A00}, \texttt{0x4A00: BREQZ R1,0x4AF0} (taken), \texttt{0x4AF8: RET}, \texttt{0x4004: ADD}.
+    State the BTB effect of each control instruction and the final contents of the top of the RAS\@.
+    \item A GSelect predictor uses a 2-bit global history register and indexes the predictor table with \texttt{PC[2]} and the current GHR. The row for \texttt{PC[2]=0} is \texttt{[01,10,11,00]} for GHR \texttt{00,01,10,11}, the row for \texttt{PC[2]=1} is \texttt{[10,01,00,11]}, and the initial GHR is \texttt{01}.
+    Simulate the following branch sequence in order: \texttt{(0x2004,T)}, \texttt{(0x2008,N)}, \texttt{(0x2004,T)}, \texttt{(0x200C,T)}.
+    For each access, give the selected table entry before update, the prediction, the updated counter, and the new GHR\@.
+    \item A Yeh/Patt predictor uses \texttt{PC[3:2]} to index a history table, and each history register is 2 bits wide.
+    Explain how the history-table lookup and the pattern-table lookup differ from the indexing rule used in GSelect.
+    Then state one situation in which Yeh/Patt can distinguish branches that simple global-history indexing tends to alias together.
+    \item A student claims that if every Yeh/Patt local-history register is initialized to \texttt{00}, then the first prediction for every branch must be not taken.
+    Is that claim correct?
+    Explain which structure determines the actual first prediction and why the history table alone is not enough.
+    \item A perceptron predictor uses $G=4$ bits of global history.
+    The active perceptron has weights $[1,2,-1,0,1]$, the current GHR is \texttt{1010}, and the next actual branch outcome is not taken.
+    Compute the output $y$, state the prediction, determine whether training occurs, and give the new GHR after update.
+    You may assume the project-style threshold rule $\theta=\lfloor 1.93G+14\rfloor$.
 \end{enumerate}

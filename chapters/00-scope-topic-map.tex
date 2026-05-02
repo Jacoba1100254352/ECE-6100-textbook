@@ -3,11 +3,16 @@
 
 
 \section*{How to Use This Text}\label{sec:auto-001}
-Chapters 1 through 8 provide topic depth with definitions, equations, and worked examples.
+Chapters 1 through 10 provide topic depth with definitions, equations, and worked examples.
 Chapter 5 provides integrated synthesis and cache-simulation context.
 Chapter 6 develops dynamic instruction-level parallelism mechanisms such as superscalar scheduling and out-of-order execution.
 Chapter 7 develops compiler-scheduled instruction-level parallelism through very long instruction word (VLIW) execution and software pipelining.
 Chapter 8 develops multiprocessor organization, coherence, and parallel programming models.
+Chapter 9 develops atomic synchronization, transactional-memory ideas, and memory-consistency semantics.
+Chapter 10 develops parallel interconnection-network topologies, routing, flow control, and switch fabrics.
+Appendix~\ref{ch:advanced-topics} summarizes the advanced-topics lecture on quantum-computing architecture and superconducting processor research.
+Appendix~\ref{ch:final-review-checklist} provides a compact final-review checklist and clarification guide.
+
 
 \section*{Cross-Chapter Reading Paths}\label{sec:cross-chapter-reading-paths}
 \begin{enumerate}
@@ -15,7 +20,9 @@ Chapter 8 develops multiprocessor organization, coherence, and parallel programm
     \item Readers focused on control hazards, prediction, and data hazards should concentrate on the middle and later sections of Chapter 4.
     \item Readers focused on instruction-level parallelism should read Chapter 6 for dynamic ILP and Chapter 7 for compiler-scheduled ILP\@.
     \item Readers focused on simulator-style interpretation and consolidated worked checks should use Chapter 5 alongside the detailed discussions in Chapters 3, 4, and 6.
-    \item Readers focused on thread-level parallelism, coherence, and shared-memory multiprocessors should continue from Chapters 1 and 2 into Chapter 8.
+    \item Readers focused on thread-level parallelism, coherence, and shared-memory multiprocessors should continue from Chapters 1 and 2 into Chapters 8 through 10.
+    \item Readers reviewing the advanced-topics final-exam material should read Appendix~\ref{ch:advanced-topics}.
+    \item Readers doing a last comprehensive review should use Appendix~\ref{ch:final-review-checklist} to identify weak concepts, then return to the relevant chapter sections.
 \end{enumerate}
 
 
@@ -43,4 +50,16 @@ Coverage includes cycles per instruction (CPI) versus instructions per cycle (IP
 Coverage includes compiler-scheduled very long instruction word (VLIW) execution, dependence-graph and list-scheduling ideas, zero-no-op multi-op encoding with tail and pause fields, software pipelining and iterative modulo scheduling, and memory disambiguation.
 
 \paragraph{Chapter 8: Multiprocessors, Interconnects, and Cache Coherence}\label{par:scope-ch8}
-Coverage includes shared-memory versus message-passing organization, standalone multiprocessors versus accelerator systems, buses versus point-to-point links, the cache-coherence problem and its formal properties, shared-cache versus directory-based versus snooping solutions, MSI coherence states and transactions, transient coherence states, and shared-memory versus message-passing programming examples.
+Coverage includes shared-memory versus message-passing organization, standalone multiprocessors versus accelerator systems, buses versus point-to-point links, the cache-coherence problem and its formal properties, shared-cache versus directory-based versus snooping solutions, MSI coherence states and transactions, MESI/MOESI/MOESIF refinements including \texttt{E}, \texttt{O}, and \texttt{F}, transient coherence states, directory-entry structure and message flow, limited and distributed directory organizations, sharing patterns and false sharing, and shared-memory programming support through locks, barriers, and atomic synchronization primitives.
+
+\paragraph{Chapter 9: Atomic Synchronization, Transactional Memory, and Memory Consistency}\label{par:scope-ch9}
+Coverage includes the distinction between coherence states and full protocol behavior, abort-versus-intervene transfer policies, load-link / store-conditional, fetch-and-op and fetch-and-add primitives, dynamic work claiming, tree and tournament locks, sense-reversing barriers, hardware barrier intuition, transactional-memory execution and aborts, and the distinction between coherence and memory consistency, including strict consistency, sequential consistency, relaxed consistency, data races, and synchronization ordering through fences and acquire/release style semantics.
+
+\paragraph{Chapter 10: Parallel Interconnection Networks}\label{par:scope-ch10}
+Coverage includes the distinction between direct and indirect topologies, hypercube organization and Gray-code intuition, $k$-ary $n$-dimensional meshes and tori, physical-layout constraints and wire-length balance, bisection bandwidth, crossbars and dance-hall style switching, multi-stage interconnects such as omega networks, perfect-shuffle wiring, deterministic versus adaptive versus oblivious routing, packets versus flits, and the progression from store-and-forward to cut-through, wormhole, and virtual-channel flow control.
+
+\paragraph{Appendix D: Advanced Topics}\label{par:scope-appd}
+Coverage includes quantum computers as accelerators, decoherence, imperfect control, NISQ limits, fault-tolerant logical qubits, reversible phase-oracle intuition, superconducting-circuit constraints, compiler-scheduled dataflow execution, operand queues, barrel processing, and combined single-thread/throughput-oriented superconducting processor organization.
+
+\paragraph{Appendix E: Final Review Checklist}\label{par:scope-appe}
+Coverage includes a comprehensive concept checklist, review clarifications for tiling, iterative modulo scheduling, memory consistency, barriers versus locks, and bisectional bandwidth, plus fast self-check prompts.

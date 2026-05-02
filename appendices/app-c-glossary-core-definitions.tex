@@ -1,5 +1,5 @@
 \chapter{Glossary of Core Definitions}\label{ch:auto-007}
-This appendix collects first-pass definitions used throughout Chapters 1--8.
+This appendix collects first-pass definitions used throughout Chapters 1--10 and the advanced-topics appendix.
 
 \begin{description}
     \item[\textit{Parallelism}] Doing multiple useful operations concurrently to increase throughput.
@@ -10,7 +10,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--8.
     \item[\textit{Polycyclic Scheduling}] Early name for overlapping multiple loop iterations in one compact repeating schedule.
     \item[\textit{Software Pipelining}] Loop-scheduling technique that overlaps operations from different iterations and emits a prologue, steady-state kernel, and epilogue.
     \item[\textit{Thread-Level Parallelism (TLP)}] Concurrent execution of multiple threads on one or more cores.
-    \item[\textit{Processing Element (PE)}] One independently executing processor, core, or execution agent within a multiprocessor system.
+    \item[\textit{Processing Element (PE)}] One independently executing processor, core, or other execution agent in a multiprocessor.
     \item[\textit{Digital Signal Processor (DSP)}] Processor class optimized for regular numeric workloads such as filtering, radio, and image-processing kernels.
     \item[\textit{SIMD}] One instruction stream operating on multiple data elements in lockstep.
     \item[\textit{MIMD}] Multiple instruction streams operating on multiple data streams independently.
@@ -24,14 +24,90 @@ This appendix collects first-pass definitions used throughout Chapters 1--8.
     \item[\textit{Snooping Coherence}] Coherence method in which each cache monitors shared interconnect traffic and reacts when another processor requests a block it holds.
     \item[\textit{Directory-Based Coherence}] Coherence method in which a directory tracks which caches currently hold a block and coordinates invalidations or forwarding.
     \item[\textit{MSI}] Coherence protocol whose stable states are modified, shared, and invalid.
+    \item[\textit{MESI}] Coherence protocol whose stable states are modified, exclusive, shared, and invalid.
+    \item[\textit{MOESI}] Coherence protocol whose stable states are modified, owned, exclusive, shared, and invalid.
+    \item[\textit{MOESIF}] Coherence protocol whose stable states are modified, owned, exclusive, shared, invalid, and forward.
     \item[\textit{GetS}] Coherence request for a shared readable copy of a block.
     \item[\textit{GetM}] Coherence request for exclusive writable ownership of a block.
     \item[\textit{WriteBack}] Propagation of a dirty cache block to lower memory.
+    \item[\textit{Exclusive (E)}] Clean state in which exactly one cache holds the block and may later write it without first broadcasting an upgrade request.
+    \item[\textit{Owned (O)}] Dirty shared state in which one cache remains responsible for the current value and may respond to later requests even though other caches hold clean shared copies.
+    \item[\textit{Forward (F)}] Clean shared state designating one cache as the responder for later shared requests.
+    \item[\textit{Hit Line}] Shared indication line used to tell a requester that some other cache already holds the block, thereby distinguishing \texttt{E} from \texttt{S} in a snooping protocol.
     \item[\textit{Intervene}] Snooper action in which a cache supplies data directly in response to another processor's request.
     \item[\textit{Abort}] Snooper response instructing a requester to wait or retry because ownership transfer is not yet complete.
     \item[\textit{Transient State}] Intermediate coherence state used while a block is waiting for a request or ownership transfer to complete.
+    \item[\textit{Presence Bit Vector}] Directory field that records which caches or processors currently hold a copy of one block.
+    \item[\textit{Limited Directory}] Directory organization that records only a bounded number of sharers explicitly and uses an overflow policy when that bound is exceeded.
+    \item[\textit{Recall}] Directory command requiring a cache to return the current block value and surrender ownership.
+    \item[\textit{Invalidate}] Directory command requiring a cache to discard its current copy of a block.
+    \item[\textit{Act}] Directory-style acknowledgment indicating that a required coherence action completed.
+    \item[\textit{Nack}] Directory-style negative acknowledgment indicating that a request cannot yet be completed and should be retried later.
+    \item[\textit{Sharing Pattern}] Characteristic way in which a block is accessed across processors, such as private, read-only, producer-consumer, migratory, or read-write shared.
+    \item[\textit{False Sharing}] Performance problem in which unrelated variables placed in the same cache block force unnecessary invalidations or transfers because one of them is actively shared.
+    \item[\textit{Coherence Miss}] Miss caused by coherence actions such as invalidation or ownership transfer rather than by compulsory, capacity, or conflict effects alone.
+    \item[\textit{Inclusive Cache Hierarchy}] Hierarchy in which data present in an upper level is guaranteed to also be present in the next lower level.
+    \item[\textit{Exclusive Cache Hierarchy}] Hierarchy in which adjacent levels are intended not to hold duplicate copies of the same block.
+    \item[\textit{Non-Exclusive Cache Hierarchy}] Hierarchy that allows overlap between adjacent levels without requiring it for every block.
     \item[\textit{Critical Section}] Region of code that must not be executed concurrently by multiple threads if shared data is to remain correct.
     \item[\textit{Lock}] Synchronization primitive that grants exclusive access to a critical section.
+    \item[\textit{Mutex}] Mutual-exclusion lock allowing at most one thread into a protected critical section at a time.
+    \item[\textit{Barrier}] Synchronization point that forces all participating threads to wait until the last one arrives.
+    \item[\textit{Spin Lock}] Lock implementation in which a waiting thread repeatedly polls a shared variable instead of blocking.
+    \item[\textit{Atomic Read-Modify-Write}] Indivisible memory operation that reads a location, transforms it, and writes the new value with no visible intermediate state.
+    \item[\textit{Test-and-Set}] Atomic read-modify-write primitive that writes a 1 and returns the old value.
+    \item[\textit{Test-and-Test-and-Set}] Spin-lock strategy that first polls with ordinary reads and attempts an atomic acquisition only when the lock appears free.
+    \item[\textit{Load-Link / Store-Conditional (LL/SC)}] Atomic primitive pair in which a load establishes a reservation and a later store succeeds only if no conflicting coherence event invalidated that reservation.
+    \item[\textit{Fetch-and-Op}] Atomic primitive that returns the old value of a location while applying some operation to it.
+    \item[\textit{Fetch-and-Add}] Fetch-and-op specialization in which the atomic update is addition.
+    \item[\textit{Tree Lock}] Lock organization that reduces contention by arranging locks hierarchically so contenders meet in stages.
+    \item[\textit{Tournament Lock}] Another name for a hierarchical tree lock in which contenders advance through multiple levels.
+    \item[\textit{Sense-Reversing Barrier}] Barrier that uses a phase bit so one barrier instance is not confused with the next.
+    \item[\textit{OpenMP}] Standard shared-memory parallel-programming interface based largely on compiler directives and runtime support.
+    \item[\textit{MPI}] Message Passing Interface; standard API for distributed-memory or message-passing parallel programming.
+    \item[\textit{Transactional Memory}] Synchronization model in which a critical section executes optimistically and commits only if no conflicting access occurred.
+    \item[\textit{Hardware Transactional Memory}] Transactional-memory implementation that uses hardware structures such as caches to track speculative read and write sets.
+    \item[\textit{Software Transactional Memory}] Transactional-memory implementation that tracks conflicts and retries through software metadata rather than specialized hardware.
+    \item[\textit{Memory Consistency}] Rules governing the visibility and ordering of memory operations to different addresses across multiple processors.
+    \item[\textit{Strict Consistency}] Memory model in which all processors observe memory operations in one global order that matches actual time.
+    \item[\textit{Sequential Consistency}] Strong memory model in which execution appears as one total interleaving that preserves each processor's program order.
+    \item[\textit{Weak Consistency}] Family of relaxed models that provide strong ordering mainly at explicit synchronization operations rather than at every ordinary load and store.
+    \item[\textit{Acquire}] Synchronization action that prevents later memory accesses from moving before it.
+    \item[\textit{Release}] Synchronization action that prevents earlier memory accesses from moving after it.
+    \item[\textit{Store Fence}] Ordering operation that ensures earlier stores become visible before later memory actions proceed.
+    \item[\textit{Load Fence}] Ordering operation that prevents later loads from bypassing earlier outstanding memory actions.
+    \item[\textit{Memory Fence}] Explicit ordering operation that constrains permitted memory reordering around a program point.
+    \item[\textit{Flit}] Flow-control digit; the unit of transfer controlled by the network's flow-control mechanism.
+    \item[\textit{K-ary N-Dimensional Topology}] Direct-network family with $n$ dimensions and $k$ nodes in each dimension, for a total of $k^n$ nodes.
+    \item[\textit{Direct Topology}] Network topology in which processors or nodes are connected directly to selected neighboring nodes.
+    \item[\textit{Indirect Topology}] Network topology in which processors communicate through a separate switching fabric.
+    \item[\textit{Hypercube}] Direct topology with $2^d$ nodes in which each node has degree $d$ and neighbors differ in one coordinate.
+    \item[\textit{Mesh}] Direct topology in which nodes connect to neighbors along one or more dimensions without wraparound edge links.
+    \item[\textit{Torus}] Direct topology in which each dimension wraps around so the network forms one ring per dimension.
+    \item[\textit{Gray Code}] Binary numbering scheme in which adjacent code words differ in exactly one bit.
+    \item[\textit{Bisection Bandwidth}] Minimum aggregate link bandwidth crossing any equal-halves cut of a network.
+    \item[\textit{Crossbar}] Indirect switching fabric that can connect any input to any output.
+    \item[\textit{Multi-Stage Interconnect}] Indirect network built from several stages of small switches rather than one full crossbar.
+    \item[\textit{Perfect Shuffle}] Fixed wiring permutation commonly used between stages of an omega network.
+    \item[\textit{Omega Network}] Multi-stage interconnect in which one destination bit guides the routing choice at each stage.
+    \item[\textit{Routing}] Process of choosing the path a flit or packet takes through the interconnect.
+    \item[\textit{Deterministic Routing}] Routing policy that always chooses the same path for a given source and destination.
+    \item[\textit{Dimension-Order Routing}] Deterministic routing policy that traverses dimensions in a fixed order such as $x$ before $y$.
+    \item[\textit{Adaptive Routing}] Routing policy that chooses among multiple next hops based on current congestion information.
+    \item[\textit{Oblivious Routing}] Non-adaptive routing policy that ignores current load but may still use randomized path selection for balance.
+    \item[\textit{Valiant's Algorithm}] Oblivious routing method that sends traffic first to a randomly chosen intermediate node and then to the final destination.
+    \item[\textit{Flow Control}] Rules determining when data may advance through the network and what happens when downstream resources are full.
+    \item[\textit{Circuit Switching}] Communication method that reserves an entire route before data transmission begins.
+    \item[\textit{Packet Switching}] Communication method in which independently routed packets carry their own destination information.
+    \item[\textit{Packet}] Message unit that carries routing information and may be divided into multiple flits for transport.
+    \item[\textit{Back Pressure}] Upstream throttling mechanism used to prevent downstream buffers from overflowing.
+    \item[\textit{Credit-Based Flow Control}] Back-pressure scheme in which a sender tracks how many downstream buffer slots remain available.
+    \item[\textit{Store-and-Forward}] Flow-control method that buffers the entire packet at each hop before transmitting it onward.
+    \item[\textit{Cut-Through Routing}] Packet-forwarding method that begins sending to the next hop as soon as enough of the header has arrived to determine the route.
+    \item[\textit{Wormhole Flow Control}] Flit-level forwarding method in which one packet may stretch across several routers and links at once.
+    \item[\textit{Head-of-Line Blocking}] Throughput loss caused when one blocked packet prevents unrelated traffic behind it from advancing.
+    \item[\textit{Virtual Channel}] Logical subdivision of one physical link into multiple independently buffered and arbitrated channels.
+    \item[\textit{Router}] Interconnect component that examines incoming traffic, chooses outputs, and manages buffering and arbitration.
     \item[\textit{Data Race}] Incorrect unsynchronized overlap of conflicting accesses to shared state.
     \item[\textit{Embarrassingly Parallel}] Workload whose useful work is effectively all parallelizable and therefore scales nearly ideally if resources permit.
     \item[\textit{Pipelining}] Temporal parallelism where different stages process different instructions simultaneously.
@@ -85,6 +161,20 @@ This appendix collects first-pass definitions used throughout Chapters 1--8.
     \item[\textit{Write-Through}] Write policy where lower level is updated on each write hit.
     \item[\textit{Write-Allocate}] Write-miss policy that fetches and installs the block before write.
     \item[\textit{Write-No-Allocate}] Write-miss policy that bypasses install and writes lower level directly.
+    \item[\textit{Qubit}] Quantum bit whose useful state must be isolated and controlled well enough to preserve quantum behavior during computation.
+    \item[\textit{Decoherence}] Loss of intended quantum behavior when a qubit interacts with the surrounding environment.
+    \item[\textit{NISQ}] Noisy intermediate-scale quantum computing; near-term machines with limited qubits, noise, and short usable programs.
+    \item[\textit{Logical Qubit}] Error-corrected qubit represented by many physical qubits and maintained through repeated decoding.
+    \item[\textit{Phase Oracle}] Reversible quantum operation that encodes a classical function by changing the phase of selected basis states.
+    \item[\textit{Fault-Tolerant Quantum Computing}] Quantum-computing approach that uses encoded logical qubits and error correction to run longer computations reliably.
+    \item[\textit{Superconducting Logic}] Logic family that uses superconducting devices and very low-resistance wires, often representing information with pulses.
+    \item[\textit{Rapid Single Flux Quantum (RSFQ)}] Superconducting pulse-logic family that represents bits using quantized magnetic-flux pulses.
+    \item[\textit{Reciprocal Quantum Logic (RQL)}] AC-powered superconducting logic family related to RSFQ and used as one candidate technology for energy-efficient processors.
+    \item[\textit{Operand Queue}] Storage structure that holds produced values until compiler-scheduled consumer instructions need them.
+    \item[\textit{Barrel Processor}] Multithreaded processor that issues from different resident threads in rotation to keep a deep pipeline occupied.
+    \item[\textit{Cryostat}] Cooling system used to maintain cryogenic temperatures for superconducting or quantum hardware.
+    \item[\textit{Energy-Delay Product (EDP)}] Efficiency metric combining energy and runtime; lower EDP indicates a better energy/performance tradeoff.
+    \item[\textit{SUP}] Superconducting Unit of Performance; proposed organization combining latency-oriented and throughput-oriented superconducting resources.
     \item[\textit{PIPT}] Physically indexed, physically tagged cache organization in which TLB translation typically precedes L1 indexing/tag lookup.
     \item[\textit{VIPT}] Virtually indexed, physically tagged cache organization that overlaps indexing with translation.
     \item[\textit{TLB}] Translation lookaside buffer storing recent virtual-to-physical translations.
@@ -120,11 +210,13 @@ This appendix collects first-pass definitions used throughout Chapters 1--8.
     \item[\textit{Hit-Under-Miss}] Ability to serve cache hits while a miss is still outstanding.
 \end{description}
 
+
 \section*{Acronym List}\label{sec:acronym-list}
 \begin{description}
     \item[AAT] Average Access Time
     \item[ALU] Arithmetic Logic Unit
     \item[AVX] Advanced Vector Extensions
+    \item[ACT] Acknowledgment
     \item[AW] Address Width
     \item[BTFNT] Backward Taken, Forward Not Taken
     \item[BTB] Branch Target Buffer
@@ -137,6 +229,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--8.
     \item[DSP] Digital Signal Processor
     \item[DISP] Dispatch and Decode
     \item[DRAM] Dynamic Random-Access Memory
+    \item[EDP] Energy-Delay Product
     \item[EX] Execute
     \item[FICI] Fire In Order, Complete In Order
     \item[FIFO] First In, First Out
@@ -146,6 +239,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--8.
     \item[FU] Functional Unit
     \item[GPU] Graphics Processing Unit
     \item[HT] Hit Time
+    \item[HTM] Hardware Transactional Memory
     \item[IC] Instruction Count
     \item[ID] Instruction Decode
     \item[IF] Instruction Fetch
@@ -155,17 +249,27 @@ This appendix collects first-pass definitions used throughout Chapters 1--8.
     \item[IPC] Instructions Per Cycle
     \item[ISA] Instruction Set Architecture
     \item[LFU] Least Frequently Used
+    \item[LL/SC] Load-Link / Store-Conditional
     \item[LIP] Least Recently Used Insertion Policy
+    \item[LLC] Last-Level Cache
     \item[LRU] Least Recently Used
     \item[MEM] Memory
     \item[MII] Minimum Initiation Interval
     \item[MIMD] Multiple Instruction, Multiple Data
     \item[MIP] Most Recently Used Insertion Policy
     \item[MISD] Multiple Instruction, Single Data
+    \item[MESI] Modified, Exclusive, Shared, Invalid
     \item[MP] Miss Penalty
     \item[MR] Miss Ratio
     \item[MRU] Most Recently Used
     \item[MSI] Modified, Shared, Invalid
+    \item[MOESI] Modified, Owned, Exclusive, Shared, Invalid
+    \item[MOESIF] Modified, Owned, Exclusive, Shared, Invalid, Forward
+    \item[MPI] Message Passing Interface
+    \item[NACK] Negative Acknowledgment
+    \item[NISQ] Noisy Intermediate-Scale Quantum
+    \item[NoC] Network on Chip
+    \item[OpenMP] Open Multi-Processing
     \item[OS] Operating System
     \item[PC] Program Counter
     \item[PCIe] Peripheral Component Interconnect Express
@@ -180,17 +284,23 @@ This appendix collects first-pass definitions used throughout Chapters 1--8.
     \item[ResII] Resource-Constrained Initiation Interval
     \item[RISC] Reduced Instruction Set Computer
     \item[ROB] Reorder Buffer
+    \item[RMW] Read-Modify-Write
+    \item[RQL] Reciprocal Quantum Logic
     \item[RS] Reservation Station
+    \item[RSFQ] Rapid Single Flux Quantum
     \item[SIMD] Single Instruction, Multiple Data
     \item[SIMT] Single Instruction, Multiple Threads
     \item[SISD] Single Instruction, Single Data
     \item[SMT] Simultaneous Multithreading
     \item[SRAM] Static Random-Access Memory
+    \item[STM] Software Transactional Memory
     \item[SSE] Streaming SIMD Extensions
     \item[SSD] Solid-State Drive
     \item[SU] State Update
-    \item[TLB] Translation Lookaside Buffer
+    \item[SUP] Superconducting Unit of Performance
     \item[TLP] Thread-Level Parallelism
+    \item[TLB] Translation Lookaside Buffer
+    \item[TM] Transactional Memory
     \item[VIPT] Virtually Indexed, Physically Tagged
     \item[VLIW] Very Long Instruction Word
     \item[VPN] Virtual Page Number

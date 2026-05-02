@@ -12,20 +12,22 @@ An architectural change should first be classified by what it is trying to impro
 Its performance impact must then be evaluated with the correct metric, usually runtime for one job or throughput for a stream of jobs.
 The central CPU-time equation,
 \[
-\text{CPU time}=\text{IC}\times\text{CPI}\times\text{CT},
+    \text{CPU time}=\text{IC}\times\text{CPI}\times\text{CT},
 \]
 turns that reasoning into a concrete tradeoff among instruction count, pipeline efficiency, and clock period.
 Within that framework, Amdahl's law bounds fixed-size speedup, Gustafson's law explains scaled-size behavior, and the choice between arithmetic and harmonic means determines whether a summary is mathematically meaningful.
 
 \paragraph{Worked check}\label{par:auto-026}
-Consider an optimization that accelerates 30\% of runtime by $2\times$. The total speedup is
+Consider an optimization that accelerates 30\% of runtime by $2\times$.
+The total speedup is
 \begin{equation}\label{eq:auto-045}
     S=\frac{1}{(1-0.3)+\frac{0.3}{2}}=\frac{1}{0.85}\approx 1.176.
 \end{equation}
 The unaccelerated fraction remains in the denominator and bounds overall speedup.
 
 \paragraph{Worked check: maximum possible speedup}\label{par:auto-026a}
-Consider a mechanism that accelerates 25\% of the original benchmark runtime and makes that portion arbitrarily fast. The maximum total speedup is
+Consider a mechanism that accelerates 25\% of the original benchmark runtime and makes that portion arbitrarily fast.
+The maximum total speedup is
 \begin{equation}\label{eq:auto-045a}
     S_{\max}=\frac{1}{1-0.25}=\frac{4}{3}\approx 1.33.
 \end{equation}
@@ -37,7 +39,7 @@ Chapter 3 adds the memory-hierarchy side of the performance model.
 That means translating a cache specification such as $(C,B,S)$ into sets, ways, and tag/index/offset fields; distinguishing compulsory, conflict, and capacity misses; and understanding how replacement and write policies alter observed traffic.
 It also means using
 \[
-AAT=HT+MR\cdot MP
+    AAT=HT+MR\cdot MP
 \]
 as a compact summary of hierarchy behavior while remembering that cache size, block size, and associativity can influence all three terms in different ways.
 
@@ -189,10 +191,23 @@ A grouped formula index for the full text is provided in Appendix~\ref{ch:formul
 \section{Practice Questions}\label{sec:ch5-practice}
 The following questions reinforce the integrated ideas of Chapter 5 and are intended for self-checking after the summary.
 \begin{enumerate}
-    \item A hierarchy reports $HT_{L1}=1$, $MR_{L1}=0.10$, $HT_{L2}=7$, $MR_{L2,read}=0.20$, and $DRAM\_TIME=80$. Compute $AAT_{L2}$ and $AAT_{L1}$. Then explain why the L1 miss penalty is modeled as the lower-level \emph{average} access time rather than as a fixed constant.
-    \item A simulator reports 120 prefetched lines, 70 prefetch hits, and 25 prefetched lines evicted before first use. What do these three counters say about prefetch usefulness and prefetch waste? What additional information would you want before concluding that the prefetcher is a net win?
+    \item A hierarchy reports the following parameters:
+    \[
+        HT_{L1}=1,\quad MR_{L1}=0.10,\quad HT_{L2}=7,\quad MR_{L2,read}=0.20,\quad \text{DRAM\_TIME}=80.
+    \]
+    Compute $AAT_{L2}$ and $AAT_{L1}$.
+    Then explain why the L1 miss penalty is modeled as the lower-level \emph{average} access time rather than as a fixed constant.
+    \item A simulator reports 120 prefetched lines, 70 prefetch hits, and 25 prefetched lines evicted before first use.
+    What do these three counters say about prefetch usefulness and prefetch waste?
+    What additional information would you want before concluding that the prefetcher is a net win?
     \item In a hierarchy that uses write-through, write-no-allocate behavior at the lower level, why is it often more meaningful to report the lower-level miss ratio over \emph{reads only} rather than over all accesses?
-    \item Two cache configurations have the same capacity and associativity. Configuration A has lower hit time but higher miss ratio. Configuration B has higher hit time but lower miss ratio. Explain why the better design cannot be chosen correctly without computing or estimating average access time.
+    \item Two cache configurations have the same capacity and associativity.
+    Configuration A has lower hit time but higher miss ratio.
+    Configuration B has higher hit time but lower miss ratio.
+    Explain why the better design cannot be chosen correctly without computing or estimating average access time.
     \item Explain why the servicing order of read-miss repair and writeback traffic can change later hierarchy statistics even when the high-level policy choices are unchanged.
-    \item A scalar core has base $CPI=1$. Loads are 30\% of all instructions, the L1 data-cache miss ratio on loads is 5\%, and each such miss adds 20 stall cycles. Branches are 18\% of all instructions, the branch misprediction rate is 10\%, and each misprediction adds 2 cycles. Estimate the total CPI and identify which source of stalls contributes more.
+    \item A scalar core has base $CPI=1$.
+    Loads are 30\% of all instructions, the L1 data-cache miss ratio on loads is 5\%, and each such miss adds 20 stall cycles.
+    Branches are 18\% of all instructions, the branch misprediction rate is 10\%, and each misprediction adds 2 cycles.
+    Estimate the total CPI and identify which source of stalls contributes more.
 \end{enumerate}

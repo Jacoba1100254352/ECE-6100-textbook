@@ -1,5 +1,5 @@
 \chapter{Formula Compendium (Grouped and Labeled)}\label{ch:formula-compendium}
-This appendix gathers the core formulas used across Chapters 1--8.
+This appendix gathers the core formulas used across Chapters 1--10.
 
 
 \section*{Chapter 1 Formula Set}\label{sec:auto-056}
@@ -257,6 +257,7 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
     \end{aligned}
 \end{equation}
 
+
 \section*{Chapter 7 Formula Set (VLIW and Software Pipelining)}\label{sec:ch7-formulas}
 
 \paragraph{Chapter 7-F1 (Dependence Height)}\label{par:ch7-formula-1}
@@ -288,9 +289,68 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
     MII=\max(ResII,RecII),\qquad II\ge MII.
 \end{equation}
 
+
 \section*{Chapter 8 Formula Set (Multiprocessors and Coherence)}\label{sec:ch8-formulas}
 
 \paragraph{Chapter 8-F1 (Ideal Embarrassingly Parallel Scaling)}\label{par:ch8-formula-1}
 \begin{equation}\label{eq:ch8-formula-ideal-scaling}
     S(N)=N \qquad \text{when } f=1 \text{ and no shared resource becomes the bottleneck.}
+\end{equation}
+
+\paragraph{Chapter 8-F2 (Directory Entry Count)}\label{par:ch8-formula-2}
+\begin{equation}\label{eq:ch8-formula-dir-entries}
+    N_{entries}=\frac{2^m}{2^v}=2^{m-v},
+\end{equation}
+where memory has $2^m$ bytes and the coherence block size is $2^v$ bytes.
+
+\paragraph{Chapter 8-F3 (Full Bit-Vector Directory Storage Estimate)}\label{par:ch8-formula-3}
+\begin{equation}\label{eq:ch8-formula-full-dir}
+    bits_{dir}\approx 2^{m-v}\left(N+n_{ctrl}\right),
+\end{equation}
+where $N$ is the number of PEs and $n_{ctrl}$ represents the small set of non-sharer control bits such as dirty, valid, or overflow indicators.
+
+\paragraph{Chapter 8-F4 (Limited $K$-Pointer Directory Storage Estimate)}\label{par:ch8-formula-4}
+\begin{equation}\label{eq:ch8-formula-kdir}
+    bits_{dir}\approx 2^{m-v}\left(K\left\lceil \log_2 N \right\rceil + n_{ctrl}\right).
+\end{equation}
+
+
+\section*{Chapter 9 Formula Set (Synchronization and Memory Consistency)}\label{sec:ch9-formulas}
+
+\paragraph{Chapter 9-F1 (Fetch-and-Op Semantics)}\label{par:ch9-formula-1}
+\begin{equation}\label{eq:app-ch9-formula-fetchop}
+    \text{\texttt{fetch\_and\_op}}(x,c):\qquad old=x,\qquad x\leftarrow x\;\textit{op}\;c,\qquad \text{return } old.
+\end{equation}
+
+\paragraph{Chapter 9-F2 (Dynamic Work Claim via Fetch-and-Add)}\label{par:ch9-formula-2}
+\begin{equation}\label{eq:app-ch9-formula-work-claim}
+    i=\text{\texttt{fetch\_and\_add}}(next,1),\qquad \text{execute iteration } i \text{ iff } i<N.
+\end{equation}
+
+\paragraph{Chapter 9-F3 (Last Arrival in a Counter-Based Barrier)}\label{par:ch9-formula-3}
+\begin{equation}\label{eq:app-ch9-formula-barrier}
+    \text{last arriver if }\text{\texttt{fetch\_and\_add}}(count,1)=N-1.
+\end{equation}
+
+
+\section*{Chapter 10 Formula Set (Parallel Interconnection Networks)}\label{sec:ch10-formulas}
+
+\paragraph{Chapter 10-F1 (K-ary N-Dimensional Node Count)}\label{par:ch10-formula-1}
+\begin{equation}\label{eq:app-ch10-formula-kary}
+    N_{nodes}=k^n.
+\end{equation}
+
+\paragraph{Chapter 10-F2 (Hypercube Size and Degree)}\label{par:ch10-formula-2}
+\begin{equation}\label{eq:app-ch10-formula-hypercube}
+    N_{nodes}=2^d,\qquad degree=d.
+\end{equation}
+
+\paragraph{Chapter 10-F3 (Bisection Bandwidth for Uniform Links)}\label{par:ch10-formula-3}
+\begin{equation}\label{eq:app-ch10-formula-bisection}
+    B_{bisect}=N_{cut}\times W_{link}.
+\end{equation}
+
+\paragraph{Chapter 10-F4 (Omega Network Stage Count)}\label{par:ch10-formula-4}
+\begin{equation}\label{eq:app-ch10-formula-omega}
+    stages=\log_2 N.
 \end{equation}

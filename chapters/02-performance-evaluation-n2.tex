@@ -248,11 +248,27 @@ These tools form the quantitative core used in later chapters.
 The following questions reinforce the main ideas of Chapter 2 and are intended for self-checking after the summary.
 \begin{enumerate}
     \item Machine A executes a workload with $IC=1.2\times 10^9$, $CPI=1.5$, and clock rate $2.4$ GHz. Machine B executes the same workload with $IC=0.9\times 10^9$, $CPI=1.9$, and clock rate $3.0$ GHz. Compute the runtime of both machines and the speedup of the faster machine over the slower one.
-    \item Two machines execute the same program. Machine J runs at $5.1$ GHz with $CPI=3.0$. Machine K runs at $5.5$ GHz with $CPI=3.7$. Compute the speedup of K over J. Then consider Machine G, which runs at $6.1$ GHz with $CPI=3.2$ but requires $1.5\times$ as many dynamic instructions as J for the same work. Compute the speedup of G over J.
-    \item A benchmark mix contains three workloads with weights $0.50$, $0.30$, and $0.20$. On one machine, their runtimes are 4 s, 9 s, and 6 s. Compute the weighted average runtime. Then explain why the same weighted arithmetic mean would be inappropriate if the reported quantities were throughputs instead of runtimes.
-    \item A proposed optimization accelerates the branch-recovery portion of a program, which currently accounts for 30\% of total runtime, by a factor of 4. Use Amdahl's Law to compute the overall speedup. Then compute the maximum possible speedup if that portion were made infinitely fast.
-    \item A program spends 20\% of its time in vectorizable code. Suppose an added accelerator makes only that portion run four times faster. Compute the overall speedup. Then explain why adding more parallel hardware gives diminishing returns when the accelerated fraction is fixed.
-    \item A parallel machine runs a scaled problem with serial fraction $0.10$ on 16 processors. Compute the speedup predicted by Gustafson's Law. Then explain why this result does not contradict Amdahl's Law.
+    \item Two machines execute the same program.
+    Machine J runs at $5.1$ GHz with $CPI=3.0$.
+    Machine K runs at $5.5$ GHz with $CPI=3.7$.
+    Compute the speedup of K over J. Then consider Machine G, which runs at $6.1$ GHz with $CPI=3.2$ but requires $1.5\times$ as many dynamic instructions as J for the same work.
+    Compute the speedup of G over J\@.
+    \item A benchmark mix contains three workloads with weights $0.50$, $0.30$, and $0.20$.
+    On one machine, their runtimes are 4 s, 9 s, and 6 s.
+    Compute the weighted average runtime.
+    Then explain why the same weighted arithmetic mean would be inappropriate if the reported quantities were throughputs instead of runtimes.
+    \item A proposed optimization accelerates the branch-recovery portion of a program, which currently accounts for 30\% of total runtime, by a factor of 4.
+    Use Amdahl's Law to compute the overall speedup.
+    Then compute the maximum possible speedup if that portion were made infinitely fast.
+    \item A program spends 20\% of its time in vectorizable code.
+    Suppose an added accelerator makes only that portion run four times faster.
+    Compute the overall speedup.
+    Then explain why adding more parallel hardware gives diminishing returns when the accelerated fraction is fixed.
+    \item A parallel machine runs a scaled problem with serial fraction $0.10$ on 16 processors.
+    Compute the speedup predicted by Gustafson's Law.
+    Then explain why this result does not contradict Amdahl's Law.
     \item For each of the following, state whether arithmetic mean, harmonic mean, or a weighted variant is the correct aggregation method, and explain why: runtimes for an equal-work benchmark suite, throughputs for an equal-work benchmark suite, and runtimes for a production workload mix with known fractions.
-    \item Two candidate servers cost \$4{,}000 and \$5{,}400 and deliver speedups of 1.25 and 1.55 relative to the same baseline. Compute speedup per dollar and cost per unit speedup for both systems. State which system is preferable under each metric.
+    \item Two candidate servers cost \$4{,}000 and \$5{,}400 and deliver speedups of 1.25 and 1.55 relative to the same baseline.
+    Compute speedup per dollar and cost per unit speedup for both systems.
+    State which system is preferable under each metric.
 \end{enumerate}

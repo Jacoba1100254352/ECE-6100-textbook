@@ -1,0 +1,179 @@
+\chapter[Advanced Topics]{Advanced Topics: Quantum and Superconducting Architectures}\label{ch:advanced-topics}
+This appendix summarizes the advanced-topics guest lecture.
+The material is not a replacement for the core chapters; it is a short final-review reference for two research directions that use architectural ideas outside conventional CMOS processors.
+
+
+\section{Quantum Computing Architecture}\label{sec:appd-quantum}
+Quantum computers are best viewed as accelerators rather than replacements for classical computers.
+A useful quantum system still needs a classical computer to prepare work, drive the quantum device, interpret measurements, and coordinate repeated trials.
+The expected advantages are problem-specific.
+Two motivating examples from the lecture were simulation of physical and molecular systems, which was the original Feynman-style motivation, and integer factoring, which matters because efficient factoring would threaten RSA-style public-key cryptography.
+
+\subsection{Why the Hardware Is Difficult}\label{subsec:appd-quantum-errors}
+A classical transistor contains many atoms and is engineered so that small physical disturbances do not usually change the digital value.
+A qubit is different: in several implementations the useful state is tied to one atom, ion, neutral atom, or artificial atom-like device.
+That makes isolation and precise control central architectural concerns.
+
+The lecture grouped quantum errors into two broad classes.
+\textit{Decoherence} means that the qubit stops behaving like the intended closed quantum system because the environment interacts with it.
+A stray photon, thermal effect, vibration, or other coupling can destroy the state that the algorithm depends on.
+\textit{Imperfect control} means that the hardware operation itself is inaccurate: a laser pulse may be mistimed, mis-aimed, too wide, too weak, too strong, or the measurement apparatus may fail to collect the intended signal.
+
+These errors accumulate as a quantum program runs.
+For that reason, a common architectural and compiler heuristic is:
+\begin{quote}
+    fewer quantum instructions is usually better.
+\end{quote}
+Shorter quantum programs reduce the time window for decoherence and reduce the number of imperfect operations that can corrupt the computation.
+This does not eliminate noise, but it is one of the few levers available to a compiler or architecture researcher when the underlying qubits are unreliable.
+
+\subsection{NISQ and Fault Tolerance}\label{subsec:appd-nisq}
+The near-term quantum era is often called the \textit{NISQ} era: noisy intermediate-scale quantum computing.
+The lecture's main conclusion was that useful near-term quantum advantage is hard because current machines have too few reliable qubits, high error rates, and only short usable program windows.
+Many proposed near-term algorithms are simply too long or too qubit-hungry for the machines that exist today.
+
+The longer-term path is \textit{fault-tolerant quantum computing}.
+Instead of treating one noisy physical qubit as one reliable algorithmic qubit, many noisy physical qubits are entangled and managed together to form a more reliable \textit{logical qubit}.
+The lecture used roughly a thousand physical qubits per logical qubit as an order-of-magnitude intuition, not as a universal constant.
+This creates a new architecture problem: the machine must repeatedly extract error information and run a decoder quickly enough to keep the logical qubits usable.
+Decoder design and topology-aware error correction are therefore architectural topics, not just physics topics.
+
+\subsection{Quantum Programs and Reversibility}\label{subsec:appd-quantum-programs}
+Quantum operations must be reversible.
+That is a major difference from ordinary classical functions.
+For example, a classical function $f(x)$ that maps many inputs to one output may not have an inverse, so it cannot be used directly as a quantum operation.
+
+A common trick is to convert the classical function into a reversible phase operation:
+\begin{equation}\label{eq:appd-phase-oracle}
+    U_f\lvert x\rangle = (-1)^{f(x)}\lvert x\rangle \cdot
+\end{equation}
+If $f(x)=0$, the state is unchanged.
+If $f(x)=1$, the state receives a negative phase.
+Applying the same operation twice cancels the phase change, so this operation is reversible.
+This is the idea behind the lecture's ``sign'' version of a classical function.
+
+The algorithmic benefit comes from superposition and interference.
+A quantum operation can act on a superposition of possible inputs, and later operations can make the desired answers reinforce while undesired answers cancel.
+This is not generic magic parallelism: the algorithm must match the mathematical structure of the problem.
+That is why quantum speedups exist for some problems but not for arbitrary computation.
+
+
+\section{Superconducting Processor Architecture}\label{sec:appd-superconducting}
+The second guest lecture asked whether processors can be built in a substantially different way from conventional CMOS designs.
+The motivation is energy.
+Modern data centers and supercomputers consume large amounts of power, and simply scaling familiar CMOS microarchitecture is increasingly expensive.
+Superconducting circuits offer extremely low switching energy, but they impose constraints that break many familiar processor structures.
+
+\subsection{Why Ordinary Processor Designs Do Not Map Cleanly}\label{subsec:appd-sc-constraints}
+A superconductor has near-zero resistance, so the usual voltage-and-current intuition changes.
+Superconducting logic families often represent information using short pulses rather than long-lived voltage levels.
+That can be very energy efficient, especially on wires, but it creates a practical problem: a tiny pulse cannot be freely fanned out to many destinations.
+Every split or copy of a signal may require explicit hardware.
+
+This makes common high-performance structures expensive:
+\begin{itemize}
+    \item multi-ported register files need many read and write paths,
+    \item result buses and bypass networks need broad fanout,
+    \item out-of-order schedulers need associative wakeup and tag broadcast,
+    \item branch prediction and recovery need fast tables and cheap mis-speculation recovery,
+    \item and multi-ported caches require duplicated indexing, tags, comparators, and wiring.
+\end{itemize}
+These are exactly the structures used heavily in conventional high-IPC CMOS cores.
+The architectural response is to move more work to the compiler and design the hardware around predictable data movement.
+
+\subsection{Syndrome: Compiler-Scheduled Single-Thread Performance}\label{subsec:appd-syndrome}
+The lecture's proposed single-thread core, called Syndrome in the notes, uses a dataflow-like execution model.
+Instead of every instruction reading operands from and writing results back to one centralized register file, an instruction names later destination instructions that should receive its result.
+The produced value is held in an \textit{operand queue} until the scheduled consumer needs it.
+
+This resembles VLIW and software scheduling from Chapter~\ref{ch:compiler-scheduled-ilp}, but with a different hardware motivation.
+The compiler knows the timing distance between producers and consumers, so it can encode relative delivery times and set up bypass or crossbar controls before the value arrives.
+The goal is to keep useful instruction-level parallelism while avoiding the most expensive fanout-heavy structures of out-of-order execution.
+
+Control flow is also exposed earlier to the machine.
+The lecture described a three-part pattern:
+\begin{itemize}
+    \item \textit{prepare} supplies a possible branch target early,
+    \item \textit{compare} computes the condition early,
+    \item \textit{when} commits the control-flow choice when the condition is known.
+\end{itemize}
+This separates where the program might go from whether it will go there.
+For loops, where the exit condition is often available near the top of the loop body, this gives the processor time to prefetch and configure control paths without relying on a large conventional branch predictor.
+
+The cache design follows the same theme.
+Instead of building a fully multi-ported cache, the design banks the cache by address.
+For example, odd and even indices can map to different half-sized banks.
+This gives multiple accesses per cycle when the accesses land in different banks, while avoiding the area cost of a monolithic multi-ported cache.
+
+\subsection{Stride: Thread-Level Parallelism Through Barrel Processing}\label{subsec:appd-stride}
+The proposed Stride core attacks the problem from the other direction: thread-level parallelism instead of instruction-level parallelism.
+It is a barrel processor.
+On each cycle, the pipeline issues an instruction from a different thread, rotating through many hardware threads.
+If the pipeline is very deep, the core needs many resident threads so that a thread's long-latency operation can make progress before that thread is scheduled again.
+
+The tradeoff is clear.
+One thread has very low individual IPC because it issues only once every many cycles.
+The whole core can still sustain high system throughput because many threads are in flight at once.
+This style is attractive for workloads with abundant independent or embarrassingly parallel work, but it is a poor fit for code that needs high single-thread latency.
+
+\subsection{SUP: Combining the Two Modes}\label{subsec:appd-sup}
+The proposed larger unit combines the Syndrome-style core and the Stride-style core into a \textit{superconducting unit of performance (SUP)}.
+The reason is that high-performance computing programs often alternate between phases:
+\begin{itemize}
+    \item single-threaded or latency-sensitive setup,
+    \item coarse-grained parallel work with some synchronization,
+    \item and massively parallel phases such as matrix or signal-processing kernels.
+\end{itemize}
+Syndrome is intended for the single-thread and coarse-grained phases.
+Stride is intended for the highly threaded phases.
+A RISC-V-style register interface provides a software-visible boundary between the two modes: state can be saved into registers when leaving one side and restored when execution returns.
+A Cilk-like programming model is a natural fit because it already expresses spawn and join structure.
+
+The design also reuses tiles where possible.
+Data tiles and memory tiles can serve both modes, while execution tiles can share storage structures with different controllers.
+That matters because superconducting fabrication area is expensive, and every avoided duplicate structure helps.
+
+\subsection{Cryogenic System Organization}\label{subsec:appd-cryo}
+Cooling cost cannot be ignored.
+The lecture used a rough rule of thumb that removing one watt from the 4 K environment may require hundreds of watts outside the cryostat.
+Even with that overhead, superconducting logic can still be attractive because the in-cryostat operation energy is extremely low.
+The relevant metric is not just peak frequency; it is energy-delay product and system throughput per watt.
+
+A full system can use temperature staging.
+Superconducting logic sits near liquid-helium temperatures.
+Some CMOS support logic and cache structures may sit at a warmer cryogenic level, such as liquid-nitrogen temperature, where CMOS can still operate efficiently.
+Multiple cryostats can then be connected using conventional high-performance interconnects such as InfiniBand, Omni-Path, or optical networks.
+
+
+\section{Final Review Checkpoints}\label{sec:appd-review}
+For final-review purposes, focus on the following claims.
+\begin{enumerate}
+    \item Quantum computers are accelerators coordinated by classical computers, not drop-in replacements for all classical processors.
+    \item Quantum speedups are problem-specific; physics simulation and integer factoring are canonical examples.
+    \item Decoherence and imperfect control are the two broad error sources emphasized in the lecture.
+    \item Fewer quantum instructions are preferred because errors accumulate with time and with each imperfect operation.
+    \item NISQ machines are limited by noise, qubit count, and short useful program lengths.
+    \item Fault-tolerant quantum computing uses many physical qubits plus decoding to create more reliable logical qubits.
+    \item Quantum operations must be reversible; phase-oracle forms such as Equation~\ref{eq:appd-phase-oracle} are one way to embed classical functions.
+    \item Superconducting logic can be much more energy efficient than CMOS, but cooling overhead and architecture constraints still matter.
+    \item Near-zero resistance does not make conventional fanout, register files, bypass networks, and branch predictors free.
+    \item The Syndrome-style core uses compiler-scheduled dataflow and operand queues to avoid centralized multi-ported register-file pressure.
+    \item The Stride-style core uses barrel processing to trade single-thread latency for high aggregate throughput across many threads.
+    \item A combined SUP-style design uses the single-thread core for latency-sensitive phases and the threaded core for highly parallel phases.
+\end{enumerate}
+
+
+\section{Practice True/False Prompts}\label{sec:appd-true-false}
+Mark each statement true or false, then correct the false statements.
+\begin{enumerate}
+    \item A quantum computer is expected to replace the classical computer entirely for all workloads.
+    \item Reducing quantum instruction count can improve reliability because both decoherence and gate/control errors accumulate during execution.
+    \item NISQ machines are already assumed to be good enough for long, reliable, general-purpose quantum programs.
+    \item Fault tolerance in quantum computing usually means encoding one logical qubit across many unreliable physical qubits.
+    \item A quantum implementation of a classical function must respect reversibility.
+    \item Superconducting processors can use all conventional out-of-order CPU structures cheaply because wire resistance is near zero.
+    \item Compiler scheduling becomes more important when hardware fanout, multi-ported storage, and associative wakeup are expensive.
+    \item A barrel processor improves the latency of one thread by issuing that same thread every cycle.
+    \item Banking a cache can provide multiple accesses per cycle when the accesses map to different banks.
+    \item A SUP-style design combines single-thread-oriented and throughput-oriented execution resources because real programs often move through different parallel phases.
+\end{enumerate}

@@ -1,5 +1,6 @@
 \chapter[Dynamic ILP and Out-of-Order]{Dynamic ILP: Superscalar Scheduling and Out-of-Order Execution}\label{ch:ilp-superscalar}
 
+
 \section{Why Cycles per Instruction Can Go Below One}\label{sec:ilp-cpi-ipc}
 In basic single-issue pipelines, designers often treat cycles per instruction (CPI) near 1 as a practical lower bound.
 Superscalar execution challenges that assumption by allowing multiple instructions to make progress in the same cycle.
@@ -62,90 +63,90 @@ In Fig.~\ref{fig:ilp-superscalar-pipeline}, retirement is represented by the fin
 \begin{figure}[t]
     \centering
     \resizebox{\textwidth}{!}{%
-    \begin{tikzpicture}[
-        font=\small,
-        >=Latex,
-        box/.style={draw, rectangle, minimum height=12mm, minimum width=34mm, align=center},
-        smallbox/.style={draw, rectangle, minimum height=9.5mm, minimum width=16mm, align=center},
-        queue/.style={draw, rectangle, minimum height=7.5mm, minimum width=28mm, draw=red!65!black},
-        stagearrow/.style={->, thick},
-        sidearrow/.style={->, semithick},
-        dasharrow/.style={->, dashed, semithick}
-    ]
+        \begin{tikzpicture}[
+            font=\small,
+            >=Latex,
+            box/.style={draw, rectangle, minimum height=12mm, minimum width=34mm, align=center},
+            smallbox/.style={draw, rectangle, minimum height=9.5mm, minimum width=16mm, align=center},
+            queue/.style={draw, rectangle, minimum height=7.5mm, minimum width=28mm, draw=red!65!black},
+            stagearrow/.style={->, thick},
+            sidearrow/.style={->, semithick},
+            dasharrow/.style={->, dashed, semithick}
+        ]
 
-    % Top row
-    \node[box, minimum width=24mm] (branch) at (0,0) {Branch\\Handling};
-    \node[box, minimum width=52mm] (fetch) at (4.6,0) {Instruction Fetch};
-    \node[smallbox] (icache) at (8.6,0) {I\$};
+            % Top row
+            \node[box, minimum width=24mm] (branch) at (0,0) {Branch\\Handling};
+            \node[box, minimum width=52mm] (fetch) at (4.6,0) {Instruction Fetch};
+            \node[smallbox] (icache) at (8.6,0) {I\$};
 
-    % Main pipeline
-    \node[box, minimum width=62mm] (dispatch) at (4.6,-2.6) {Dispatch and Decode};
-    \node[box, minimum width=62mm] (schedule) at (4.6,-5.0) {Schedule};
-    \node[box, minimum width=68mm, minimum height=24mm] (execute) at (4.6,-8.1) {};
-    \node[box, minimum width=68mm] (state) at (4.6,-11.4) {State Update};
-    \node at ($(execute.north)+(0,-0.55)$) {Execute unit};
+            % Main pipeline
+            \node[box, minimum width=62mm] (dispatch) at (4.6,-2.6) {Dispatch and Decode};
+            \node[box, minimum width=62mm] (schedule) at (4.6,-5.0) {Schedule};
+            \node[box, minimum width=68mm, minimum height=24mm] (execute) at (4.6,-8.1) {};
+            \node[box, minimum width=68mm] (state) at (4.6,-11.4) {State Update};
+            \node at ($(execute.north)+(0,-0.55)$) {Execute unit};
 
-    % Functional units inside execute
-    \node[smallbox, minimum width=10mm, minimum height=9.5mm] (fu1) at (3.0,-8.75) {FU};
-    \node[smallbox, minimum width=10mm, minimum height=9.5mm] (fu2) at (4.2,-8.75) {FU};
-    \node at (5.25,-8.75) {$\cdots$};
-    \node[smallbox, minimum width=10mm, minimum height=9.5mm] (fu3) at (6.2,-8.75) {FU};
+            % Functional units inside execute
+            \node[smallbox, minimum width=10mm, minimum height=9.5mm] (fu1) at (3.0,-8.75) {FU};
+            \node[smallbox, minimum width=10mm, minimum height=9.5mm] (fu2) at (4.2,-8.75) {FU};
+            \node at (5.25,-8.75) {$\cdots$};
+            \node[smallbox, minimum width=10mm, minimum height=9.5mm] (fu3) at (6.2,-8.75) {FU};
 
-    % Side structures
-    \node[box, minimum width=22mm, minimum height=24mm] (regfile) at (-1.3,-3.8) {Reg\\File};
-    \node[smallbox, minimum width=14mm, minimum height=11mm] (dcache) at (9.2,-8.1) {D\$};
+            % Side structures
+            \node[box, minimum width=22mm, minimum height=24mm] (regfile) at (-1.3,-3.8) {Reg\\File};
+            \node[smallbox, minimum width=14mm, minimum height=11mm] (dcache) at (9.2,-8.1) {D\$};
 
-    % Queues on right
-    \node[queue] (dqueue) at (10.9,-2.6) {};
-    \node[queue] (squeue) at (10.9,-5.0) {};
+            % Queues on right
+            \node[queue] (dqueue) at (10.9,-2.6) {};
+            \node[queue] (squeue) at (10.9,-5.0) {};
 
-    % Connections at top
-    \draw[<->, thick] (branch.east) -- (fetch.west);
-    \draw[<->, thick] (fetch.east) -- (icache.west);
+            % Connections at top
+            \draw[<->, thick] (branch.east) -- (fetch.west);
+            \draw[<->, thick] (fetch.east) -- (icache.west);
 
-    % Vertical flow
-    \draw[stagearrow] ($(fetch.south)+(-1.6,0)$) -- ($(dispatch.north)+(-1.6,0)$);
-    \draw[stagearrow] ($(fetch.south)+(-0.4,0)$) -- ($(dispatch.north)+(-0.4,0)$);
-    \draw[stagearrow] ($(fetch.south)+(1.6,0)$) -- ($(dispatch.north)+(1.6,0)$);
-    \node at (5.2,-1.3) {$\cdots$};
+            % Vertical flow
+            \draw[stagearrow] ($(fetch.south)+(-1.6,0)$) -- ($(dispatch.north)+(-1.6,0)$);
+            \draw[stagearrow] ($(fetch.south)+(-0.4,0)$) -- ($(dispatch.north)+(-0.4,0)$);
+            \draw[stagearrow] ($(fetch.south)+(1.6,0)$) -- ($(dispatch.north)+(1.6,0)$);
+            \node at (5.2,-1.3) {$\cdots$};
 
-    \draw[stagearrow] ($(dispatch.south)+(-1.6,0)$) -- ($(schedule.north)+(-1.6,0)$);
-    \draw[stagearrow] ($(dispatch.south)+(-0.4,0)$) -- ($(schedule.north)+(-0.4,0)$);
-    \draw[stagearrow] ($(dispatch.south)+(1.6,0)$) -- ($(schedule.north)+(1.6,0)$);
-    \node at (5.2,-3.8) {$\cdots$};
+            \draw[stagearrow] ($(dispatch.south)+(-1.6,0)$) -- ($(schedule.north)+(-1.6,0)$);
+            \draw[stagearrow] ($(dispatch.south)+(-0.4,0)$) -- ($(schedule.north)+(-0.4,0)$);
+            \draw[stagearrow] ($(dispatch.south)+(1.6,0)$) -- ($(schedule.north)+(1.6,0)$);
+            \node at (5.2,-3.8) {$\cdots$};
 
-    \draw[stagearrow] ($(schedule.south)+(-1.6,0)$) -- ($(execute.north)+(-1.6,0)$);
-    \draw[stagearrow] ($(schedule.south)+(-0.4,0)$) -- ($(execute.north)+(-0.4,0)$);
-    \draw[stagearrow] ($(schedule.south)+(1.6,0)$) -- ($(execute.north)+(1.6,0)$);
-    \node at (5.2,-6.4) {$\cdots$};
+            \draw[stagearrow] ($(schedule.south)+(-1.6,0)$) -- ($(execute.north)+(-1.6,0)$);
+            \draw[stagearrow] ($(schedule.south)+(-0.4,0)$) -- ($(execute.north)+(-0.4,0)$);
+            \draw[stagearrow] ($(schedule.south)+(1.6,0)$) -- ($(execute.north)+(1.6,0)$);
+            \node at (5.2,-6.4) {$\cdots$};
 
-    \draw[stagearrow] (fu1.south) -- ($(state.north)+(-1.6,0)$);
-    \draw[stagearrow] (fu2.south) -- ($(state.north)+(-0.4,0)$);
-    \draw[stagearrow] (fu3.south) -- ($(state.north)+(1.6,0)$);
+            \draw[stagearrow] (fu1.south) -- ($(state.north)+(-1.6,0)$);
+            \draw[stagearrow] (fu2.south) -- ($(state.north)+(-0.4,0)$);
+            \draw[stagearrow] (fu3.south) -- ($(state.north)+(1.6,0)$);
 
-    \draw[stagearrow] ($(state.south)+(-1.6,0)$) -- ++(0,-0.8);
-    \draw[stagearrow] ($(state.south)+(-0.4,0)$) -- ++(0,-0.8);
-    \draw[stagearrow] ($(state.south)+(1.6,0)$) -- ++(0,-0.8);
-    \node at (5.2,-12.6) {$\cdots$};
+            \draw[stagearrow] ($(state.south)+(-1.6,0)$) -- ++(0,-0.8);
+            \draw[stagearrow] ($(state.south)+(-0.4,0)$) -- ++(0,-0.8);
+            \draw[stagearrow] ($(state.south)+(1.6,0)$) -- ++(0,-0.8);
+            \node at (5.2,-12.6) {$\cdots$};
 
-    % Left-side register file connections
-    \draw[sidearrow] (regfile.north east) -- ($(dispatch.west)+(0,0.00)$);
-    \draw[sidearrow] (regfile.south east) -- ($(schedule.west)+(0,0.00)$);
-    \draw[dasharrow] ($(state.west)+(-0.2,0)$) -- ++(-2.3,0) -- ++(0,5.0) -- (regfile.south);
+            % Left-side register file connections
+            \draw[sidearrow] (regfile.north east) -- ($(dispatch.west)+(0,0.00)$);
+            \draw[sidearrow] (regfile.south east) -- ($(schedule.west)+(0,0.00)$);
+            \draw[dasharrow] ($(state.west)+(-0.2,0)$) -- ++(-2.3,0) -- ++(0,5.0) -- (regfile.south);
 
-    % D-cache connection
-    \draw[-, semithick] (execute.east) -- (dcache.west);
+            % D-cache connection
+            \draw[-, semithick] (execute.east) -- (dcache.west);
 
-    % Labels on right
-    \node[anchor=west] at (7.0,-1.3) {fetch};
-    \node[anchor=west, text=red!65!black] at (12.4,-2.6) {Dispatch Queue};
-    \node[anchor=west] at (7.0,-3.8) {dispatch};
-    \node[anchor=west, text=red!65!black] at (12.4,-5.0) {Scheduling Queue};
-    \node[anchor=west] at (7.0,-6.4) {fire or issue};
-    \node[anchor=west] at (7.0,-10.0) {complete};
-    \node[anchor=west] at (7.0,-12.3) {retire or commit};
+            % Labels on right
+            \node[anchor=west] at (7.0,-1.3) {fetch};
+            \node[anchor=west, text=red!65!black] at (12.4,-2.6) {Dispatch Queue};
+            \node[anchor=west] at (7.0,-3.8) {dispatch};
+            \node[anchor=west, text=red!65!black] at (12.4,-5.0) {Scheduling Queue};
+            \node[anchor=west] at (7.0,-6.4) {fire or issue};
+            \node[anchor=west] at (7.0,-10.0) {complete};
+            \node[anchor=west] at (7.0,-12.3) {retire or commit};
 
-    \end{tikzpicture}
+        \end{tikzpicture}
     }
     \caption{Logical superscalar pipeline view illustrating one representative organization. The figure is not specific to FICI, FICO, or FOCO; those classifications depend on the firing and completion policy. Boxed elements denote major structures or stages, while the right-side annotations denote the adjacent flow actions.}
     \label{fig:ilp-superscalar-pipeline}
@@ -208,19 +209,19 @@ A common simplified latency model is shown in Table~\ref{tab:ilp-typical-latenci
     \centering
     \begin{tabular}{|l|c|p{2.7in}|}
         \hline
-        Type & Typical latency & Why \\
+        Type                         & Typical latency & Why                                                                                                                                              \\
         \hline
-        Floating-point (FP) multiply & 3 & Denormalize, multiply, renormalize. \\
+        Floating-point (FP) multiply & 3               & Denormalize, multiply, renormalize.                                                                                                              \\
         \hline
-        FP add & 2 & Denormalize and add, then renormalize. \\
+        FP add                       & 2               & Denormalize and add, then renormalize.                                                                                                           \\
         \hline
-        Load & 2 & Typical cache pipeline behavior. \\
+        Load                         & 2               & Typical cache pipeline behavior.                                                                                                                 \\
         \hline
-        Store & 1 & Write buffering, or a load/store buffer, can hide much of the visible latency. \\
+        Store                        & 1               & Write buffering, or a load/store buffer, can hide much of the visible latency.                                                                   \\
         \hline
-        Divide & Variable & Often implemented with unpipelined iterative methods such as Newton iteration, and many simplified models treat divide as too rare to emphasize. \\
+        Divide                       & Variable        & Often implemented with unpipelined iterative methods such as Newton iteration, and many simplified models treat divide as too rare to emphasize. \\
         \hline
-        ALU & 1 & Most common operation, so short latency is especially valuable. \\
+        ALU                          & 1               & Most common operation, so short latency is especially valuable.                                                                                  \\
         \hline
     \end{tabular}
     \caption{Typical simplified function-unit latencies used in superscalar examples.}
@@ -250,20 +251,20 @@ Repeated DISP entries indicate that the instruction is blocked in the in-order f
     \setlength{\tabcolsep}{4pt}
     \renewcommand{\arraystretch}{1.15}
     \resizebox{\textwidth}{!}{%
-    \begin{tabular}{c l | c c c c c c c c c c}
-        \hline
-        Instr.
-        & Operation & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 \\
-        \hline
-        A & ADD $R1, R2, R3$ & IF & DISP & EX & SU &  &  &  &  &  &  \\
-        B & MUL $R5, R1, R4$ & IF & DISP & DISP & EX & EX & EX & SU &  &  &  \\
-        C & ADD $R3, R1, R2$ &  & IF & DISP & EX & SU &  &  &  &  &  \\
-        D & ADD $R1, R5, R4$ &  & IF & DISP & DISP & DISP & DISP & EX & SU &  &  \\
-        E & MUL $R6, R7, R8$ &  &  & IF & DISP & DISP & DISP & EX & EX & EX & SU \\
-        F & ADD $R1, R3, R3$ &  &  & IF & DISP & DISP & DISP & DISP & EX & SU &  \\
-        G & ADD $R4, R3, R5$ &  &  &  & IF & DISP & DISP & DISP & DISP & EX & SU \\
-        \hline
-    \end{tabular}}
+        \begin{tabular}{c l | c c c c c c c c c c}
+            \hline
+            Instr.
+            & Operation        & 0  & 1    & 2    & 3    & 4    & 5    & 6    & 7    & 8  & 9  \\
+            \hline
+            A & ADD $R1, R2, R3$ & IF & DISP & EX   & SU   &      &      &      &      &    &    \\
+            B & MUL $R5, R1, R4$ & IF & DISP & DISP & EX   & EX   & EX   & SU   &      &    &    \\
+            C & ADD $R3, R1, R2$ &    & IF   & DISP & EX   & SU   &      &      &      &    &    \\
+            D & ADD $R1, R5, R4$ &    & IF   & DISP & DISP & DISP & DISP & EX   & SU   &    &    \\
+            E & MUL $R6, R7, R8$ &    &      & IF   & DISP & DISP & DISP & EX   & EX   & EX & SU \\
+            F & ADD $R1, R3, R3$ &    &      & IF   & DISP & DISP & DISP & DISP & EX   & SU &    \\
+            G & ADD $R4, R3, R5$ &    &      &      & IF   & DISP & DISP & DISP & DISP & EX & SU \\
+            \hline
+        \end{tabular}}
     \caption{Timing table for a simplified FICO schedule. Repeated DISP entries indicate that an instruction remains blocked in the in-order dispatch-and-fire path while waiting for data or hardware to become available.}
     \label{tab:ilp-fico-timing}
 \end{table}
@@ -409,21 +410,21 @@ Each cell shows the dominant structure label first---dispatch (DISP), reservatio
     \newcommand{\stagecell}[2]{\shortstack[c]{\rule{0pt}{2.9ex}\textbf{#1}\\[-0.1ex]\strut #2}}
     \newcommand{\rowlabel}[1]{\shortstack[c]{\rule{0pt}{2.5ex}\textbf{#1}\\[-0.1ex]\rule[-0.9ex]{0pt}{2.0ex}}}
     \resizebox{\textwidth}{!}{%
-    \begin{tabular}{|>{\raggedright\arraybackslash}m{28mm}|c|c|c|c|c|c|c|}
-        \hline
-        \textbf{Instruction / event} & \textbf{0} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5} & \textbf{6} \\
-        \hline
-        \rowlabel{\textit{A}} & \stagecell{DISP}{Dispatch} & \stagecell{EX}{Fire} & \stagecell{EX}{Miss wait} & \stagecell{EX}{Miss wait} & \stagecell{EX}{Miss wait} & \stagecell{EX}{Miss wait} & \stagecell{CDB}{Complete} \\
-        \hline
-        \rowlabel{\textit{B}} & \stagecell{DISP}{Dispatch} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Ready after \textit{A}} \\
-        \hline
-        \rowlabel{\textit{C}} & \stagecell{DISP}{Dispatch} & \stagecell{EX}{Fire} & \stagecell{EX}{Hit wait} & \stagecell{EX}{Hit wait} & \stagecell{CDB}{Complete} &  &  \\
-        \hline
-        \rowlabel{\textit{D}} & \stagecell{DISP}{Dispatch} & \stagecell{RS}{Wait on \textit{C}} & \stagecell{RS}{Wait on \textit{C}} & \stagecell{RS}{Wait on \textit{C}} & \stagecell{RS}{Wake on \textit{C}} & \stagecell{EX}{Fire} & \stagecell{CDB}{Complete after \textit{A}} \\
-        \hline
-        \rowlabel{CDB} &  &  &  &  & \stagecell{CDB}{\textit{C}} &  & \stagecell{CDB}{\textit{A} then \textit{D}} \\
-        \hline
-    \end{tabular}}
+        \begin{tabular}{|>{\raggedright\arraybackslash}m{28mm}|c|c|c|c|c|c|c|}
+            \hline
+            \textbf{Instruction / event} & \textbf{0}                 & \textbf{1}                         & \textbf{2}                         & \textbf{3}                         & \textbf{4} & \textbf{5} & \textbf{6} \\
+            \hline
+            \rowlabel{\textit{A}}        & \stagecell{DISP}{Dispatch} & \stagecell{EX}{Fire}               & \stagecell{EX}{Miss wait} & \stagecell{EX}{Miss wait} & \stagecell{EX}{Miss wait} & \stagecell{EX}{Miss wait} & \stagecell{CDB}{Complete} \\
+            \hline
+            \rowlabel{\textit{B}}        & \stagecell{DISP}{Dispatch} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Ready after \textit{A}} \\
+            \hline
+            \rowlabel{\textit{C}}        & \stagecell{DISP}{Dispatch} & \stagecell{EX}{Fire}               & \stagecell{EX}{Hit wait} & \stagecell{EX}{Hit wait} & \stagecell{CDB}{Complete} &  &  \\
+            \hline
+            \rowlabel{\textit{D}}        & \stagecell{DISP}{Dispatch} & \stagecell{RS}{Wait on \textit{C}} & \stagecell{RS}{Wait on \textit{C}} & \stagecell{RS}{Wait on \textit{C}} & \stagecell{RS}{Wake on \textit{C}} & \stagecell{EX}{Fire} & \stagecell{CDB}{Complete after \textit{A}} \\
+            \hline
+            \rowlabel{CDB}               &                            &                                    &                                    &                                    & \stagecell{CDB}{\textit{C}}        &                                    & \stagecell{CDB}{\textit{A} then \textit{D}} \\
+            \hline
+        \end{tabular}}
     \caption{Compact cycle table for the four-instruction Tomasulo trace. The table emphasizes logical ordering rather than exact micro-timing details.}
     \label{fig:ilp-tomasulo-cycle-table}
 \end{figure}
@@ -553,32 +554,32 @@ The following tag-based example makes the lookup rule explicit.
 Assume the architected register file initially holds committed ready values for $R1$, $R2$, and $R3$, and that dispatch allocates ROB tags in program order.
 Consider:
 
-{\small
+    {\small
 \begin{center}
-\begin{tabular}{@{}ll@{}}
-    \textit{A}: & LW $R1,0(R3)$ \\
-    \textit{B}: & ADD $R3,R2,R1$ \\
-    \textit{C}: & ADD $R1,R3,R2$
-\end{tabular}
+    \begin{tabular}{@{}ll@{}}
+        \textit{A}: & LW $R1,0(R3)$  \\
+        \textit{B}: & ADD $R3,R2,R1$ \\
+        \textit{C}: & ADD $R1,R3,R2$
+    \end{tabular}
 \end{center}}
 
 At dispatch, the source resolution is:
 
-{\small
+    {\small
 \begin{center}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{|c|c|c|c|}
-    \hline
-    Instr.
-    & Dest reg/tag & Src \#1 at dispatch & Src \#2 at dispatch \\
-    \hline
-    \textit{A} & $R1$/A & $R3$ value from architected RF & n/a \\
-    \hline
-    \textit{B} & $R3$/B & $R2$ value from architected RF & waits on tag A from ROB entry \textit{A} \\
-    \hline
-    \textit{C} & $R1$/C & waits on tag B from ROB entry \textit{B} & $R2$ value from architected RF \\
-    \hline
-\end{tabular}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        Instr.
+        & Dest reg/tag & Src \#1 at dispatch                      & Src \#2 at dispatch                      \\
+        \hline
+        \textit{A} & $R1$/A       & $R3$ value from architected RF           & n/a                                      \\
+        \hline
+        \textit{B} & $R3$/B       & $R2$ value from architected RF           & waits on tag A from ROB entry \textit{A} \\
+        \hline
+        \textit{C} & $R1$/C       & waits on tag B from ROB entry \textit{B} & $R2$ value from architected RF           \\
+        \hline
+    \end{tabular}
 \end{center}}
 
 The key rule is that dispatch always takes the newest in-flight producer.
@@ -593,13 +594,13 @@ After all three instructions have dispatched, the in-flight structures look like
     \begin{tabular}{|c|c|c|c|c|}
         \hline
         Instr.
-        & Dest reg/tag & Src \#1 & Src \#2 & Queue status \\
+        & Dest reg/tag & Src \#1          & Src \#2          & Queue status          \\
         \hline
-        \textit{A} & $R1$/A & $R3$ value ready & n/a & ready to fire \\
+        \textit{A} & $R1$/A       & $R3$ value ready & n/a              & ready to fire         \\
         \hline
-        \textit{B} & $R3$/B & $R2$ value ready & tag A not ready & waiting on \textit{A} \\
+        \textit{B} & $R3$/B       & $R2$ value ready & tag A not ready  & waiting on \textit{A} \\
         \hline
-        \textit{C} & $R1$/C & tag B not ready & $R2$ value ready & waiting on \textit{B} \\
+        \textit{C} & $R1$/C       & tag B not ready  & $R2$ value ready & waiting on \textit{B} \\
         \hline
     \end{tabular}
 
@@ -607,13 +608,13 @@ After all three instructions have dispatched, the in-flight structures look like
 
     \begin{tabular}{|c|c|c|c|}
         \hline
-        ROB entry & Dest reg & Ready & Value source \\
+        ROB entry  & Dest reg & Ready & Value source        \\
         \hline
-        \textit{A} & $R1$ & 0 & pending load result \\
+        \textit{A} & $R1$     & 0     & pending load result \\
         \hline
-        \textit{B} & $R3$ & 0 & pending add result \\
+        \textit{B} & $R3$     & 0     & pending add result  \\
         \hline
-        \textit{C} & $R1$ & 0 & pending add result \\
+        \textit{C} & $R1$     & 0     & pending add result  \\
         \hline
     \end{tabular}
     \caption{Tag-based Tomasulo plus ROB bypass after dispatch of \textit{A}, \textit{B}, and \textit{C}.}
@@ -648,13 +649,13 @@ Assume the initial mappings are $R0\rightarrow P0$, $R1\rightarrow P1$, $R2\righ
 Assume two-wide fetch and dispatch, two-wide retirement, two 1-cycle ALUs, one 1-cycle LSU, and a back-to-front cycle evaluation so that Execute can mark a destination physical register ready before Schedule runs later in the same cycle.
 Consider the following sequence:
 
-{\small
+    {\small
 \begin{center}
-\begin{tabular}{@{}ll@{}}
-    \textit{A}: & LW $R3,0(R1)$ \\
-    \textit{B}: & ADD $R1,R3,R2$ \\
-    \textit{C}: & ADD $R2,R2,R1$
-\end{tabular}
+    \begin{tabular}{@{}ll@{}}
+        \textit{A}: & LW $R3,0(R1)$  \\
+        \textit{B}: & ADD $R1,R3,R2$ \\
+        \textit{C}: & ADD $R2,R2,R1$
+    \end{tabular}
 \end{center}}
 
 One legal cycle-by-cycle interpretation is:
@@ -672,73 +673,78 @@ One legal cycle-by-cycle interpretation is:
 
 The exact cycle numbers can shift by one under a different but internally consistent simulator ordering, but the final renamed state does not change.
 
-{\small
+    {\small
 \begin{center}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{|c|c|c|c|c|c|}
-    \hline
-    Instr.
-    & FU & Dest physical reg. & Src \#1 & Src \#2 & Final status \\
-    \hline
-    \textit{A} & LSU & $P4$ & $P1$ & n/a & completed and retired \\
-    \hline
-    \textit{B} & ALU & $P5$ & $P4$ & $P2$ & completed and retired \\
-    \hline
-    \textit{C} & ALU & $P6$ & $P2$ & $P5$ & completed and retired \\
-    \hline
-\end{tabular}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|c|c|c|c|c|c|}
+        \hline
+        Instr.
+        & FU  & Dest physical reg.
+        & Src \#1 & Src \#2 & Final status          \\
+        \hline
+        \textit{A} & LSU & $P4$               & $P1$    & n/a     & completed and retired \\
+        \hline
+        \textit{B} & ALU & $P5$               & $P4$    & $P2$    & completed and retired \\
+        \hline
+        \textit{C} & ALU & $P6$               & $P2$    & $P5$    & completed and retired \\
+        \hline
+    \end{tabular}
 
-\vspace{1ex}
+    \vspace{1ex}
 
-\begin{tabular}{|c|c|c|c|}
-    \hline
-    ROB entry & Dest architected reg. & Prev physical reg. & Final status \\
-    \hline
-    \textit{A} & $R3$ & $P3$ & retired \\
-    \hline
-    \textit{B} & $R1$ & $P1$ & retired \\
-    \hline
-    \textit{C} & $R2$ & $P2$ & retired \\
-    \hline
-\end{tabular}
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        ROB entry  & Dest architected reg.
+        & Prev physical reg.
+        & Final status \\
+        \hline
+        \textit{A} & $R3$                  & $P3$               & retired      \\
+        \hline
+        \textit{B} & $R1$                  & $P1$               & retired      \\
+        \hline
+        \textit{C} & $R2$                  & $P2$               & retired      \\
+        \hline
+    \end{tabular}
 
-\vspace{1ex}
+    \vspace{1ex}
 
-\begin{tabular}{|c|c|}
-    \hline
-    Architected reg. & Final physical reg. \\
-    \hline
-    $R0$ & $P0$ \\
-    \hline
-    $R1$ & $P5$ \\
-    \hline
-    $R2$ & $P6$ \\
-    \hline
-    $R3$ & $P4$ \\
-    \hline
-\end{tabular}
-\hspace{1.5em}
-\begin{tabular}{|c|c|c|}
-    \hline
-    Physical reg. & Ready & Free \\
-    \hline
-    $P0$ & 1 & 0 \\
-    \hline
-    $P1$ & 1 & 1 \\
-    \hline
-    $P2$ & 1 & 1 \\
-    \hline
-    $P3$ & 1 & 1 \\
-    \hline
-    $P4$ & 1 & 0 \\
-    \hline
-    $P5$ & 1 & 0 \\
-    \hline
-    $P6$ & 1 & 0 \\
-    \hline
-    $P7$ & 0 & 1 \\
-    \hline
-\end{tabular}
+    \begin{tabular}{|c|c|}
+        \hline
+        Architected reg.
+        & Final physical reg. \\
+        \hline
+        $R0$             & $P0$                \\
+        \hline
+        $R1$             & $P5$                \\
+        \hline
+        $R2$             & $P6$                \\
+        \hline
+        $R3$             & $P4$                \\
+        \hline
+    \end{tabular}
+    \hspace{1.5em}
+    \begin{tabular}{|c|c|c|}
+        \hline
+        Physical reg.
+        & Ready & Free \\
+        \hline
+        $P0$          & 1     & 0    \\
+        \hline
+        $P1$          & 1     & 1    \\
+        \hline
+        $P2$          & 1     & 1    \\
+        \hline
+        $P3$          & 1     & 1    \\
+        \hline
+        $P4$          & 1     & 0    \\
+        \hline
+        $P5$          & 1     & 0    \\
+        \hline
+        $P6$          & 1     & 0    \\
+        \hline
+        $P7$          & 0     & 1    \\
+        \hline
+    \end{tabular}
 \end{center}}
 
 Three rules determine the outcome.
@@ -833,6 +839,7 @@ If scheduling queues remain lightly used but \textit{no-fire cycles} are high, t
 Many simulators also offer a no-miss or no-misprediction mode.
 Such a configuration does not model real execution, but it is analytically useful because it isolates pure width, scheduling, and dependence limits from penalties caused by cache misses and poor control-flow prediction.
 
+
 \section{Chapter 6 Summary}\label{sec:chapter6-summary-ilp}
 Chapter 6 develops dynamic instruction-level parallelism as a concrete microarchitectural path to $CPI<1$.
 Superscalar design achieves this by widening the pipeline's effective throughput and managing dependencies, hazards, and speculative state carefully.
@@ -840,6 +847,7 @@ FICO-style scoreboarding illustrates the basic mechanism, while renaming, Tomasu
 Once the machine executes and completes work out of order, however, scheduling is no longer enough by itself.
 The core must also maintain precise architectural state through mechanisms such as physical-register renaming, reorder buffers, future files, or checkpoint/repair schemes.
 Modern processors therefore combine ILP techniques with careful recovery, retirement, and microarchitectural side-effect control.
+Operationally, this chapter is best checked through throughput-bound calculations, dependence-height reasoning on DDGs, cycle tables for FICO timing, reservation-station and RAT snapshots, and careful separation of speculative completion from architectural retirement.
 Simulator-visible counters such as fetched-versus-retired instructions, misprediction counts, miss counts, queue occupancy, and ROB pressure then provide a practical way to diagnose which limits are dominating a given design point.
 These ideas together form the bridge from classic five-stage thinking to modern high-throughput scalar cores.
 
@@ -847,12 +855,30 @@ These ideas together form the bridge from classic five-stage thinking to modern 
 \section{Practice Questions}\label{sec:ch6-practice}
 The following questions reinforce the main ideas of Chapter 6 and are intended for self-checking after the summary.
 \begin{enumerate}
-    \item Explain why a superscalar machine can achieve $CPI<1$ without violating the meaning of a clock cycle. Then state the corresponding condition on instructions per cycle (IPC).
-    \item In a FICO-style machine with one ALU and one load/store unit, consider the sequence \texttt{LW R1,0(R2)} followed by \texttt{ADD R3,R1,R4}. Describe the earliest cycle in which the add can fire if the load takes two cycles to complete and there is no forwarding of the load result before it is ready.
-    \item Consider Tomasulo with tags and a ROB with bypass for the sequence \texttt{LW R1,0(R3)}; \texttt{ADD R3,R2,R1}; \texttt{ADD R1,R3,R2}. When the second and third instructions dispatch, which of their source operands come from the register file and which come from the youngest older ROB producer?
-    \item In a renamed machine, the current mapping of architected register \texttt{R1} points to physical register \texttt{P10}. A new instruction \texttt{ADD R1,R2,R3} dispatches and receives destination physical register \texttt{P24}. What mapping change occurs immediately at dispatch, and why can \texttt{P10} not be freed at that same moment?
-    \item Distinguish the event of broadcasting a result on the common data bus from the event of updating precise architected state at retirement. Why is this distinction essential once execution and completion occur out of order?
-    \item A simulator reports 1{,}600 fetched instructions, 1{,}200 retired instructions, 1{,}000 cycles, 220 no-fire cycles, and 90 ROB-blocked dispatch cycles. Compute IPC using the architecturally meaningful instruction count. Then explain what the gap between fetched and retired instructions suggests and what the ROB-blocked count suggests.
-    \item Explain why register renaming removes false dependences but does not remove true dependences. Give one short example of each case.
-    \item Compare reorder-buffer recovery with checkpoint/repair recovery. What state must each approach preserve so that the machine can return to a precise point after a misprediction or exception?
+    \item A FOCO processor fetches at most 6 instructions per cycle, dispatches at most 4 per cycle, has three 1-cycle function units that can each accept one instruction per cycle, and retires at most 5 per cycle.
+    Assuming the window always contains enough independent ready work of the right types, what is the maximum IPC? Which resource creates the bound?
+    \item A dependence graph has nodes \textit{A} through \textit{G} and edges \textit{A}$\rightarrow$\textit{C}, \textit{B}$\rightarrow$\textit{C}, \textit{B}$\rightarrow$\textit{D}, \textit{C}$\rightarrow$\textit{E}, \textit{D}$\rightarrow$\textit{F}, \textit{E}$\rightarrow$\textit{G}, and \textit{F}$\rightarrow$\textit{G}.
+    If the dependence height of a node is the length of the longest path from that node to an exit, compute the height of every node.
+    \item In a FICO-style machine with one LSU, one ADD unit, two-cycle loads, and one-cycle adds, trace the sequence \texttt{A: LW R1,0(R2)}, \texttt{B: ADD R3,R1,R4}, \texttt{C: ADD R5,R6,R7}, \texttt{D: ADD R8,R3,R9}.
+    Fill in a cycle table for dispatch, fire, and complete.
+    Then state whether adding a second ADD unit removes all stalls, and explain which stalls remain due to the in-order fire rule.
+    \item Consider Tomasulo with tags and a ROB with bypass for the sequence \texttt{LW R1,0(R3)}; \texttt{ADD R3,R2,R1}; \texttt{ADD R1,R3,R2}.
+    When the second and third instructions dispatch, which of their source operands come from the register file and which come from the youngest older ROB producer?
+    \item Using the same three-instruction sequence, write the contents of the scheduling queue or reservation stations immediately after dispatch of all three instructions.
+    For each entry, identify the destination tag or physical register, which source operands are already ready, and which operands are waiting on older tags.
+    \item Suppose the machine from the previous question has two ADD units, one LSU, and enough result buses that completion bandwidth is not the bottleneck.
+    What is the earliest completion order of the three instructions, and in what order do their results become architecturally visible?
+    \item In a renamed machine, the current mapping of architected register \texttt{R1} points to physical register \texttt{P10}.
+    A new instruction \texttt{ADD R1,R2,R3} dispatches and receives destination physical register \texttt{P24}.
+    What mapping change occurs immediately at dispatch, and why can \texttt{P10} not be freed at that same moment?
+    \item Distinguish the event of broadcasting a result on the common data bus from the event of updating precise architected state at retirement.
+    Why is this distinction essential once execution and completion occur out of order?
+    \item For each statement below, answer true or false and justify briefly: (a) with enough physical registers, WAR and WAW dependences can be removed, but RAW dependences remain; (b) if a value is present in the future file or physical register file, then precise architected state has already been updated; (c) using fetched instructions instead of retired instructions can overstate IPC on a run with many squashes.
+    \item A simulator reports 1{,}600 fetched instructions, 1{,}200 retired instructions, 1{,}000 cycles, 220 no-fire cycles, and 90 ROB-blocked dispatch cycles.
+    Compute IPC using the architecturally meaningful instruction count.
+    Then explain what the gap between fetched and retired instructions suggests and what the ROB-blocked count suggests.
 \end{enumerate}
+
+
+
+

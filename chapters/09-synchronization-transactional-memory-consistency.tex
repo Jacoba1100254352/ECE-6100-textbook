@@ -1,0 +1,386 @@
+\chapter[Synchronization and Memory Consistency]{Synchronization, Atomic Primitives, Transactional Memory, and Memory Consistency}\label{ch:sync-consistency}
+
+
+\section{Protocol States Versus Protocol Behavior}\label{sec:sync-state-vs-protocol}
+Chapter~\ref{ch:multiprocessors} introduced stable coherence states such as \texttt{M}, \texttt{S}, \texttt{I}, and later \texttt{O}.
+The next important refinement is that a list of stable states does \emph{not} completely define the protocol.
+Two systems may expose the same end states yet differ in how they move data, when they write back to memory, and how much traffic they generate while ownership changes are in flight.
+
+Suppose one PE holds a block in \texttt{M} and another PE requests that block.
+Table~\ref{tab:sync-protocol-behavior} summarizes several common responses.
+\begin{table}[t]
+    \centering
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|p{1.8in}|p{4.0in}|}
+        \hline
+        Mechanism                & Behavior when another PE requests a block currently held in \texttt{M}                                                                                                                                           \\
+        \hline
+        Abort and retry          & The current owner stalls the requester, completes the required ownership change or write-back, and then forces the requester to try again later.                                                                 \\
+        \hline
+        Intervene                & The current owner supplies the data directly, effectively pretending to be memory for that transfer and avoiding an unnecessary trip all the way to main memory.                                                 \\
+        \hline
+        Owned-state optimization & If the protocol supports \texttt{O}, the old owner may keep dirty responsibility while another cache receives a readable copy, so the memory write-back can be delayed until a later eviction or ownership loss. \\
+        \hline
+    \end{tabular}
+    \caption{The stable state set does not by itself determine the transfer behavior. Different protocol implementations can move the same block in different ways and incur different write-back costs.}
+    \label{tab:sync-protocol-behavior}
+\end{table}
+
+The key semantic point is this: if the final state is \texttt{S}, then the block is supposed to be \emph{clean}.
+That means memory must be made correct by the end of the transaction.
+If the protocol instead supports \texttt{O}, then memory may remain stale temporarily because one cache is explicitly responsible for the dirty shared copy.
+Thus, the presence or absence of \texttt{O} changes \emph{when} write-back is required.
+The distinction matters most when memory is far away and cache-to-cache transfer is much cheaper than forcing every ownership change to go through DRAM\@.
+
+This is why it is safer to think of protocol states as \emph{permissions plus responsibilities} rather than as the full protocol.
+The state says what a cache is allowed to do and what cleanup it owes the rest of the system.
+The implementation still decides whether ownership changes happen through retry, direct intervention, deferred write-back, or some combination of those techniques.
+
+
+\section{Atomic Primitives for Shared-Memory Synchronization}\label{sec:sync-atomic-primitives}
+Once multiple threads share writable state, the machine needs atomic operations that let software coordinate safely.
+Chapter~\ref{ch:multiprocessors} already introduced simple spin locks based on \textit{test-and-set} and \textit{test-and-test-and-set}.
+Those remain important because they reveal a core architectural truth: a synchronization primitive is not just a correctness device, but also a traffic pattern imposed on the coherence system.
+
+A naive repeated \texttt{test\_and\_set()} forces the lock variable into a writable-owner state over and over again.
+That makes the modified copy bounce from PE to PE and fills the interconnect with invalidation traffic.
+\textit{Test-and-test-and-set} reduces that cost by letting waiters spin mostly on shared cached copies and attempt the expensive atomic step only when the lock appears free.
+The lock is still correct either way; the difference is how much communication the machine must generate just to keep score.
+
+\subsection*{Load-Link / Store-Conditional}
+Another classic primitive pair is \textit{load-link / store-conditional} (LL/SC).
+A load-link reads a memory value and simultaneously records a reservation on that address.
+A later store-conditional to the same address succeeds only if no conflicting coherence event invalidated that reservation in the meantime.
+If another PE obtains ownership of the block or invalidates the local copy, the reservation is cleared and the store-conditional fails.
+
+One way to express a lock acquisition using LL/SC is:
+\begin{verbatim}
+do {
+  old = load_link(lock);
+  if (old == 0)
+    success = store_conditional(lock, 1);
+  else
+    success = 0;
+} while (!success);
+\end{verbatim}
+If \texttt{store\_conditional()} succeeds, the thread acquired the lock.
+If it fails, some other coherence event intervened, so the loop retries.
+
+Architecturally, LL/SC works well when the machine can cheaply observe invalidation events affecting the reservation.
+That is natural in a broadcast snooping setting.
+In a larger directory-based system, however, the reservation must survive longer-latency ownership transfers and more complex message paths, so the mechanism becomes harder to scale cleanly.
+The primitive remains elegant, but its implementation cost depends strongly on the interconnect and coherence organization.
+
+\subsection*{Fetch-and-Op and Fetch-and-Add}
+A more general atomic primitive is \textit{fetch-and-op}: return the old value of a location while atomically applying some operation to it.
+In abstract form,
+\begin{equation}\label{eq:ch9-formula-fetchop}
+    \text{\texttt{fetch\_and\_op}}(x,c):\qquad old=x,\qquad x\leftarrow x\;\textit{op}\;c,\qquad \text{return } old.
+\end{equation}
+The most common special case is \textit{fetch-and-add}, where the operation is integer addition.
+Implementations may provide that primitive directly in hardware, build it from LL/SC, or realize it through another atomic read-modify-write path.
+
+Fetch-and-add is extremely useful for dynamic work distribution.
+Instead of statically assigning iterations to threads, the runtime can let each worker claim the next available iteration number as it becomes free:
+\begin{verbatim}
+while ((i = fetch_and_add(next, 1)) < N) {
+  body(i);
+}
+\end{verbatim}
+This idea is often called \textit{guided self-scheduling} or dynamic work claiming.
+It handles uneven iteration costs naturally: a faster core simply claims more iterations over time, while a slower core claims fewer.
+
+High-level interfaces often hide these mechanics.
+\textit{OpenMP} is the standard directive-based shared-memory API\@.
+A compiler may translate a parallel loop into a runtime structure that internally resembles repeated work claiming.
+\textit{MPI}, by contrast, is the standard message-passing interface; it exposes explicit communication rather than a shared atomic counter.
+The architectural lesson is that even high-level APIs eventually bottom out in a small set of atomic ownership and ordering operations.
+
+
+\section{Reducing Synchronization Contention}\label{sec:sync-contention}
+Correct synchronization is necessary, but naive synchronization can turn one hot variable into the dominant source of coherence traffic.
+Two common responses are to reduce the number of contenders hitting the same lock at once and to structure barrier release so consecutive barrier instances do not interfere with one another.
+
+\subsection*{Tree and Tournament Locks}
+A \textit{tree lock} or \textit{tournament lock} replaces one heavily contended global lock with a hierarchy of smaller locks.
+For example, with 16 PEs one design might let:
+\begin{itemize}
+    \item $P_0$ through $P_3$ compete first on one local lock,
+    \item $P_4$ through $P_7$ compete on another,
+    \item $P_8$ through $P_{11}$ and $P_{12}$ through $P_{15}$ do the same,
+    \item and then only the local winners advance to higher-level locks.
+\end{itemize}
+That structure reduces the invalidation flood at the top of the tree because not all 16 contenders pound on the same variable at the same instant.
+Instead, most of the traffic stays localized within smaller competing groups.
+
+The price is latency.
+Acquiring the final global lock now requires winning several stages in sequence.
+Tree locks therefore trade reduced contention for longer acquisition paths.
+They are attractive when raw contention is the dominant problem and the extra hierarchy depth is cheaper than one enormous burst of invalidations on a single lock variable.
+
+\subsection*{Barrier Construction with Fetch-and-Add}
+Fetch-and-add also provides a simple software barrier.
+The main idea is to count arrivals and release all threads when the last one arrives.
+The subtle part is making one barrier instance distinct from the next, especially if the barrier sits inside a loop.
+A common solution is a \textit{sense-reversing barrier}, in which each thread keeps its own local phase bit.
+
+A compact form is:
+\begin{verbatim}
+Shared: count = 0, phase = 0
+Per thread: localPhase = 0
+
+barrier(N):
+  localPhase = 1 - localPhase
+  if (fetch_and_add(count, 1) == N-1) {
+    count = 0
+    phase = localPhase
+  } else {
+    while (phase != localPhase) { }
+  }
+\end{verbatim}
+The last arriving thread is the one for which
+\begin{equation}\label{eq:ch9-formula-barrier-last}
+    \text{\texttt{fetch\_and\_add}}(count,1)=N-1.
+\end{equation}
+That thread resets the counter and flips the shared phase.
+All other threads spin until they observe the new phase value.
+The phase bit plays the role of the ``toggle'' idea often used in informal explanations: it prevents one completed barrier instance from being confused with the next one.
+
+Hardware can implement a similar idea more directly.
+On a bus-based machine, one simple design gives each PE a dedicated arrival line.
+A PE asserts its line when it reaches the barrier, and everyone leaves once all lines are asserted.
+This is conceptually simple and resembles the one-hot signaling style used for other shared bus signals, but it does not scale well because it consumes dedicated hardware resources and assumes a shared observable medium.
+
+\paragraph{Review Emphasis: Barrier Versus Lock}\label{par:ch9-review-barrier-lock}
+A lock protects a critical section: at most one thread owns the protected region at a time.
+A barrier is a phase boundary: all participating threads wait until the last one arrives, then all proceed.
+The two are easy to confuse because barriers can be implemented using atomic operations and locks can be used inside synchronization libraries, but their purpose is different.
+Locks provide mutual exclusion.
+Barriers regroup threads that are allowed to run independently during the phase before the barrier.
+This is why barriers are common in bulk-synchronous programming models, including GPU-style kernel phases, but become expensive if inserted after every small step.
+
+
+\section{Transactional Memory}\label{sec:sync-transactional-memory}
+Locks are not the only way to protect a critical section.
+Another idea is \textit{transactional memory}: execute the critical section speculatively, then commit the result only if no conflicting access occurred.
+The programmer's conceptual model is close to a database transaction:
+\begin{enumerate}
+    \item begin a transaction,
+    \item read and write the shared data optimistically,
+    \item commit if no conflict occurred,
+    \item otherwise abort and retry.
+\end{enumerate}
+
+In hardware transactional memory, the processor typically tracks the transaction's read and write sets using the cache hierarchy.
+The accessed lines must remain resident until commit, and if some other PE invalidates one of those lines before the transaction ends, the transaction aborts.
+A pseudocode sketch looks like:
+\begin{verbatim}
+retry:
+  xbegin
+    critical section body
+  xend
+\end{verbatim}
+If the transaction aborts, control returns to a retry path or to a lock-based fallback.
+
+The attraction is clear.
+Transactional memory can avoid some of the awkwardness of nested locks and can eliminate explicit lock variables in lightly contended critical sections.
+If conflicts are rare, many threads may complete without ever spinning on a shared lock.
+
+The limitations are equally important.
+Transactions can fail because of true data conflicts, because the read or write set is too large for the available cache tracking, or because interrupts, exceptions, or implementation-specific hazards force an abort.
+Security and speculation concerns also make this design space delicate: mechanisms that delay architectural visibility or suppress exceptional behavior must be engineered very carefully to avoid side channels.
+As a result, practical support is vendor-specific and often paired with conservative fallbacks.
+
+A slower but conceptually similar alternative is \textit{software transactional memory}.
+Here the runtime records metadata in software, checks for conflicts explicitly, and retries when necessary.
+That approach sacrifices performance but keeps the optimistic-concurrency programming model.
+
+
+\section{Memory Consistency Beyond Coherence}\label{sec:sync-consistency}
+Coherence and consistency are related, but they are not the same guarantee.
+\textit{Cache coherence} constrains the order in which all processors observe writes to \emph{one memory location}.
+\textit{Memory consistency} constrains the relative order of operations to \emph{different locations}.
+A machine can therefore be perfectly coherent and still violate a programmer's intended synchronization if it allows aggressive reordering across different addresses.
+
+\subsection*{Data Races}
+A \textit{data race} occurs when two or more accesses touch the same location, at least one of those accesses is a write, and the ordering among them is not properly constrained.
+That is the real danger behind relaxed memory ordering.
+The machine is free to overlap or reorder operations for performance, but if the program does not establish the intended order, the result can become nondeterministic or simply wrong.
+
+The subtle point is that the race may involve more than one variable.
+An incorrectly constructed barrier, for example, can race on both the arrival counter and the phase or completion flag.
+Even if each individual variable is coherent, the combined protocol can still fail if the updates are observed in the wrong cross-variable order.
+Coherence therefore removes only one class of failure; it does not automatically make parallel code race-free.
+
+\subsection*{Strict Consistency}
+The strongest imaginable model is \textit{strict consistency}.
+In a strict-consistency machine, all processors observe memory operations in one global order that matches actual time.
+One way to imagine such a system is a central arbiter that repeatedly asks each processor, one at a time, to perform its next memory access.
+If one processor's write physically happened first, every later read must see that fact.
+
+This model is deterministic and easy to reason about.
+With the same timed inputs, the machine produces the same outputs.
+The cost is extreme.
+Strict consistency is effectively saying that the machine must behave as though there were only one instantly authoritative memory, no hidden reorderings, and no cache behavior that could let processors observe temporarily different views of the world.
+That makes it useful as a thought experiment and almost useless as a high-performance implementation target.
+In worked problems, a supplied actual-time order or global-clock order must therefore be respected exactly under strict consistency.
+
+\subsection*{Sequential Consistency}
+The best-known practical teaching model is \textit{sequential consistency}.
+It weakens strict consistency slightly by discarding the requirement that the global order match physical time exactly.
+Instead, it requires only two things:
+\begin{enumerate}
+    \item each processor's memory operations appear in the global order in the same order as that processor's program,
+    \item all processors observe one common total interleaving of those per-processor streams.
+\end{enumerate}
+This is equivalent to imagining that the program ran on a uniprocessor that interleaved whole-thread memory operations in some unpredictable but legal order.
+Thus, in an interleaving exercise, any total order is legal as long as each thread's local program order is preserved, even if the chosen interleaving does not match the originally supplied real-time order.
+
+A classic example uses two shared variables initially set to 0:
+\begin{verbatim}
+Processor 1:             Processor 2:
+  A = 1                    B = 1
+  BB = B                   AA = A
+\end{verbatim}
+Coherence alone only says that all processors will agree on the order of writes to \texttt{A}, and separately on the order of writes to \texttt{B}.
+It says nothing about the cross-address ordering between \texttt{A = 1} and \texttt{B = 1}.
+If the machine allows the later loads to become visible before the earlier stores, then outcomes such as \texttt{AA = 0} and \texttt{BB = 0} become possible even though each individual location remains coherent.
+
+Under sequential consistency, however, the result \texttt{AA = 0} and \texttt{BB = 0} is impossible.
+To get \texttt{AA = 0}, Processor 2's load of \texttt{A} would have to appear before Processor 1's earlier store of \texttt{A}.
+To get \texttt{BB = 0}, Processor 1's load of \texttt{B} would have to appear before Processor 2's earlier store of \texttt{B}.
+Those two requirements create a cyclic ordering contradiction once both processors' program orders must be preserved.
+Sequential consistency is therefore much stronger than plain coherence.
+
+It is still expensive to implement.
+Modern processors want to issue loads and stores out of order, buffer writes, speculate past unresolved misses, and overlap communication aggressively.
+A fully sequentially consistent implementation must either forbid much of that behavior or detect when speculation violated the model and then roll the machine back.
+That is possible, but not cheap.
+
+\subsection*{Weak and Relaxed Consistency}
+Real multiprocessors therefore use weaker or more selective models.
+There is no single weak-consistency design; there are many variants.
+The common idea is that not every memory access deserves the same ordering guarantee.
+
+One useful mental model is to divide shared accesses into two broad categories:
+\begin{itemize}
+    \item \textit{ordinary} or uncontended accesses, where the hardware is free to reorder aggressively if no synchronization rule is violated,
+    \item \textit{synchronization} or contended accesses, such as lock variables, atomic counters, and flags, which must carry stronger ordering guarantees.
+\end{itemize}
+Atomic operations such as \texttt{test\_and\_set()}, \texttt{fetch\_and\_add()}, and LL/SC-based updates are therefore designed to behave as synchronization points.
+They do not merely update one word atomically; they also participate in the stronger ordering discipline needed to make parallel programs meaningful.
+
+\subsection*{Memory Fences and Acquire/Release Ordering}
+The hardware mechanism that exposes this stronger ordering is the \textit{memory fence}.
+Common fence styles include:
+\begin{itemize}
+    \item a \textit{store fence}, which ensures that earlier stores become visible before later operations proceed,
+    \item a \textit{load fence}, which prevents later loads from bypassing earlier outstanding memory actions,
+    \item and a full \textit{memory fence}, which imposes both kinds of ordering.
+\end{itemize}
+These operations are expensive precisely because they restrict the processor's ability to overlap memory traffic.
+
+This is why locks are more than just atomic variables.
+An \textit{acquire} operation must prevent later accesses inside the critical section from floating before the lock is obtained.
+A \textit{release} operation must prevent earlier critical-section updates from remaining hidden after the lock is released.
+Put differently, a correct lock implementation behaves like an ordering device as well as a mutual-exclusion device.
+
+The practical synchronization bug usually appears in a message-passing pattern such as:
+\begin{verbatim}
+Producer:                 Consumer:
+  x = 1                     while (flag == 0) { }
+  flag = 1                  z = x
+\end{verbatim}
+If the consumer observes \texttt{flag == 1}, the programmer expects \texttt{z} to become 1 as well.
+Coherence by itself does not guarantee that expectation, because the machine might make the write to \texttt{flag} visible before the earlier write to \texttt{x} becomes visible to the consumer.
+The two variables are each coherent on their own, but the cross-variable ordering required by the synchronization protocol is missing.
+
+One correct repair is to place a release-style ordering point before publishing the flag and an acquire-style ordering point after consuming it:
+\begin{verbatim}
+Producer:                 Consumer:
+  x = 1                     while (flag == 0) { }
+  store_fence()             load_fence()
+  flag = 1                  z = x
+\end{verbatim}
+The exact syntax varies by ISA and API, but the principle is the same.
+The fence pair restores the intended cross-variable order.
+
+One brute-force solution would be to forbid essentially all load/store reordering and march memory operations through the system in a globally rigid order.
+That is simple to explain and expensive to implement.
+Real machines instead treat synchronization operations specially.
+An acquire prevents later memory actions from moving before the synchronization event, while a release prevents earlier actions from moving after it.
+Locks, unlocks, atomic synchronization primitives, and explicit memory fences rely on this idea.
+The result is a compromise: ordinary data accesses may still be reordered for performance, but synchronization points restore enough order for correctly written parallel programs to communicate.
+
+\paragraph{Review Emphasis: The Consistency Failure Mode}\label{par:ch9-review-consistency-failure}
+The recurring mistake is assuming that coherence makes the flag protocol correct.
+Coherence makes all processors agree on the order of writes to \texttt{x}, and separately on the order of writes to \texttt{flag}.
+It does not, by itself, force the write to \texttt{x} to become visible before the write to \texttt{flag}.
+That cross-address guarantee is exactly the job of consistency rules, fences, and acquire/release semantics.
+
+This is the larger architectural lesson of the chapter pair.
+Chapter~\ref{ch:multiprocessors} showed how the machine preserves one shared-memory illusion for a single block at a time.
+This chapter adds the second half of the story: once software uses that shared memory for synchronization, the machine must also provide atomic updates and cross-address ordering guarantees.
+Without those additional guarantees, coherence alone is not enough.
+
+\enlargethispage{2\baselineskip}
+
+
+\section{Chapter 9 Summary}\label{sec:chapter9-summary}
+Chapter 9 extends the multiprocessor discussion from block ownership into synchronization and ordering.
+The first key idea is that stable coherence states do not by themselves define the whole protocol: abort/retry, direct intervention, and owned-state optimizations can all move the same block differently and change when write-back occurs.
+Atomic synchronization then builds on that coherence substrate.
+Repeated test-and-set is correct but traffic-heavy, while test-and-test-and-set reduces invalidation pressure by letting waiters spin on shared copies.
+Load-link / store-conditional offers another way to express atomic lock acquisition, and fetch-and-op primitives generalize atomic update so runtimes can implement work claiming, counters, and barriers.
+Tree locks reduce the invalidation storm at one global lock by spreading contention across a hierarchy, while sense-reversing barriers distinguish one barrier instance from the next with an explicit phase bit.
+Transactional memory replaces explicit lock ownership with optimistic execution and commit-or-retry semantics, but it depends on careful hardware or runtime support and may still abort under conflict or implementation pressure.
+Finally, coherence and consistency are distinct: coherence orders writes to one location, whereas memory consistency governs the visibility of operations to different locations.
+Strict consistency is conceptually simplest and essentially impractical.
+Sequential consistency preserves each processor's program order within one shared global interleaving, which makes it much easier to reason about but still costly to implement efficiently.
+Weaker models therefore rely on synchronization variables, atomic operations, and fences to provide strong ordering only where software actually needs it.
+Correct shared-memory synchronization thus requires both atomic primitives and explicit ordering rules such as acquire/release semantics or fences.
+
+
+\section{Practice Questions}\label{sec:ch9-practice}
+The following questions reinforce the main ideas of Chapter 9.
+\begin{enumerate}
+    \item Explain why ``the states are not the protocol.'' Use a block currently held in \texttt{M} by one cache and requested by another cache to illustrate your answer.
+    \item Compare abort/retry, intervene, and the \texttt{O} state as ways of handling a request to a block currently held dirty in another cache.
+    Which choice can delay write-back the longest, and why?
+    \item Why does repeated \texttt{test\_and\_set()} cause more coherence traffic than test-and-test-and-set?
+    \item Describe the roles of \textit{load-link} and \textit{store-conditional}.
+    What coherence event causes the store-conditional to fail?
+    \item What is the difference between \textit{fetch-and-op} and \textit{fetch-and-add}? Why is fetch-and-add useful for dynamic loop scheduling?
+    \item A workload uses one global lock and shows a severe invalidation storm when many threads enter the critical section together.
+    Why might a tree lock help, and what latency cost does it introduce?
+    \item In a fetch-and-add barrier, why is a phase or toggle bit needed in addition to the arrival counter?
+    \item Compare a software barrier based on an atomic counter with a hardware barrier built from one dedicated signal line per PE. What assumptions does the hardware version make about the interconnect?
+    \item When should a programmer use a lock, and when should a programmer use a barrier?
+    Give one example where each is the natural primitive.
+    \item What problem is transactional memory trying to avoid compared with conventional lock-based critical sections?
+    Give two reasons a transaction may still abort.
+    \item Distinguish clearly between cache coherence and memory consistency.
+    \item In the producer/consumer example with \texttt{x} and \texttt{flag}, explain how a consumer can legally observe \texttt{flag == 1} yet still read an old value of \texttt{x} if the machine provides coherence but not sufficient consistency ordering.
+    \item Consider two threads:
+    \begin{verbatim}
+Thread A:  A1: tA = M[0x3008]
+           A2: tA = tA + 4
+           A3: M[0x3004] = tA
+
+Thread B:  B1: tB = M[0x3004]
+           B2: tB = tB + 9
+           B3: M[0x3008] = tB
+    \end{verbatim}
+    Assume the initial values are $M[0x3008]=20$ and $M[0x3004]=10$.
+    If the actual-time order is $A1,B1,A2,B2,A3,B3$, give the final values under strict consistency.
+    Then give two different legal interleavings under sequential consistency that do \emph{not} follow that actual-time order, and state the final memory values in each case.
+    \item What does sequential consistency guarantee, and why is it usually more expensive than weaker models with acquire/release ordering?
+    \item Define a data race precisely.
+    Why can a program still contain a data race even when every individual location is cache coherent?
+    \item Compare strict consistency with sequential consistency.
+    Which one is tied directly to physical time, and which one only requires preservation of each processor's program order?
+    \item In the two-processor example with \texttt{A}, \texttt{B}, \texttt{AA}, and \texttt{BB}, explain why the outcome \texttt{AA = 0, BB = 0} is forbidden under sequential consistency.
+    \item What do store fences, load fences, and full memory fences each prevent?
+    Why are they expensive?
+    \item Why is read-only shared data usually less problematic for weak consistency than data protected by locks or atomics?
+\end{enumerate}

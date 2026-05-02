@@ -166,7 +166,11 @@ The following questions reinforce the main ideas of Chapter 1 and are intended f
 \begin{enumerate}
     \item For each of the following techniques, state whether it primarily exploits \emph{parallelism}, \emph{speculation without prediction}, \emph{speculation with prediction}, or more than one of these ideas: packed-word SIMD, a cache, a branch predictor, and out-of-order execution with branch prediction.
     \item Classify each of the following workloads using Flynn's taxonomy, and give a one-sentence justification for each answer: a dense image convolution engine, a cloud-service cluster that handles independent requests, a small thermostat controller, and a brute-force hash search implemented as many independent workers.
-    \item Explain why pipelining is orthogonal to Flynn's taxonomy. Give one example of a pipelined SISD design and one example of pipelining inside a wider SIMD or MIMD system.
-    \item A vector arithmetic pipeline has 6 stages and processes a vector of 100 elements. Compute the approximate cycle count for a serial implementation and for a pipelined implementation. Then explain how chaining could reduce producer-consumer delay for two dependent vector operations.
-    \item Distinguish packed-word SIMD from classic pipelined vector execution. In particular, explain what is fixed by register width in packed SIMD and what is streamed through the pipeline in classic vector execution.
+    \item Explain why pipelining is orthogonal to Flynn's taxonomy.
+    Give one example of a pipelined SISD design and one example of pipelining inside a wider SIMD or MIMD system.
+    \item A vector arithmetic pipeline has 6 stages and processes a vector of 100 elements.
+    Compute the approximate cycle count for a serial implementation and for a pipelined implementation.
+    Then explain how chaining could reduce producer-consumer delay for two dependent vector operations.
+    \item Distinguish packed-word SIMD from classic pipelined vector execution.
+    In particular, explain what is fixed by register width in packed SIMD and what is streamed through the pipeline in classic vector execution.
 \end{enumerate}

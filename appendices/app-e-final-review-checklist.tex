@@ -1,0 +1,130 @@
+\chapter{Comprehensive Final Review Checklist}\label{ch:final-review-checklist}
+This appendix is a compact review map for the full course.
+It is not a substitute for the chapter practice questions; it is a last-pass checklist of the concepts that repeatedly connect exam problems, homework, and projects.
+
+
+\section{Core Topic Checklist}\label{sec:app-e-core-checklist}
+
+\subsection*{Architecture and Performance}
+\begin{itemize}
+    \item Know the grain sizes of parallelism: bit-level, instruction-level, thread-level, and inter-program parallelism.
+    \item Distinguish SIMD, MIMD, packed-word SIMD, and pipelined vector execution.
+    \item Use the CPU-time equation $\text{time}=IC\times CPI\times CT$ and know which term an optimization changes.
+    \item Apply Amdahl's law for fixed-size speedup and Gustafson's law for scaled workloads.
+    \item Use arithmetic means for times and harmonic means for rates.
+\end{itemize}
+
+\subsection*{Caches and Memory Hierarchy}
+\begin{itemize}
+    \item Split addresses into tag, index, and offset fields from $(C,B,S)$ cache notation.
+    \item Classify misses as compulsory, capacity, conflict, or coherence misses when multiprocessors are involved.
+    \item Connect each cache optimization to the term it improves: hit time, miss ratio, or miss penalty.
+    \item Compare write-back/write-through and write-allocate/write-no-allocate behavior.
+    \item Explain why VIPT caches must keep index plus offset bits within the page offset unless extra synonym-handling machinery exists.
+    \item Treat tiling as a working-set transformation: choose tiles so the active data footprint fits in cache and does not create severe set conflicts.
+\end{itemize}
+
+\subsection*{Pipelines and Branch Prediction}
+\begin{itemize}
+    \item Interpret IF/ID/EX/MEM/WB timing diagrams cycle by cycle.
+    \item Identify structural, data, and control hazards and connect them to inserted stalls or squashes.
+    \item Explain why forwarding fixes many RAW hazards but does not eliminate the classic load-use stall.
+    \item Compare delay slots, squash slots, branch target buffers, return-address stacks, and direction predictors.
+    \item Work through one-bit, two-bit, GSelect, GShare, Yeh/Patt, perceptron, and hybrid predictor lookup/update behavior.
+\end{itemize}
+
+\subsection*{Dynamic and Compiler-Scheduled ILP}
+\begin{itemize}
+    \item Distinguish FICI, FICO, and FOCO execution models.
+    \item Explain how Tomasulo-style scheduling uses reservation stations, tags, result broadcast, and register renaming.
+    \item Explain why precise exceptions require in-order architectural state update, often through a reorder buffer or checkpoint/repair.
+    \item Draw data dependence graphs and classify pure, anti-, and output dependences.
+    \item Use dependence height as a list-scheduling priority.
+    \item Explain VLIW as a trade: simpler dynamic hardware in exchange for stronger compiler scheduling responsibility.
+    \item For software pipelining, compute $ResII$, $RecII$, and $MII=\max(ResII,RecII)$, then reason about prologue, kernel, and epilogue code.
+\end{itemize}
+
+\subsection*{Multiprocessors, Synchronization, and Consistency}
+\begin{itemize}
+    \item Distinguish shared-memory and message-passing systems.
+    \item Explain coherence as ordering and propagation for one memory location, not as full synchronization correctness.
+    \item Trace MSI/MESI/MOESI-style state transitions and know what \texttt{E}, \texttt{O}, and \texttt{F} add.
+    \item Distinguish abort/retry from intervene behavior when dirty data is requested by another cache.
+    \item Explain false sharing as unnecessary coherence traffic caused by unrelated variables sharing one cache block.
+    \item Compare snooping and directory-based coherence, including why limited-pointer directories trade space against overflow behavior.
+    \item Explain why test-and-test-and-set reduces coherence traffic compared with repeated test-and-set.
+    \item Use locks for mutual exclusion around critical sections and barriers for regrouping a set of threads at a phase boundary.
+    \item Define a data race and explain why coherence alone does not remove data races.
+    \item Compare strict, sequential, and weak/relaxed consistency models.
+    \item Know what store fences, load fences, full fences, acquire operations, and release operations prevent.
+\end{itemize}
+
+\subsection*{Interconnection Networks}
+\begin{itemize}
+    \item Distinguish direct topologies, such as meshes and tori, from indirect topologies, such as crossbars and multi-stage networks.
+    \item For $k$-ary $n$-dimensional networks, compute node count as $k^n$.
+    \item Define bisectional bandwidth as the aggregate bandwidth crossing the minimum equal-halves cut.
+    \item Explain why a torus has more bisectional bandwidth than the corresponding mesh.
+    \item Compare deterministic, adaptive, and oblivious routing.
+    \item Explain Valiant's algorithm as randomized load balancing through an intermediate node.
+    \item Distinguish packet-level and flit-level flow control.
+    \item Compare store-and-forward, cut-through, wormhole, and virtual-channel flow control.
+\end{itemize}
+
+
+\section{Review Clarifications}\label{sec:app-e-clarifications}
+
+\subsection*{Tiling}
+Tiling is useful when the program has reuse but the untiled working set is too large for the cache.
+The transformation changes loop order so the program operates on cache-sized pieces before moving on.
+For exam-style problems, the first check is usually the footprint inequality: active arrays, tile dimensions, and bytes per element must fit within the effective cache capacity.
+The second check is placement: a tile that fits by byte count can still perform poorly if the active blocks conflict in the same sets.
+
+\subsection*{Iterative Modulo Scheduling}
+Modulo scheduling is easiest to understand as loop unrolling followed by rerolling.
+Unrolling exposes overlap among different iterations, but unrolling too far makes code large.
+Software pipelining keeps the repeating overlapped pattern as a compact kernel and adds a prologue and epilogue to handle startup and drain.
+
+Iterative modulo scheduling begins at the lower bound $MII=\max(ResII,RecII)$.
+$ResII$ comes from resource pressure.
+$RecII$ comes from loop-carried dependence cycles.
+The compiler tries to schedule the loop at that initiation interval; if it cannot, it increments $II$ and tries again.
+An operation that would appear in cycle $x$ of the unrolled schedule maps to row $x\bmod II$ of the modulo reservation table.
+Operations that conceptually wrap around the compact kernel explain why prologue and epilogue code are needed.
+
+\subsection*{Memory Consistency}
+The core consistency trap is that coherence is per-location, while synchronization usually depends on ordering between locations.
+In the producer/consumer pattern, a coherent machine can still let the consumer observe a flag update before it observes the data update that the flag was meant to publish.
+The fix is not merely better coherence; the fix is an ordering rule around synchronization, implemented through acquire/release semantics or explicit fences.
+
+Strict consistency ties the visible memory order to actual time.
+Sequential consistency allows a single legal interleaving that preserves each thread's program order, even if that interleaving is not the real-time order.
+Weak or relaxed models allow ordinary accesses to move more freely but require synchronization accesses to carry stronger ordering guarantees.
+
+\subsection*{Barriers and Locks}
+A lock protects a critical section: only one thread should execute that protected code at a time.
+A barrier is a phase boundary: every participating thread waits until all have arrived, and then all may proceed.
+Barriers are natural in bulk-synchronous programs such as GPU-style kernel phases.
+They are expensive when overused because fast threads idle while waiting for slow ones.
+
+\subsection*{Bisectional Bandwidth}
+Bisectional bandwidth is a topology figure of merit.
+For a legal equal-halves cut, sum the bandwidths of the links crossing the cut.
+The bisectional bandwidth is the minimum such aggregate over the allowed equal splits.
+For regular meshes and tori, the intended cuts are along topology dimensions, not arbitrary diagonal cuts chosen to inflate the count.
+This value is a potential maximum, not a guarantee: routing, buffering, and traffic conflicts can keep real throughput below it.
+
+
+\section{Fast Self-Check Prompts}\label{sec:app-e-self-check}
+\begin{enumerate}
+    \item Given a cache geometry, can you compute tag/index/offset bits and explain whether a miss is compulsory, capacity, conflict, or coherence?
+    \item Given a branch predictor table and branch history, can you show both the prediction and the update?
+    \item Given a dependence graph, can you identify false dependences and explain how renaming removes them?
+    \item Given a loop body and functional-unit counts, can you compute $ResII$, $RecII$, and $MII$?
+    \item Given a coherence trace, can you count memory reads, memory writes, invalidations, and cache-to-cache transfers?
+    \item Given a lock implementation, can you explain which part provides atomicity and which part provides ordering?
+    \item Given two threads accessing two variables, can you decide which outcomes are legal under strict consistency, sequential consistency, and relaxed ordering?
+    \item Given a network topology, can you compute bisectional bandwidth and explain why routing may still perform worse than that theoretical limit?
+    \item Given a packet/flit scenario, can you explain whether store-and-forward, cut-through, wormhole, or virtual channels best describes the behavior?
+    \item Given the advanced-topics appendix, can you state why quantum machines and superconducting processors are architectural accelerators rather than simple CMOS replacements?
+\end{enumerate}
