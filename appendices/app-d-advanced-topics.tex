@@ -45,7 +45,7 @@ For example, a classical function $f(x)$ that maps many inputs to one output may
 
 A common trick is to convert the classical function into a reversible phase operation:
 \begin{equation}\label{eq:appd-phase-oracle}
-    U_f\lvert x\rangle = (-1)^{f(x)}\lvert x\rangle \cdot
+    U_f\lvert x\rangle = (-1)^{f(x)}\lvert x\rangle.
 \end{equation}
 If $f(x)=0$, the state is unchanged.
 If $f(x)=1$, the state receives a negative phase.
@@ -54,7 +54,7 @@ This is the idea behind the lecture's ``sign'' version of a classical function.
 
 The algorithmic benefit comes from superposition and interference.
 A quantum operation can act on a superposition of possible inputs, and later operations can make the desired answers reinforce while undesired answers cancel.
-This is not generic magic parallelism: the algorithm must match the mathematical structure of the problem.
+This is not generic parallelism: the algorithm must match the mathematical structure of the problem.
 That is why quantum speedups exist for some problems but not for arbitrary computation.
 
 
@@ -148,7 +148,7 @@ Multiple cryostats can then be connected using conventional high-performance int
 \section{Final Review Checkpoints}\label{sec:appd-review}
 For final-review purposes, focus on the following claims.
 \begin{enumerate}
-    \item Quantum computers are accelerators coordinated by classical computers, not drop-in replacements for all classical processors.
+    \item Quantum computers are accelerators coordinated by classical computers, not universal replacements for classical processors.
     \item Quantum speedups are problem-specific; physics simulation and integer factoring are canonical examples.
     \item Decoherence and imperfect control are the two broad error sources emphasized in the lecture.
     \item Fewer quantum instructions are preferred because errors accumulate with time and with each imperfect operation.

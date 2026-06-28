@@ -30,10 +30,8 @@ Table~\ref{tab:mp-grain-size} places multiprocessors in the broader grain-size v
 \end{table}
 
 At the architecture-classification level, two familiar Flynn terms continue to matter:
-\begin{itemize}
-    \item \textit{single instruction, multiple data (SIMD)} machines apply the same operation to multiple data elements at once.
-    \item \textit{multiple instruction, multiple data (MIMD)} machines allow different PEs to execute different instructions on different data at the same time.
-\end{itemize}
+\textit{Single instruction, multiple data (SIMD)} machines apply the same operation to multiple data elements at once.
+\textit{Multiple instruction, multiple data (MIMD)} machines allow different PEs to execute different instructions on different data at the same time.
 Modern shared-memory multiprocessors are usually discussed as MIMD machines.
 That does not exclude SIMD units inside each core; it only means that the overall machine permits several independently executing instruction streams.
 
@@ -163,7 +161,7 @@ A coherent cache system is normally expected to satisfy three properties:
 \end{enumerate}
 The second property is intentionally phrased in terms of \textit{sufficient time} rather than instant propagation.
 Physical systems cannot propagate signals across large chips or boards instantaneously.
-Coherence therefore promises eventual agreement and a consistent write story, not magic zero-time updates.
+Coherence therefore promises eventual agreement and a consistent write story, not instantaneous zero-time updates.
 
 
 \section{Coherence Solution Families}\label{sec:mp-coherence-families}
@@ -500,7 +498,7 @@ Typical messages include:
 \begin{itemize}
     \item \texttt{GetS}: request a shared readable copy.
     \item \texttt{GetM}: request exclusive writable ownership.
-    \item \texttt{Act}: acknowledgment that a requested action completed.
+    \item \texttt{Ack}: acknowledgment that a requested action completed.
     \item \texttt{Nack}: negative acknowledgment, typically meaning the requester must retry later.
     \item \texttt{Invalidate}: command to discard a clean shared copy.
     \item \texttt{Recall}: command to return a dirty value and surrender ownership.
@@ -544,7 +542,7 @@ Consider a block whose directory entry currently shows either a clean shared sta
 \paragraph{Shared read request (\texttt{GetS}).}
 Suppose $P_2$ issues \texttt{GetS}.
 If the directory sees no dirty owner, then memory already has the correct value.
-The directory sets $P_2$\('\)s presence bit and returns the block so that $P_2$ enters \texttt{S}.
+The directory sets the presence bit for $P_2$ and returns the block so that $P_2$ enters \texttt{S}.
 If the directory sees a dirty owner, then it sends \texttt{Recall} to that owner, waits for the data and acknowledgment, updates memory or otherwise records the returned value, sets the requester's presence bit, and then sends the data to $P_2$.
 The result is that the requester receives a correct shared copy and the directory's state matches reality.
 
@@ -553,7 +551,7 @@ Now suppose $P_2$ instead issues \texttt{GetM}.
 The directory must ensure that all competing copies disappear before granting writable ownership.
 If another cache has the block dirty, the directory sends \texttt{Recall} to that owner and collects the returned data.
 If other caches merely hold clean shared copies, the directory sends \texttt{Invalidate} to each one and waits for all acknowledgments.
-Only after every required acknowledgment has arrived does the directory send the data and permission to $P_2$, clear the other presence bits, set $P_2$\('\)s bit, and mark the entry dirty.
+Only after every required acknowledgment has arrived does the directory send the data and permission to $P_2$, clear the other presence bits, set the presence bit for $P_2$, and mark the entry dirty.
 That ordering is what enforces the single-writer invariant and a consistent global order of writes.
 
 \subsection*{Why Directories Scale Better}
@@ -575,7 +573,7 @@ If memory contains $2^m$ bytes and the coherence block size is $2^v$ bytes, then
 Each entry then needs enough information to identify the sharers and encode control state.
 For a full bit-vector directory with $N$ PEs, that means roughly $N$ sharer bits plus a small number of control bits.
 As $N$ grows, the directory becomes both large and increasingly central to system throughput.
-One useful way to reason about homework-style metadata questions is therefore:
+One useful way to reason about review-style metadata questions is therefore:
 \begin{enumerate}
     \item compute the number of directory entries from memory size and block size,
     \item estimate the number of bits per entry from the sharer encoding plus control bits,

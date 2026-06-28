@@ -186,7 +186,7 @@ The \textit{branch target buffer (BTB)} predicts where a branch goes (target pre
 \subsection{BTB with Tags}\label{subsec:auto-009}
 A tagged BTB stores branch PC tags and associated targets.
 On fetch, the BTB is indexed and tag-compared; a valid tag hit yields a predicted target.
-Tagging eliminates \textit{aliasing}, where two unrelated branches share an entry, ensuring higher prediction accuracy at the cost of significantly more hardware area and longer lookup time.
+Tagging detects when the indexed entry belongs to a different branch, reducing destructive \textit{aliasing} at the cost of more hardware area and lookup work.
 
 \subsection{BTB without Tags}\label{subsec:auto-010}
 A tagless BTB behaves like a hashed direct lookup table from index to target metadata.
@@ -508,5 +508,5 @@ The following questions reinforce the main ideas of Chapter 4 and are intended f
     \item A perceptron predictor uses $G=4$ bits of global history.
     The active perceptron has weights $[1,2,-1,0,1]$, the current GHR is \texttt{1010}, and the next actual branch outcome is not taken.
     Compute the output $y$, state the prediction, determine whether training occurs, and give the new GHR after update.
-    You may assume the project-style threshold rule $\theta=\lfloor 1.93G+14\rfloor$.
+    You may assume the threshold rule $\theta=\lfloor 1.93G+14\rfloor$ used in this text.
 \end{enumerate}

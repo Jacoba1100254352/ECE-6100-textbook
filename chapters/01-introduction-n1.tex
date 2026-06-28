@@ -20,10 +20,9 @@ Most performance techniques in modern processors can be traced to three closely 
 \textit{Speculation} increases performance by doing work early, before the machine is fully certain that this work will be needed.
 \textit{Prediction} estimates uncertain future behavior (for example branch direction or branch target) so speculative work is directed toward the most likely path.
 Prediction is not a third independent speedup method; it is a tool that makes speculation more selective and efficient.
-One useful informal nickname for this is ``2.5 tricks'' rather than three completely separate tricks.
 Parallelism is one direct source of speedup.
 Speculation is the second.
-Prediction is the ``half'' because it usually matters only by making speculation more effective.
+Prediction supports the second by improving the chance that speculative work is useful rather than discarded.
 
 \paragraph{Classifying common optimizations}\label{par:auto-005a}
 This distinction is useful because many architectural features combine these ideas differently.
@@ -102,7 +101,7 @@ A cloud-service cluster is naturally MIMD because many processors or machines ex
 Some tasks, such as brute-force hash search, can be built in several ways: a lockstep array of identical workers looks SIMD-like, while a farm of largely independent workers looks MIMD\@.
 The important step is to identify whether the machine is reusing one instruction stream across many data elements or allowing many instruction streams to proceed independently.
 
-\subsection{Where pipelining fits}\label{subsec:auto-004}
+\subsection{Where Pipelining Fits}\label{subsec:auto-004}
 Pipelining is orthogonal to Flynn's taxonomy.
 It is a temporal form of parallelism in which different stages operate on different instructions concurrently.
 Because pipeline structure is an internal execution organization, pipelining can appear inside SISD cores, SIMD engines, and MIMD processors alike.
@@ -143,7 +142,7 @@ Chaining reduces producer-consumer delay and improves sustained throughput in ve
 
 
 \section{Common Chapter 1 Pitfalls}\label{sec:auto-008}
-Students often conflate speculation with prediction.
+A common mistake is to conflate speculation with prediction.
 The correct view is that prediction is one way to make speculation more effective, not the definition of speculation itself.
 Another recurring error is to assume that additional cores guarantee proportional speedup; real speedup is limited by dependencies, communication, and serial regions of code.
 It is also common to treat SIMD and MIMD as interchangeable, even though they target different workload structures and have different programming implications.

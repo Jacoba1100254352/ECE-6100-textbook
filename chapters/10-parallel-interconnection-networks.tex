@@ -113,7 +113,7 @@ Its value is clarity: message latency is easy to interpret as hop count times li
 
 For example, in a unidirectional ring with 1-cycle links, a message that must traverse 5 hops has a zero-load network latency of 5 cycles before router or queueing delays are added.
 If each node can consume at most one message per cycle, then additional delay appears as queueing rather than as route ambiguity.
-Many simulator projects intentionally use this simplified model, sometimes together with very deep input queues, so that the main architectural questions are message ordering, hop count, and contention rather than finite-buffer loss.
+Many teaching models intentionally use this simplified structure, sometimes together with very deep input queues, so that the main architectural questions are message ordering, hop count, and contention rather than finite-buffer loss.
 
 \subsection{Physical Layout and Wire-Length Balance}\label{subsec:pin-layout}
 Logical dimensionality is only part of the story.

@@ -41,7 +41,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Limited Directory}] Directory organization that records only a bounded number of sharers explicitly and uses an overflow policy when that bound is exceeded.
     \item[\textit{Recall}] Directory command requiring a cache to return the current block value and surrender ownership.
     \item[\textit{Invalidate}] Directory command requiring a cache to discard its current copy of a block.
-    \item[\textit{Act}] Directory-style acknowledgment indicating that a required coherence action completed.
+    \item[\textit{Ack}] Directory-style acknowledgment indicating that a required coherence action completed.
     \item[\textit{Nack}] Directory-style negative acknowledgment indicating that a request cannot yet be completed and should be retried later.
     \item[\textit{Sharing Pattern}] Characteristic way in which a block is accessed across processors, such as private, read-only, producer-consumer, migratory, or read-write shared.
     \item[\textit{False Sharing}] Performance problem in which unrelated variables placed in the same cache block force unnecessary invalidations or transfers because one of them is actively shared.
@@ -216,7 +216,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[AAT] Average Access Time
     \item[ALU] Arithmetic Logic Unit
     \item[AVX] Advanced Vector Extensions
-    \item[ACT] Acknowledgment
+    \item[ACK] Acknowledgment
     \item[AW] Address Width
     \item[BTFNT] Backward Taken, Forward Not Taken
     \item[BTB] Branch Target Buffer

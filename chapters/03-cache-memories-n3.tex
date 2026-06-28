@@ -147,7 +147,7 @@ If the problem says to ignore replacement metadata such as LRU state, then it sh
 \paragraph{Address partitioning example}\label{par:auto-018}
 Consider the same $(13,5,0)$ 64-bit cache.
 For the virtual address \texttt{0000\_1234\_ABCD\_5678}:
-\textbf{Offset (5 bits):} the lowest 5 bits of \texttt{78} (\texttt{0111\_1000}) are \texttt{11000}, which is \texttt{18} (decimal 24).
+\textbf{Offset (5 bits):} the lowest 5 bits of \texttt{78} (\texttt{0111\_1000}) are \texttt{11000}, which is \texttt{0x18} (decimal 24).
 \textbf{Index (8 bits):} bits 5 through 12 come from hex digits \texttt{5}, \texttt{6}, and \texttt{7}.
 In binary these digits are \texttt{0101}, \texttt{0110}, and \texttt{0111}; extracting bits 5--12 yields \texttt{1011\_0011} (binary), which is \texttt{B3}.
 \textbf{Tag (51 bits):} the remaining upper bits are the tag.
@@ -571,7 +571,7 @@ Here $TF=4$ is also structurally reasonable because each row occupies four 64-by
 \paragraph{Review Emphasis: What Tiling Is Really Buying}\label{par:ch3-review-tiling}
 Tiling does not change the arithmetic performed by the program.
 It changes the order in which the program visits data so that reuse happens while the relevant blocks are still cache-resident.
-The exam-style reasoning is usually: identify the active data touched by one tile, multiply by bytes per element, require that footprint to fit in the effective cache capacity, and then remember that associativity can still matter.
+The review-problem reasoning is usually: identify the active data touched by one tile, multiply by bytes per element, require that footprint to fit in the effective cache capacity, and then remember that associativity can still matter.
 If the tile fits by byte count but all active blocks map to too few sets, conflict misses can still defeat the transformation.
 
 \textbf{Loop fusion} combines independent loops that touch related data to improve temporal locality.
@@ -606,7 +606,7 @@ The following questions reinforce the main ideas of Chapter 3 and are intended f
     Why does critical-word-first by itself not guarantee a reduction in processor-visible miss penalty?
     \item A system uses 32-byte blocks, an 8-byte memory bus, and serialized memory transfers.
     A miss first incurs a 70 ns round trip for the requested word, and each additional word also requires 70 ns.
-    The cache hit time is 10 ns and the hit rate is 15\%.
+    The cache hit time is 10 ns and the miss ratio is 15\%.
     Compute the average access time under three cases: baseline repair with no early use of returned data, early restart with a uniform probability of needing any of the four words in the block, and critical-word-first with early restart.
     \item Consider a $(C,B,S)=(6,4,2)$ cache with LRU replacement and the access stream \texttt{0x589e}, \texttt{0xa7a1}, \texttt{0x3767}, \texttt{0xcce2}, \texttt{0xa7aa}, \texttt{0xff4d}, \texttt{0x376c}, \texttt{0x5892}.
     For each access, determine the set, tag, hit or miss outcome, and final contents of the tag store after the full trace.

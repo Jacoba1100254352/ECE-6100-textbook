@@ -155,28 +155,28 @@ In Fig.~\ref{fig:ilp-superscalar-pipeline}, retirement is represented by the fin
 
 \section{Dependency Types and Why They Matter}\label{sec:ilp-dependencies}
 Superscalar scheduling must respect three dependency classes.
-\begin{itemize}
-    \item \textit{read-after-write (RAW)} is a true flow dependency.
-    A later instruction needs a value produced by an earlier one, so executing them in the wrong order would use stale data and produce the wrong result.
-    \item \textit{write-after-read (WAR)} is an anti-dependency.
-    A later instruction must not overwrite a register before an earlier instruction has finished reading it, even though the two instructions do not share a true data value.
-    \item \textit{write-after-write (WAW)} is an output dependency.
-    Two instructions write the same destination, so their writes must appear in the correct order or the final architectural value will be wrong.
-\end{itemize}
+
+\textit{Read-after-write (RAW)} is a true flow dependency: a later instruction needs a value produced by an earlier one, so executing them in the wrong order would use stale data and produce the wrong result.
+
+\textit{Write-after-read (WAR)} is an anti-dependency: a later instruction must not overwrite a register before an earlier instruction has finished reading it, even though the two instructions do not share a true data value.
+
+\textit{Write-after-write (WAW)} is an output dependency: two instructions write the same destination, so their writes must appear in the correct order or the final architectural value will be wrong.
+
 Only RAW is fundamentally unavoidable.
 WAR and WAW are name dependencies that arise from register reuse and can be reduced or removed by renaming the register.
 
 
 \section{Fire/Complete Taxonomy}\label{sec:ilp-fire-complete}
 A compact way to classify designs is by fire order and complete order.
-\begin{itemize}
-    \item \textit{fire in order, complete in order (FICI)} is the classic simple-pipeline behavior.
-    Instructions begin execution in program order and also finish in program order, which simplifies control but limits how much parallelism the machine can exploit.
-    \item \textit{fire in order, complete out of order (FICO)} is a simpler superscalar step.
-    Instructions still begin execution in order, but different latencies allow later instructions to finish first, so some parallel speedup is possible without fully out-of-order scheduling.
-    \item \textit{fire out of order, complete out of order (FOCO)} is more aggressive and offers higher potential ILP\@.
-    The scheduler may start and finish instructions whenever operands and hardware are ready, which exposes more ILP but requires more machinery to preserve correct architectural behavior.
-\end{itemize}
+
+\textit{Fire in order, complete in order (FICI)} is the classic simple-pipeline behavior.
+Instructions begin execution in program order and also finish in program order, which simplifies control but limits how much parallelism the machine can exploit.
+
+\textit{Fire in order, complete out of order (FICO)} is a simpler superscalar step.
+Instructions still begin execution in order, but different latencies allow later instructions to finish first, so some parallel speedup is possible without fully out-of-order scheduling.
+
+\textit{Fire out of order, complete out of order (FOCO)} is more aggressive and offers higher potential ILP\@.
+The scheduler may start and finish instructions whenever operands and hardware are ready, which exposes more ILP but requires more machinery to preserve correct architectural behavior.
 
 
 \section{Scoreboarding Intuition (FICO Style)}\label{sec:ilp-scoreboard}
@@ -302,78 +302,6 @@ When dispatch renames a destination, it allocates a fresh physical register and 
 Ready bits in the physical register file then indicate whether each renamed value has actually been produced yet.
 Some architectures describe the same underlying status with \textit{busy bits} instead.
 The terminology varies, but the idea is the same: one convention marks a value as ready to use, while the other marks it as still busy or unavailable.
-% Figure~\ref{fig:ilp-register-renaming} shows one concrete sequence for architected register \texttt{R1}.
-% Instruction \texttt{I1} allocates a new physical destination \texttt{P8}, instruction \texttt{I2} captures that same \texttt{P8} as its source, and a later writer \texttt{I3} allocates yet another destination \texttt{P9}.
-% Because \texttt{I2} already refers to \texttt{P8}, the later write to \texttt{P9} does not interfere with the older read, so the false write-after-read (WAR) and write-after-write (WAW) hazards disappear while the true read-after-write (RAW) dependence from \texttt{I1} to \texttt{I2} remains.
-%
-% \begin{figure}[t]
-%     \centering
-%     \resizebox{\textwidth}{!}{%
-%     \begin{tikzpicture}[
-%         font=\small,
-%         >=Latex,
-%         panel/.style={draw, rounded corners, fill=gray!4, minimum width=3.6cm, minimum height=6.6cm},
-%         titlebox/.style={draw, rounded corners, fill=black!5, minimum width=3.0cm, minimum height=0.8cm, align=center, font=\bfseries},
-%         instr/.style={draw, rounded corners, fill=blue!8, minimum width=3.0cm, minimum height=0.95cm, align=center},
-%         ratbox/.style={draw, rounded corners, fill=yellow!15, minimum width=2.8cm, minimum height=0.9cm, align=left},
-%         pregready/.style={draw, rounded corners, fill=green!12, minimum width=2.6cm, minimum height=0.75cm, align=left},
-%         pregwait/.style={draw, rounded corners, fill=orange!18, minimum width=2.6cm, minimum height=0.75cm, align=left},
-%         note/.style={draw, rounded corners, fill=white, minimum width=3.0cm, minimum height=1.0cm, align=left},
-%         flow/.style={->, thick},
-%         dep/.style={->, thick, green!50!black},
-%         panelarrow/.style={->, semithick}
-%     ]
-%     \node[panel] (p0) at (0,0) {};
-%     \node[panel] (p1) at (4.6,0) {};
-%     \node[panel] (p2) at (9.2,0) {};
-%     \node[panel] (p3) at (13.8,0) {};
-%
-%     \node[titlebox] at (0,2.55) {Step 0\\Before Dispatch};
-%     \node[titlebox] at (4.6,2.55) {Step 1\\Dispatch \texttt{I1}};
-%     \node[titlebox] at (9.2,2.55) {Step 2\\Dispatch \texttt{I2}};
-%     \node[titlebox] at (13.8,2.55) {Step 3\\Dispatch \texttt{I3}};
-%
-%     \node[instr] at (0,1.25) {\texttt{R1} currently means\\the committed value};
-%     \node[ratbox] (rat0) at (0,-0.1) {\textbf{RAT}\\\texttt{R1 -> P1}};
-%     \node[pregready] (p0a) at (0,-1.45) {\textbf{P1}: old \texttt{R1}\\ready = 1};
-%     \node[note] at (0,-2.85) {Only one visible name\\exists in the architected state.};
-%
-%     \node[instr] (i1) at (4.6,1.25) {\texttt{I1: ADD R1, R2, R3}\\allocate new destination};
-%     \node[ratbox] (rat1) at (4.6,-0.1) {\textbf{RAT}\\\texttt{R1 -> P8}};
-%     \node[pregready] at (4.6,-1.25) {\textbf{P1}: old \texttt{R1}\\ready = 1};
-%     \node[pregwait] (p8a) at (4.6,-2.15) {\textbf{P8}: dest of \texttt{I1}\\ready = 0};
-%     \node[note] at (4.6,-3.35) {A fresh physical register\\holds the next version of \texttt{R1}.};
-%     \draw[flow] (i1.south) -- (p8a.north);
-%
-%     \node[instr] (i2) at (9.2,1.25) {\texttt{I2: SUB R4, R1, R5}\\capture source for \texttt{R1}};
-%     \node[ratbox] (rat2) at (9.2,-0.1) {\textbf{RAT}\\\texttt{R1 -> P8}};
-%     \node[pregwait] (p8b) at (9.2,-1.35) {\textbf{P8}: produced by \texttt{I1}\\ready = 0};
-%     \node[note] (n2) at (9.2,-2.95) {\texttt{I2} records source\\\texttt{R1} as \texttt{P8}.\\This keeps the true RAW edge.};
-%     \draw[flow] (rat2.south) -- (p8b.north);
-%     \draw[dep] (p8b.south) -- (n2.north);
-%
-%     \node[instr] (i3) at (13.8,1.25) {\texttt{I3: MUL R1, R6, R7}\\allocate another destination};
-%     \node[ratbox] (rat3) at (13.8,-0.1) {\textbf{RAT}\\\texttt{R1 -> P9}};
-%     \node[pregready] (p8c) at (13.8,-1.2) {\textbf{P8}: older \texttt{R1} version\\used by \texttt{I2}};
-%     \node[pregwait] (p9c) at (13.8,-2.15) {\textbf{P9}: dest of \texttt{I3}\\ready = 0};
-%     \node[note] at (13.8,-3.35) {\texttt{I2} still reads \texttt{P8},\\while younger users of \texttt{R1}\\now see \texttt{P9}.};
-%     \draw[flow] (i3.south) -- (p9c.north);
-%     \draw[flow] (rat3.south) -- (p9c.north west);
-%
-%     \draw[panelarrow] (1.95,0) -- (2.65,0);
-%     \draw[panelarrow] (6.55,0) -- (7.25,0);
-%     \draw[panelarrow] (11.15,0) -- (11.85,0);
-%
-%     \node[draw, rounded corners, fill=green!8, minimum width=15.2cm, minimum height=1.2cm, align=left] (footer) at (6.9,-5.0) {
-%         \textbf{Effect:} write-after-read (WAR) and write-after-write (WAW) hazards disappear because the later write gets a new physical name.
-%         Only the real read-after-write (RAW) dependence remains: when \texttt{I1} finishes, it marks \texttt{P8} ready, and \texttt{I2} can wake up and use that value.
-%     };
-%     \end{tikzpicture}}
-%     \caption{Register renaming over time.
-%     The register alias table (RAT) always points to the newest physical version of an architected register, while older in-flight instructions keep the physical register numbers they captured earlier.
-%     This removes false name dependencies while preserving true data flow.}
-%     \label{fig:ilp-register-renaming}
-% \end{figure}
 
 
 \section{Tomasulo's Algorithm}\label{sec:ilp-tomasulo}

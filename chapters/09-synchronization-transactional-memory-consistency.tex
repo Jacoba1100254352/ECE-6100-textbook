@@ -104,13 +104,8 @@ Two common responses are to reduce the number of contenders hitting the same loc
 \subsection*{Tree and Tournament Locks}
 A \textit{tree lock} or \textit{tournament lock} replaces one heavily contended global lock with a hierarchy of smaller locks.
 For example, with 16 PEs one design might let:
-\begin{itemize}
-    \item $P_0$ through $P_3$ compete first on one local lock,
-    \item $P_4$ through $P_7$ compete on another,
-    \item $P_8$ through $P_{11}$ and $P_{12}$ through $P_{15}$ do the same,
-    \item and then only the local winners advance to higher-level locks.
-\end{itemize}
-That structure reduces the invalidation flood at the top of the tree because not all 16 contenders pound on the same variable at the same instant.
+$P_0$ through $P_3$ compete first on one local lock, $P_4$ through $P_7$ compete on another, $P_8$ through $P_{11}$ and $P_{12}$ through $P_{15}$ do the same, and then only the local winners advance to higher-level locks.
+That structure reduces the invalidation flood at the top of the tree because not all 16 contenders compete for the same variable at the same instant.
 Instead, most of the traffic stays localized within smaller competing groups.
 
 The price is latency.
