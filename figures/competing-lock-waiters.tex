@@ -1,0 +1,15 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tabular}{@{}llll@{}}
+    \toprule
+    Event & Old lock value & New lock value & What the waiter knows \\
+    \midrule
+    $A$: atomic load & 0 & 0 & The lock looked free \\
+    $B$: atomic load & 0 & 0 & The lock looked free \\
+    $A$: exchange with 1 & 0 & 1 & Acquisition succeeded \\
+    $B$: exchange with 1 & 1 & 1 & Acquisition failed; retry \\
+    \bottomrule
+  \end{tabular}
+  \caption{Both waiters can see an opportunity, but only one acquires the lock. Here 0 means free, 1 means held, an exchange returns the old value while writing 1, and $A$ does not unlock during the trace. The preliminary loads grant no ownership.}
+  \label{fig:competing-lock-waiters}
+\end{figure}

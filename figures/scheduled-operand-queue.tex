@@ -1,0 +1,14 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \node[bookbox,minimum width=2.6cm] (producer) at (0,0) {Producer: add};
+    \node[bookbox,minimum width=2.8cm] (queue) at (4,0) {Operand queue};
+    \node[bookbox,minimum width=2.6cm] (consumer) at (8,0) {Consumer: multiply};
+    \node[bookbox,minimum width=5.8cm] (schedule) at (4,1.6) {Compiler-selected destination and timing};
+    \draw[bookarrow] (producer) -- node[booklabel,below=5mm] {result} (queue);
+    \draw[bookarrow] (queue) -- node[booklabel,below=5mm] {ready operand} (consumer);
+    \draw[bookarrow,dashed] (schedule) -- (queue);
+  \end{tikzpicture}
+  \caption{A scheduled value travels to its consumer instead of making every instruction rediscover its producer. The queue holds an operand until use; its depth, ports, and control remain real resources. This is an explanatory dataflow diagram, not a full SYNDRA implementation schematic.}
+  \label{fig:scheduled-operand-queue}
+\end{figure}

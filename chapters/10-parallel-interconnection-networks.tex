@@ -209,6 +209,12 @@ Two transfers may need the same internal link or the same switch output at the s
 Unlike a nonblocking crossbar, the omega network does not generally offer an independent path for every pair of simultaneous requests.
 Thus the network may be fast when contention is low and much slower when several requests collide in the same internal region.
 
+\paragraph{A short path is not a latency guarantee}
+Conte recalls this distinction from his work on the Cedar multiprocessor: messages could follow a short path through the fabric, yet contention and limited buffering could make the wait much longer than the empty-network traversal.
+The lesson is not that multistage networks are inherently unusable, but that counting switch stages leaves out the queues.
+Published measurements of Cedar also found that nonuniform traffic and replies converging on one processor port could limit performance.\footnote{The April 16, 2026 lecture recollection and the Cedar network study are identified separately in Appendix~\ref{ch:source-notes}.}
+When evaluating a topology, ask both how quickly one message crosses an empty network and what happens when many messages compete.
+
 
 \section{Routing Algorithms}\label{sec:pin-routing}
 Routing answers the question: given a source and a destination, which path should the message follow?
@@ -380,8 +386,8 @@ A typical design includes:
 This structure is analogous in spirit to a processor pipeline: several flits can be in different internal stages of the router at the same time.
 That pipelining is essential for throughput.
 At the same time, the arbitration policy matters.
-The lecture handout asks the reader to compare ring injection with traffic on a road.\footnote{\texttt{n8\_interconn.pdf}, slide 28, ``Packet Insertion: Ring Stop.''}
-A useful interpretation is a roundabout: transit flits are already circulating, while locally injected flits wait to merge.
+The lecture handout asks the reader to compare ring injection with traffic on a road, and Conte makes the traffic-circle comparison in class.\footnote{\texttt{n8\_interconn.pdf}, slide 28, ``Packet Insertion: Ring Stop,'' and the April 21, 2026 recording identified in Appendix~\ref{ch:source-notes}.}
+In that picture, transit flits are already circulating, while locally injected flits wait to merge.
 Prioritizing transit traffic can keep the ring moving, but unlimited priority could starve a core trying to inject.
 The analogy therefore motivates both congestion control and a fairness rule, not one universal arbitration policy.
 

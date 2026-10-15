@@ -80,6 +80,20 @@ Measuring either $\lvert+\rangle$ or $\lvert-\rangle$ directly in the computatio
 The final $H$ turns their \emph{relative} phase difference into different measurement outcomes.
 A common phase multiplying the entire state, such as replacing every amplitude by its negative, is instead unobservable by itself.
 
+\paragraph{What the one-bit algorithm actually learns}
+The guest lecture's phase-oracle example belongs to a small query problem: determine $f(0)\oplus f(1)$, where $\oplus$ is exclusive-or, without needing to report the two outputs individually.
+The same circuit works for all four one-bit Boolean functions.
+Writing $s_0=(-1)^{f(0)}$ and $s_1=(-1)^{f(1)}$ gives
+\begin{equation}\label{eq:deutsch-one-bit-result}
+    H U_f H\lvert0\rangle
+    =\frac{s_0+s_1}{2}\lvert0\rangle
+     +\frac{s_0-s_1}{2}\lvert1\rangle.
+\end{equation}
+When the outputs agree, $s_0=s_1$ and measurement gives 0; when they differ, $s_0=-s_1$ and measurement gives 1.
+An overall minus sign does not change either outcome.
+This is Deutsch's one-bit query advantage: one coherent oracle use suffices, whereas a deterministic exact classical algorithm needs both function values in the worst case.
+It is a query-count comparison, not a promise that building the oracle or running the entire quantum program is cheaper.\footnote{The April 23, 2026 guest example and the IBM Quantum query-model reference are listed in Appendix~\ref{ch:source-notes}.}
+
 
 \section{Superconducting Processor Architecture}\label{sec:appd-superconducting}
 The superconducting architecture topic asks whether classical processors can be built differently from conventional CMOS designs.
@@ -109,14 +123,17 @@ The research proposal names its single-thread-oriented architecture \textit{SYND
 Its Statically Assigned DataGraph Execution (SADGE) model moves scheduling work to the compiler.\footnote{Pulkit Gupta's May 5, 2026 Georgia Tech proposal abstract identifies SYNDRA, STRIDE, and SUP; see Appendix~\ref{ch:source-notes}.}
 The important connection to the core chapters is static dataflow: make producer-consumer relationships explicit instead of rediscovering them with a large dynamic scheduler.
 
-An illustrative implementation can route a result toward its scheduled consumer and hold it in an \textit{operand queue} until needed, rather than returning every value through a centralized multi-ported register file.
-This describes the architectural idea, not a complete specification of the proposed core's pipeline or ISA.
+In the guest lecture's proposed design, instructions identify their scheduled consumers.
+A result goes toward the appropriate \textit{operand queue}, which holds it until the consumer needs it, rather than returning every value through a centralized multi-ported register file.
+Figure~\ref{fig:scheduled-operand-queue} follows one such producer-consumer path.
+
+\input{figures/scheduled-operand-queue}
 
 This resembles VLIW and software scheduling from Chapter~\ref{ch:compiler-scheduled-ilp}, but with a different hardware motivation.
 When timing is predictable, the compiler can arrange delivery distances and interconnect controls ahead of time.
 The goal is to keep useful instruction-level parallelism while avoiding the most expensive fanout-heavy structures of out-of-order execution.
 
-Control flow can likewise be separated into three conceptual jobs:
+The lecture likewise separates control flow into three conceptual jobs:
 \begin{itemize}
     \item \textit{prepare} supplies a possible branch target early,
     \item \textit{compare} computes the condition early,
@@ -125,7 +142,7 @@ Control flow can likewise be separated into three conceptual jobs:
 This separates where the program might go from whether it will go there.
 This can create time to prefetch or configure a path, but a static plan still needs a correct response to variable memory latency and unresolved conditions.
 
-Banking illustrates the same resource tradeoff without depending on a particular prototype.
+The lecture uses banking to illustrate the same resource tradeoff.
 Instead of one fully multi-ported cache, divide storage into independently accessed banks.
 For example, odd and even indices can map to different half-sized banks.
 This gives multiple accesses per cycle when the accesses land in different banks, while avoiding the area cost of a monolithic multi-ported cache.
@@ -155,6 +172,10 @@ SYNDRA targets single-thread-oriented phases, while STRIDE targets highly thread
 Any hybrid also needs a software interface for choosing execution resources, transferring state, and accounting for transition overhead.
 Sharing data or memory resources could reduce duplication, but the benefit must be weighed against contention and control cost rather than assumed from the word ``hybrid.''
 
+The lecture proposes a RISC-V register-state interface between the two modes.
+Before handing work across, software would materialize the live values in that register view; after the threaded work joins, the single-thread side would restore the state needed to continue.
+The cost of that handoff belongs in the end-to-end performance comparison.
+
 \subsection{Cryogenic System Organization}\label{subsec:appd-cryo}
 Cooling cost cannot be ignored.
 For an ideal refrigerator moving heat from $T_{cold}$ to $T_{hot}$, the minimum input work per unit of removed heat is
@@ -170,6 +191,14 @@ A full system can use temperature staging.
 Superconducting logic sits near liquid-helium temperatures.
 Some support electronics may sit at a warmer stage, but their device behavior and interface cost must be characterized at that temperature.
 Links to other modules or warm network equipment also add interface power and heat load.
+
+\subsection{What a Simulation Can Establish}\label{subsec:appd-research-evidence}
+Near the end of the guest lecture, a student asks the essential question: how can a processor have a performance result before the whole machine has been built?
+The answer is a chain of models.
+Circuit synthesis and physical-design estimates supply component timing; the compiler schedules for those latencies, and a simulator evaluates the resulting program.
+That is stronger than choosing convenient latency constants, but it is still a model-based result.
+Its meaning depends on the circuit library, resource limits, workload, and system costs included.
+Keep those assumptions attached to the comparison, just as in Chapter~\ref{ch:auto-006}.
 
 
 \section{Final Review Checkpoints}\label{sec:appd-review}

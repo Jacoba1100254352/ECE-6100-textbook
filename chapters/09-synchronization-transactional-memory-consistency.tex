@@ -53,6 +53,14 @@ That makes the modified copy bounce from PE to PE and fills the interconnect wit
 \textit{Test-and-test-and-set} reduces that cost by letting waiters spin mostly on shared cached copies and attempt the expensive atomic step only when the lock appears free.
 Both strategies can implement a correct lock with atomic polling/acquisition and acquire/release ordering; they differ in the communication they generate.
 
+\paragraph{A chance, not the lock}
+Conte borrows a joke from \emph{Dumb and Dumber} to make the distinction memorable: an opportunity to win is not the same as winning.
+Two waiters can both read an unlocked value, but neither owns the lock yet.
+Each must attempt the atomic operation, and only the one that changes the lock from free to held may enter.
+Figure~\ref{fig:competing-lock-waiters} follows that race without assuming that a read reserves anything.
+
+\input{figures/competing-lock-waiters}
+
 \subsection*{Load-Link / Store-Conditional}
 Another classic primitive pair is \textit{load-link / store-conditional} (LL/SC).
 A load-link reads a memory value and establishes a reservation on a region containing that location.
