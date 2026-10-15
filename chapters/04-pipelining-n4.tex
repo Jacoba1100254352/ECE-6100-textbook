@@ -1,5 +1,10 @@
 \chapter{Pipelining}\label{ch:auto-005}
 
+An instruction passes through several kinds of work: finding the instruction, reading operands, calculating, accessing memory, and recording a result.
+If each part has its own hardware, the machine need not finish the first instruction before starting the second.
+Like successive items moving through workstations, instructions can occupy different stages at once.
+The gain comes from a regular flow of finished work; a dependency or a wrong turn interrupts that flow.
+
 
 \section{Pipeline Motivation}\label{sec:auto-034}
 Pipelining improves throughput by overlapping instruction execution stages in time.
@@ -20,6 +25,8 @@ Write Back (WB) writes results to the architected register file.
 
 Even instructions that do not logically need memory often still occupy the MEM stage in a basic in-order five-stage design so that all instructions remain aligned in a uniform stage progression.
 This simplifies control and preserves in-order retirement semantics.
+Figure~\ref{fig:five-stage-overlap} shows the overlap before hazards complicate it.
+\input{figures/five-stage-overlap}
 
 
 \section{Pipeline Speedup Calculation}\label{sec:auto-036}

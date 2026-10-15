@@ -1,0 +1,43 @@
+Readable-book revision
+
+Objective
+Revise the complete course companion into clear, connected prose with relevant
+lecture anecdotes and explanatory graphics. Preserve technical depth, examples,
+and the separate chapter answer sheet. Attribute lecture material to evidence.
+
+Completed in the first editorial pass
+- Narrative openings connect the ten chapters through waiting, overlap, data
+  movement, and communication.
+- Source-supported slide examples restore the jet-simulation, Cray-vector,
+  independent-addition, rate-averaging, and register-renaming context.
+- One recording-based anecdote has a note/recording/time reference.
+- Seven new vector diagrams explain dependencies, Amdahl's limit, cache lookup,
+  pipeline overlap, false sharing, release/acquire, and network bisection.
+- Typography, running heads, front matter, contents depth, chapter openings,
+  captions, and PDF metadata have been revised.
+- Corrections distinguish buffering from speculation, equal-work from equal-time
+  rate averaging, atomicity from ordering, reservation failure from interference,
+  dynamic from guided scheduling, and unitary gates from measurement/reset.
+- Bisection definitions and affected answers now include all equal partitions.
+- The FICO practice trace now states timing assumptions and has a matching key.
+
+Remaining before the complete revision can be declared finished
+- Review the available lecture recordings, using automatic transcripts as drafts
+  rather than as authority for exact quotations, names, numbers, or anecdotes.
+- Integrate additional useful lecture stories with source/time references.
+- Continue the section-by-section technical and prose audit, especially the
+  larger cache, prediction, ILP, coherence, and advanced-topics chapters.
+- Reconcile each changed exercise or convention with the answer sheet.
+- Inspect the final rendered book across every chapter, appendix, and new figure.
+- Commit and push completed work; tag and publish the finished distribution.
+
+Local source handling
+Lecture audio, draft transcripts, recognition logs, and their local source
+inventory belong under ignored no-include/lecture-transcripts, not in GitHub.
+The public source appendix identifies the handouts and anecdotes actually used.
+
+Build
+Run make all to build the textbook and answer sheet with latexmk/pdfLaTeX.
+The design uses lmodern, microtype, fancyhdr, titlesec, caption, booktabs,
+enumitem, and TikZ in addition to the original LaTeX packages.
+Run make clean to remove intermediate build files while keeping the PDFs.

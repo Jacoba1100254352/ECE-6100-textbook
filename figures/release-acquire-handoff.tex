@@ -1,0 +1,16 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=1cm,y=1cm]
+    \node[font=\bfseries] at (2.5,2.5) {Producer};
+    \node[font=\bfseries] at (9,2.5) {Consumer};
+    \node[bookbox,minimum width=4.4cm] (writepayload) at (2.5,1.5) {Write payload: $x\leftarrow 1$};
+    \node[bookbox,minimum width=4.4cm] (publish) at (2.5,0) {Release store: $flag\leftarrow 1$};
+    \node[bookbox,minimum width=4.4cm] (observe) at (9,0) {Acquire load reads $flag=1$};
+    \node[bookbox,minimum width=4.4cm] (readpayload) at (9,-1.5) {Read payload: $z\leftarrow x$};
+    \draw[bookarrow] (writepayload) -- node[left,font=\scriptsize] {before} (publish);
+    \draw[bookarrow] (publish) -- node[above,font=\scriptsize,align=center] {reads from} (observe);
+    \draw[bookarrow] (observe) -- node[right,font=\scriptsize] {before} (readpayload);
+  \end{tikzpicture}
+  \caption{A release/acquire handoff orders the payload across two threads. The acquire must read the value published by the release. With the stated assumptions, the final read obtains $x=1$. Coherence of each location alone does not establish this chain.}
+  \label{fig:release-acquire-handoff}
+\end{figure}

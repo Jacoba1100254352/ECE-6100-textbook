@@ -1,0 +1,35 @@
+\chapter{Lecture Sources and Historical Notes}\label{ch:source-notes}
+The course materials supplied with this project are the primary reference for its scope and terminology.
+Slide numbers refer to the printed identifiers inside the handouts, which may differ from PDF page numbers because a PDF page can contain two slides.
+
+\section*{How Attribution Works}
+Lecture examples are paraphrased, not reconstructed quotations.
+They preserve the teaching point while making modeling assumptions explicit.
+Examples added to connect ideas, rather than recovered from a lecture, are presented as the book's own illustrations.
+
+\section*{Examples Used in the Narrative}
+\begin{description}
+  \item[Independent additions, Chapter 1.] \texttt{n1\_intro.pdf}, INTRO-6, contrasts three dependent additions with three independent additions on three adders. The book states the equal-latency, available-resource assumptions in its diagram.
+  \item[The Cray vector example, Chapter 1.] \texttt{n1\_intro.pdf}, INTRO-13--14, contrasts streamed vector execution with packed-word arithmetic. The book separates the lecture's simplified pipeline from historical hardware timings.
+  \item[Buying a jet-simulation machine, Chapter 2.] \texttt{n2\_perf.pdf}, PERF-18--20, uses an extravagant many-processor machine to expose Amdahl's limit, then changes the question to a larger simulation for Gustafson's law. The book uses 100 hours as a convenient baseline rather than the handout's rounded week-to-seconds conversion.
+  \item[Buying the slower machine, Chapter 2.] \texttt{n2\_perf.pdf}, PERF-9--11, compares rates of 4 and 4 with rates of 2 and 7. The workload must contain equal work of each type for the harmonic-mean comparison.
+  \item[The supercomputer joke, Chapter 2.] January 15, 2026 lecture, Notability note \emph{2. ECE 6100}, \emph{Recording 2}, approximately 06:03--06:32. The cost discussion paraphrases the joke's economic point; it does not reproduce the uncertain personal-name attribution in automatic transcription.
+  \item[Why renaming mattered, Chapter 6.] \texttt{n5\_ilp\_part1.pdf}, ILP-14, connects the System/360 Model 91's long floating-point operations and small architectural register set to dynamic scheduling and renaming.
+\end{description}
+
+\section*{Primary Historical References}
+\begin{description}
+  \item[Vector registers and chaining.] Cray Research, \emph{CRAY-1 Computer Systems Hardware Reference Manual}, HR-0004F, May 1982, sections on vector registers and chaining. The manual describes eight vector registers with up to 64 elements each and explains the conditions for forwarding an element stream between functional units. Available from the Computer History Museum's \href{https://bitsavers.computerhistory.org/pdf/cray/CRAY-1/HR-0004F_CRAY-1_Computer_Systems_Hardware_Reference_Manual_May82.pdf}{Bitsavers archive}.
+  \item[Dynamic scheduling.] R. M. Tomasulo, \emph{An Efficient Algorithm for Exploiting Multiple Arithmetic Units}, IBM Journal of Research and Development, 11(1), 1967, pp.\ 25--33. This is the original description of the Model 91 floating-point scheduling method. \href{https://doi.org/10.1147/rd.111.0025}{doi:10.1147/rd.111.0025}.
+\end{description}
+
+\section*{Reading the Remaining Course Handouts}
+The chapter sequence follows \path{n1_intro.pdf}, \path{n2_perf.pdf}, \path{n3_cache_all.pdf}, \path{n4_pipe_part1.pdf}, \path{n5_ilp_part1.pdf}, the VLIW/software-pipelining handouts, \path{n6_multiproc v1.1.pdf}, \path{n7_synch.pdf}, and \path{n8_interconn.pdf}.
+These filenames identify the local course sources; the handouts are not redistributed with the book.
+Course-specific categories, including the broad use of speculation for locality-based caching, are identified in the text when a narrower definition is also common.
+
+\section*{Specifications Behind Implementation Caveats}
+\begin{description}
+  \item[Atomic operations and reservations.] The \href{https://docs.riscv.org/reference/isa/unpriv/a-st-ext.html}{RISC-V atomic-extension specification} provides a concrete example of selectable acquire/release ordering and permitted store-conditional failure. These details motivate the distinction between atomicity and ordering in Chapter~\ref{ch:sync-consistency}; other ISAs have their own rules.
+  \item[Dynamic and guided loop scheduling.] The \href{https://www.openmp.org/spec-html/5.2/openmpse66.html}{OpenMP worksharing-loop specification} distinguishes fixed-size dynamic chunks from guided chunks that decrease as work is consumed. Chapter~\ref{ch:sync-consistency} uses this distinction when describing a fetch-and-add work counter.
+\end{description}

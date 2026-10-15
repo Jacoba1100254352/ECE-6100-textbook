@@ -1,0 +1,17 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=1cm,y=1cm]
+    \node[bookbox,minimum width=3cm] (reader) at (1.8,2.4) {Core 0 reads $x$};
+    \node[bookbox,minimum width=3cm] (writer) at (9.3,2.4) {Core 1 writes $y$};
+    \draw[draw=bookaccent,thick,fill=booklight] (2.9,0) rectangle (8.2,0.9);
+    \draw[draw=bookaccent] (5.55,0) -- (5.55,0.9);
+    \node at (4.2,0.45) {$x$: unchanged};
+    \node at (6.9,0.45) {$y$: updated};
+    \draw[bookarrow] (reader.south) -- (4.2,0.9);
+    \draw[bookarrow] (writer.south) -- (6.9,0.9);
+    \node[booklabel] at (5.55,-0.55) {One cache block: coherence permissions cover both variables.};
+    \node[booklabel] at (5.55,-1.55) {Writing $y$ invalidates Core 0's copy of the whole block.\\Its next read of $x$ can miss even though $x$ did not change.};
+  \end{tikzpicture}
+  \caption{False sharing comes from the unit of coherence. Placing $x$ and $y$ in different blocks can remove this interference, at the cost of extra space and possibly a larger working set.}
+  \label{fig:false-sharing-block}
+\end{figure}

@@ -1,17 +1,30 @@
-\chapter*{Scope and Topic Map}\label{ch:auto-001}
-\addcontentsline{toc}{chapter}{Scope and Topic Map}
+\chapter*{Before We Begin}\label{ch:auto-001}
+\addcontentsline{toc}{chapter}{Before We Begin}
 
 
-\section*{How to Use This Text}\label{sec:auto-001}
-Chapters 1 through 10 provide topic depth with definitions, equations, and worked examples.
-Chapter 5 provides integrated synthesis and cache simulation context.
-Chapter 6 develops dynamic instruction-level parallelism mechanisms such as superscalar scheduling and out-of-order execution.
-Chapter 7 develops compiler-scheduled instruction-level parallelism through very long instruction word (VLIW) execution and software pipelining.
-Chapter 8 develops multiprocessor organization, coherence, and parallel programming models.
-Chapter 9 develops atomic synchronization, transactional-memory ideas, and memory-consistency semantics.
-Chapter 10 develops parallel interconnection-network topologies, routing, flow control, and switch fabrics.
-Appendix~\ref{ch:advanced-topics} summarizes the advanced-topics lecture on quantum-computing architecture and superconducting processor research.
-Appendix~\ref{ch:final-review-checklist} provides a compact final-review checklist and clarification guide.
+\section*{The Thread Through the Book}\label{sec:auto-001}
+A fast computer is a machine that spends less time waiting.
+It keeps useful data nearby, overlaps independent work, and sometimes starts work before it knows whether that work will be needed.
+Each improvement creates another question: what happens when the guess is wrong, the data is missing, or two processors want to change the same value?
+Those questions connect the chapters that follow.
+
+We begin with the kinds of parallel work a machine can exploit and the measurements that tell us whether an improvement helped.
+Caches and pipelines then show how a single core hides or avoids waiting.
+Dynamic scheduling and compiler scheduling offer two ways to find more overlap.
+The later chapters move beyond one core, where keeping copies consistent, coordinating threads, and carrying messages become part of the computation itself.
+
+This is a course companion, not a replacement for the lectures or the current assignment specification.
+Read the prose for the mechanism, work through the examples for its consequences, and use the end-of-chapter questions to test whether you can reason without the explanation in front of you.
+The separate answer sheet follows the same chapter and question numbering.
+The formula compendium and glossary are reference tools; they are most useful after the underlying ideas are familiar.
+Appendix~\ref{ch:advanced-topics} extends the discussion to quantum and superconducting architectures, and Appendix~\ref{ch:final-review-checklist} supports a final review.
+
+\section*{Stories, Sources, and Simplified Machines}
+Short lecture examples appear where they explain an architectural choice.
+An attributed example is tied to the supplied course material in Appendix~\ref{ch:source-notes}; an uncited everyday analogy is an illustration written for this book.
+New analogies explain mechanisms without being attributed to the instructor.
+Historical machines provide context, while cycle counts and small diagrams describe explicitly simplified models unless identified otherwise.
+Always carry the stated assumptions into a calculation: forwarding timing, queue width, memory policy, and the meaning of a counter can change the answer.
 
 
 \section*{Cross-Chapter Reading Paths}\label{sec:cross-chapter-reading-paths}

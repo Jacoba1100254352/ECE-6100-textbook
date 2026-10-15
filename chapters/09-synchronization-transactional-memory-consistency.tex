@@ -1,4 +1,9 @@
-\chapter[Synchronization and Memory Consistency]{Synchronization, Atomic Primitives, Transactional Memory, and Memory Consistency}\label{ch:sync-consistency}
+\chapter[Synchronization and Memory Consistency]{Synchronization and Memory Consistency}\label{ch:sync-consistency}
+
+One thread prepares a result and sets a flag to announce that it is ready.
+Another sees the flag and reads the result.
+The story sounds complete, yet a coherent machine can still expose the flag before the data unless the program requests the required ordering.
+Shared-memory correctness therefore needs three separate ideas: coherent copies, indivisible updates, and rules for ordering communication.
 
 
 \section{Protocol States Versus Protocol Behavior}\label{sec:sync-state-vs-protocol}
@@ -64,7 +69,8 @@ do {
 } while (!success);
 \end{verbatim}
 If \texttt{store\_conditional()} succeeds, the thread acquired the lock.
-If it fails, some other coherence event intervened, so the loop retries.
+If it fails, the loop retries.
+A conflicting write can clear the reservation, but failure need not prove that another thread changed the value: an ISA can permit reservation loss or spurious failure for other implementation reasons.\footnote{For a concrete example, see the RISC-V atomic-extension specification in Appendix~\ref{ch:source-notes}.}
 
 Architecturally, LL/SC works well when the machine can cheaply observe invalidation events affecting the reservation.
 That is natural in a broadcast snooping setting.
@@ -87,7 +93,8 @@ while ((i = fetch_and_add(next, 1)) < N) {
   body(i);
 }
 \end{verbatim}
-This idea is often called \textit{guided self-scheduling} or dynamic work claiming.
+This is \textit{dynamic work claiming} with one iteration per claim.
+Guided self-scheduling is a related policy that starts with larger chunks and reduces their size as less work remains; it is not the same as repeatedly claiming one iteration.\footnote{See the OpenMP worksharing-loop specification listed in Appendix~\ref{ch:source-notes}.}
 It handles uneven iteration costs naturally: a faster core simply claims more iterations over time, while a slower core claims fewer.
 
 High-level interfaces often hide these mechanics.
@@ -262,18 +269,21 @@ One useful mental model is to divide shared accesses into two broad categories:
     \item \textit{ordinary} or uncontended accesses, where the hardware is free to reorder aggressively if no synchronization rule is violated,
     \item \textit{synchronization} or contended accesses, such as lock variables, atomic counters, and flags, which must carry stronger ordering guarantees.
 \end{itemize}
-Atomic operations such as \texttt{test\_and\_set()}, \texttt{fetch\_and\_add()}, and LL/SC-based updates are therefore designed to behave as synchronization points.
-They do not merely update one word atomically; they also participate in the stronger ordering discipline needed to make parallel programs meaningful.
+Atomic operations such as \texttt{test\_and\_set()}, \texttt{fetch\_and\_add()}, and LL/SC-based updates can support synchronization, but atomicity alone does not imply acquire or release ordering.
+The instruction or API must also request the ordering needed by the protocol.
+For example, an atomic counter used only to allocate distinct work indices can need weaker ordering than an atomic flag that publishes data.
 
 \subsection*{Memory Fences and Acquire/Release Ordering}
 The hardware mechanism that exposes this stronger ordering is the \textit{memory fence}.
 Common fence styles include:
 \begin{itemize}
-    \item a \textit{store fence}, which ensures that earlier stores become visible before later operations proceed,
-    \item a \textit{load fence}, which prevents later loads from bypassing earlier outstanding memory actions,
-    \item and a full \textit{memory fence}, which imposes both kinds of ordering.
+    \item a \textit{store-ordering fence}, which at least orders earlier stores before later stores in the model being discussed,
+    \item a \textit{load-ordering fence}, which at least orders earlier loads before later loads,
+    \item and a \textit{full memory fence}, which orders the specified earlier loads and stores before the specified later loads and stores.
 \end{itemize}
-These operations are expensive precisely because they restrict the processor's ability to overlap memory traffic.
+Fence names are ISA-specific: do not infer load-to-store or store-to-load ordering from the word ``fence'' alone.
+Check which predecessor and successor access classes the actual instruction orders.
+Restricting that overlap can cost performance, especially when earlier memory operations are slow.
 
 This is why locks are more than just atomic variables.
 An \textit{acquire} operation must prevent later accesses inside the critical section from floating before the lock is obtained.
@@ -290,15 +300,17 @@ If the consumer observes \texttt{flag == 1}, the programmer expects \texttt{z} t
 Coherence by itself does not guarantee that expectation, because the machine might make the write to \texttt{flag} visible before the earlier write to \texttt{x} becomes visible to the consumer.
 The two variables are each coherent on their own, but the cross-variable ordering required by the synchronization protocol is missing.
 
-One correct repair is to place a release-style ordering point before publishing the flag and an acquire-style ordering point after consuming it:
+One clear repair is to publish and consume the flag with release and acquire operations:
 \begin{verbatim}
 Producer:                 Consumer:
-  x = 1                     while (flag == 0) { }
-  store_fence()             load_fence()
-  flag = 1                  z = x
+  x = 1                     while (load_acquire(flag) == 0) { }
+  store_release(flag, 1)     z = x
 \end{verbatim}
-The exact syntax varies by ISA and API, but the principle is the same.
-The fence pair restores the intended cross-variable order.
+Assume \texttt{flag} is atomic, initially 0, the consumer's successful load reads the producer's release store, and no other thread modifies \texttt{x}.
+Then the release/acquire handoff makes the earlier write of \texttt{x} available to the consumer's later read.
+Figure~\ref{fig:release-acquire-handoff} traces that relationship.
+In C or C++, use the language's atomic operations or synchronization library so both the compiler and hardware honor it; ordinary shared variables plus invented fence function names are not a complete implementation.
+\input{figures/release-acquire-handoff}
 
 One brute-force solution would be to forbid essentially all load/store reordering and march memory operations through the system in a globally rigid order.
 That is simple to explain and expensive to implement.

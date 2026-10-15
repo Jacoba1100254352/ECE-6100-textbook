@@ -1,5 +1,10 @@
 \chapter{Cache Memories}\label{ch:auto-004}
 
+The next value a program needs may already be only a few millimeters from the execution unit, or it may require a much longer trip through the memory system.
+The program still issues a load in either case.
+The cache decides how often that simple instruction becomes a long wait.
+Its success rests on a practical observation: programs tend to return to the same data and to nearby addresses.
+
 
 \section{Memory Technology and the Hierarchy}\label{sec:auto-019}
 Modern cache design begins with a technology reality: fast memory is expensive and dense memory is slower.
@@ -25,6 +30,11 @@ Beneath DRAM is virtual-memory backing store (for example solid-state drive (SSD
 
 From the central processing unit (CPU) perspective, each lower level is accessed only when the upper level misses.
 This staged access is exactly why average-access-time analysis composes recursively across levels.
+
+Think of the few books open on a desk and the many books on a shelf.
+Keeping a useful book within reach saves repeated trips, but covering the desk with everything makes the working area harder to use.
+The analogy captures the capacity-versus-access-time tradeoff.
+The hardware adds a precise rule the desk does not have: each address maps to a particular set of candidate locations.
 
 
 \section{Locality: Why Caches Work}\label{sec:auto-021}
@@ -84,6 +94,9 @@ Higher associativity means fewer sets, so index width decreases by $S$ relative 
 That is why $S$ appears in index/tag equations but is not carried as an address field.
 
 \paragraph{What selects the way?}\label{par:auto-014}
+The address tells the cache where to look, but it does not name a way.
+Figure~\ref{fig:cache-set-lookup} follows one access from the address fields to the matching line.
+\input{figures/cache-set-lookup}
 The way is selected by hardware after tag comparison, not by an explicit address field:
 \begin{enumerate}
     \item Index selects one set.

@@ -1,13 +1,18 @@
 MAIN=ECE4100_6100_Architecture_Textbook
+ANSWERS=ECE4100_6100_Architecture_Answer_Sheet
 
-.PHONY: pdf clean clean-all
+.PHONY: all pdf answers clean clean-all
+
+all: pdf answers
 
 pdf:
-	latexmk -pdf $(MAIN).tex
+	latexmk -pdf -interaction=nonstopmode -halt-on-error $(MAIN).tex
+
+answers:
+	latexmk -pdf -interaction=nonstopmode -halt-on-error $(ANSWERS).tex
 
 clean:
-	latexmk -c $(MAIN).tex
+	latexmk -c $(MAIN).tex $(ANSWERS).tex
 
 clean-all:
-	latexmk -C $(MAIN).tex
-	rm -f $(MAIN).pdf
+	latexmk -C $(MAIN).tex $(ANSWERS).tex

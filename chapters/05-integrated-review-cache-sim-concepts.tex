@@ -1,9 +1,15 @@
 \chapter{Integrated Synthesis and Cache Simulation Concepts}\label{ch:auto-006}
 
+A simulator reports fewer cache misses after a change, yet the modeled program runs more slowly.
+That result is possible: the larger cache may take longer to access, or the new policy may generate expensive traffic elsewhere.
+To explain it, we need to follow an event through the whole machine instead of treating each counter as a separate verdict.
 
-\section{Chapter Purpose}\label{sec:auto-046}
-This chapter draws together the main ideas from Chapters 1--4.
-The goal is not to repeat those chapters in full, but to show how performance metrics, hazards, memory behavior, and simulation-oriented abstractions fit into a single analysis framework.
+
+\section{From an Event to an Explanation}\label{sec:auto-046}
+Begin with one demand access.
+Ask which level receives it, whether a miss causes a fill or write-back, and which counters record each event.
+Then ask whether the resulting delay actually stalls the processor or overlaps other work.
+This sequence connects the cache model to runtime and prevents a common mistake: interpreting more activity as more useful work.
 
 
 \section{Integrated Themes from Chapters 1 and 2}\label{sec:auto-047}

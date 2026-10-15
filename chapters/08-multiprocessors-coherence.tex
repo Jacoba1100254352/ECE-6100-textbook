@@ -1,4 +1,9 @@
-\chapter[Multiprocessor Fundamentals]{Multiprocessor Architecture Fundamentals: Shared Memory, Interconnects, and Cache Coherence}\label{ch:multiprocessors}
+\chapter[Multiprocessors and Coherence]{Multiprocessors and Cache Coherence}\label{ch:multiprocessors}
+
+Private caches solved a single core's distance problem by keeping useful data nearby.
+Put two such cores beside one shared memory and the solution creates a new problem: both cores can keep a copy, but one may change it.
+Which copy should the next reader trust?
+Coherence is the machinery that makes those private copies behave like one shared location.
 
 
 \section{From Instruction-Level to Thread-Level Parallelism}\label{sec:mp-intro}
@@ -118,14 +123,15 @@ That breaks the programmer's illusion of one shared value.
 
 Consider a memory location $x$ whose initial value is 1.
 Assume three PEs each read $x$ and therefore bring a copy into their private caches.
-Now suppose the following operations occur in program order:
+Now suppose synchronization orders these operations across the three PEs:
 \begin{enumerate}
     \item $P_0$ writes $x\leftarrow 22$.
     \item $P_1$ writes $x\leftarrow 44$.
     \item $P_2$ executes \texttt{x++}.
 \end{enumerate}
 If the caches do not coordinate, then $P_2$ may still read its stale local copy of 1, increment it, and write back 2.
-The program order suggests that the increment should apply to the most recent visible value and therefore produce 45, but an incoherent cache system can easily produce 2 instead.
+With that ordering, the increment should read 44 and produce 45, but an incoherent cache system can instead use the stale value and produce 2.
+Program order alone orders instructions within one PE; it does not establish this sequence across different PEs.
 Table~\ref{tab:mp-incoherent-example} summarizes the failure.
 \begin{table}[t]
     \centering
@@ -157,7 +163,7 @@ A coherent cache system is normally expected to satisfy three properties:
 \begin{enumerate}
     \item \textbf{Read-after-write semantics for one processor.} If a PE writes a value and no one else writes that location in the meantime, a later read by the same PE should return the value it wrote.
     \item \textbf{Eventual visibility to other processors.} If one PE writes a location and another PE later reads it, then after sufficient time has passed and assuming no intervening writes, the reader must eventually observe the value that was written.
-    \item \textbf{Consistent ordering of writes.} All PEs must observe writes to the same location in a consistent causal order.
+    \item \textbf{Consistent ordering of writes.} All PEs must agree on one order of writes to the same location.
 \end{enumerate}
 The second property is intentionally phrased in terms of \textit{sufficient time} rather than instant propagation.
 Physical systems cannot propagate signals across large chips or boards instantaneously.
@@ -686,6 +692,8 @@ Suppose one block holds two variables:
 Each time $y$ changes owners, the coherence protocol invalidates or transfers the whole block.
 That also invalidates $x$, even though no PE wrote $x$ at all.
 The miss on the next access to $x$ is therefore caused by block placement, not by true semantic sharing of $x$ itself.
+Figure~\ref{fig:false-sharing-block} isolates the placement problem.
+\input{figures/false-sharing-block}
 
 This is why false sharing is often described as a \textit{coherence miss}, or informally as a ``fourth C'' beyond compulsory, capacity, and conflict misses.
 The cure is usually structural rather than algorithmic: avoid placing variables with very different sharing patterns into the same cache block.

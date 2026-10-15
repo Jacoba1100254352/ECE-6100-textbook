@@ -1,5 +1,10 @@
 \chapter[Dynamic ILP and Out-of-Order]{Dynamic ILP: Superscalar Scheduling and Out-of-Order Execution}\label{ch:ilp-superscalar}
 
+A load misses in the cache.
+The next instruction needs its result, but a later instruction could add two values that are already available.
+Must the whole machine wait?
+Out-of-order execution begins with that question and earns its complexity by answering no, while still making the final result look as though the program ran in order.
+
 
 \section{Why Cycles per Instruction Can Go Below One}\label{sec:ilp-cpi-ipc}
 In basic single-issue pipelines, designers often treat cycles per instruction (CPI) near 1 as a practical lower bound.
@@ -26,10 +31,11 @@ The retire rate cannot exceed the weakest of these rates, because retirement is 
 
 
 \section{Historical Motivation}\label{sec:ilp-history}
-Historically, supercomputer scalar units showed that out-of-order mechanisms could deliver $IPC>1$ long before that became mainstream in commodity processors.
-The central lesson is that high throughput comes from combining several mechanisms rather than relying on any one of them in isolation.
-Stalls are reduced through coordinated fetch, scheduling, execution, and retirement policies.
-Modern superscalar designs extend the same idea by combining hazard management with wider issue and stronger speculation.
+The lecture introduces Tomasulo's algorithm through a constraint of the IBM System/360 Model 91: long floating-point operations had to share an architecture with only four floating-point registers.\footnote{\texttt{n5\_ilp\_part1.pdf}, ILP-14; R. M. Tomasulo's original paper is listed in Appendix~\ref{ch:source-notes}.}
+More arithmetic hardware alone would leave two problems unsolved.
+A calculation could wait on a genuinely unfinished input, or an independent calculation could be held back simply because the program reused a register name.
+Reservation stations let ready work wait near the execution units; tags distinguish which unfinished calculation will produce each value.
+That historical pressure makes the modern distinction memorable: a dependency on a value must survive, while a collision between names can be removed.
 
 
 \section{Superscalar Pipeline View}\label{sec:ilp-pipeline-model}
@@ -162,7 +168,7 @@ Superscalar scheduling must respect three dependency classes.
 
 \textit{Write-after-write (WAW)} is an output dependency: two instructions write the same destination, so their writes must appear in the correct order or the final architectural value will be wrong.
 
-Only RAW is fundamentally unavoidable.
+For arbitrary input values, a true RAW dependency must be respected even when register names change.
 WAR and WAW are name dependencies that arise from register reuse and can be reduced or removed by renaming the register.
 
 
@@ -788,6 +794,10 @@ The following questions reinforce the main ideas of Chapter 6 and are intended f
     \item A dependence graph has nodes \textit{A} through \textit{G} and edges \textit{A}$\rightarrow$\textit{C}, \textit{B}$\rightarrow$\textit{C}, \textit{B}$\rightarrow$\textit{D}, \textit{C}$\rightarrow$\textit{E}, \textit{D}$\rightarrow$\textit{F}, \textit{E}$\rightarrow$\textit{G}, and \textit{F}$\rightarrow$\textit{G}.
     If the dependence height of a node is the length of the longest path from that node to an exit, compute the height of every node.
     \item In a FICO-style machine with one LSU, one ADD unit, two-cycle loads, and one-cycle adds, trace the sequence \texttt{A: LW R1,0(R2)}, \texttt{B: ADD R3,R1,R4}, \texttt{C: ADD R5,R6,R7}, \texttt{D: ADD R8,R3,R9}.
+    Assume dispatch is two-wide in program order starting in cycle 1; a dispatched instruction can fire no earlier than the next cycle.
+    Fire is at most two-wide in program order, the ADD unit accepts one instruction per cycle, and results become usable in the cycle after completion.
+    A two-cycle load firing in cycle 2 completes at the end of cycle 3.
+    Ignore fetch, queue-capacity limits, and completion-bandwidth limits.
     Fill in a cycle table for dispatch, fire, and complete.
     Then state whether adding a second ADD unit removes all stalls, and explain which stalls remain due to the in-order fire rule.
     \item Consider Tomasulo with tags and a ROB with bypass for the sequence \texttt{LW R1,0(R3)}; \texttt{ADD R3,R2,R1}; \texttt{ADD R1,R3,R2}.

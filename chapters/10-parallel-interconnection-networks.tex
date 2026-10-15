@@ -1,5 +1,10 @@
 \chapter[Parallel Interconnection Networks]{Parallel Interconnection Networks: Topology, Routing, and Flow Control}\label{ch:parallel-interconnects}
 
+An ownership request, a cache block, and an acknowledgment all have to travel somewhere.
+On a small machine a shared bus may carry them; on a larger one, several messages can compete for links and buffers along different routes.
+A useful network must answer three questions: where can a message go, which path will it take, and what happens when the next step is busy?
+Topology, routing, and flow control answer those questions in turn.
+
 
 \section{Why Parallel Interconnects Are Their Own Topic}\label{sec:pin-why}
 Shared-memory multiprocessors ultimately depend on an interconnection fabric that moves requests, data, invalidations, acknowledgments, and coherence messages among processors, caches, directories, and memories.
@@ -142,13 +147,15 @@ where $N_{cut}$ is the number of links crossing the minimum bisection.
 
 Bisection bandwidth is useful because it compresses a network's best-case communication potential into one number.
 It does not predict the exact runtime of a real workload, because real traffic creates conflicts and hot spots, but it does reveal a hard structural limit on how much data can move between large halves of the machine.
-For regular meshes and tori, the intended bisection cuts are along topology dimensions.
-Arbitrary diagonal or zig-zag cuts are not the useful comparison point, because they do not represent the standard equal-halves bottleneck used to compare these network families.
+The minimum is over \emph{all} equal-halves partitions, not just visually straight cuts.
+For the regular square mesh and torus considered here, a dimension-aligned cut attains the minimum and makes the count easy to see.
+A diagonal or zig-zag partition is still a candidate if it divides the nodes equally; it does not change the definition, and counting extra crossings cannot increase the minimum.
 
 A 4-ary 2-mesh with 1-unit links has a bisection bandwidth of 4 link-units because the natural equal cut crosses four links.
 The corresponding 4-ary 2-torus has a bisection bandwidth of 8 link-units because the wraparound links create a second independent set of crossings.
 For this reason, an equally sized torus has twice the bisection bandwidth of the corresponding mesh.
 That does not make a torus automatically superior in every design, but it does explain why wraparound links are architecturally attractive.
+\input{figures/mesh-torus-bisection}
 
 
 \section{Indirect Networks and Multi-Stage Fabrics}\label{sec:pin-multistage}
@@ -377,7 +384,8 @@ The following questions reinforce the main ideas of Chapter 10.
     \item Define bisection bandwidth.
     A 4-ary 2-mesh and a 4-ary 2-torus use the same per-link bandwidth.
     Why does the torus have twice the bisection bandwidth?
-    \item Why should bisectional-bandwidth comparisons for regular meshes and tori use dimension-aligned equal cuts rather than arbitrary diagonal cuts?
+    \item For a regular square mesh or torus, why is a dimension-aligned equal cut a convenient way to find bisection bandwidth?
+    Does the definition exclude other equal-halves partitions?
     \item Compare a full crossbar with a multi-stage indirect network.
     Why might a designer choose the latter even though it can block?
     \item What is a perfect shuffle, and why is it associated with omega networks?

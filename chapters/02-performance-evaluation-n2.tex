@@ -1,5 +1,9 @@
 \chapter{Performance Evaluation}\label{ch:auto-003}
 
+Imagine choosing between two computers by the number on the clock-speed label.
+The higher-frequency machine seems the obvious choice until its program executes more instructions or spends more cycles waiting on each one.
+This chapter gives us a way to follow the work from instructions to elapsed time, so that a convincing sales pitch and a faster computer do not become the same thing.
+
 
 \section{Why Performance Evaluation Matters}\label{sec:auto-010}
 Architecture decisions are only meaningful if they are evaluated with the right metric.
@@ -113,12 +117,19 @@ The limit as $s\to\infty$ is
 This bound is the key insight: the unaccelerated fraction eventually dominates.
 
 \paragraph{Worked example}\label{par:auto-010}
-Consider a case in which 80\% of runtime is parallelizable and the accelerated part can use 100{,}000 processors ideally ($s=100{,}000$). Then
+The performance lecture turns Amdahl's law into a purchasing decision: you simulate jet designs, and a spectacularly large machine promises 100{,}000 processors.\footnote{\texttt{n2\_perf.pdf}, PERF-18--20. The numerical baseline here is simplified to 100 hours.}
+It is tempting to divide the old runtime by 100{,}000.
+But suppose only 80\% of the original runtime can be parallelized, with ideal acceleration of that part and no extra communication cost.
+Then
 \begin{equation}\label{eq:auto-012}
     S=\frac{1}{0.2+\frac{0.8}{100000}}\approx 5.0.
 \end{equation}
-Even enormous parallel resources cannot overcome a significant serial fraction.
-This is why architectural proposals must report both the accelerated fraction and the achieved acceleration factor.
+If the old simulation took 100 hours, 20 hours remain serial regardless of the processor count.
+The other 80 hours shrink to 0.0008 hours, leaving just over 20 hours in total.
+Even 100 ideal processors would finish in 20.8 hours, already close to that limit.
+Figure~\ref{fig:amdahl-work-bars} shows where the time goes.
+The purchasing question is now concrete: how much is that last fraction of an hour worth?
+\input{figures/amdahl-work-bars}
 
 \paragraph{Maximum-speedup interpretation}\label{par:auto-010a}
 When a problem states that a new mechanism speeds up ``25\% of a benchmark program,'' the 25\% must be interpreted as a fraction of the \emph{original execution time} of the whole benchmark unless stated otherwise.
@@ -150,6 +161,11 @@ With $\alpha=0.15$ and $N=16$,
 \end{equation}
 This can exceed Amdahl's fixed-size bound because the scaled workload includes more total useful work.
 
+Return to the jet simulation.
+Perhaps the real goal is a more detailed airflow model within the same overnight run, rather than finishing the old model as quickly as possible.
+Additional processors can support that extra parallel work.
+This is the change of question in the lecture's transition to Gustafson: measure the serial fraction in the scaled parallel run, rather than quietly reusing the old fixed-workload fraction.
+
 
 \section{Combining Performance Numbers Correctly}\label{sec:auto-016}
 Single-number summaries are useful only when the averaging method matches the quantity being averaged.
@@ -157,7 +173,7 @@ For times (seconds per task), \textit{arithmetic mean} is appropriate (Eq.~\eqre
 \begin{equation}\label{eq:auto-015}
     \bar{T}_{arith}=\frac{1}{n}\sum_{i=1}^{n}T_i.
 \end{equation}
-For rates (tasks per second), use \textit{harmonic mean} (Eq.~\eqref{eq:auto-016}):
+For rates describing \emph{equal amounts of work} in each workload, use the \textit{harmonic mean} (Eq.~\eqref{eq:auto-016}):
 \begin{equation}\label{eq:auto-016}
     \bar{R}_{harm}=\frac{n}{\sum_{i=1}^{n}\frac{1}{R_i}}.
 \end{equation}
@@ -171,7 +187,10 @@ But for one transaction of each workload, total throughput is determined by tota
     R_B=\frac{2}{\frac{1}{2}+\frac{1}{7}}=\frac{28}{9}\approx 3.11.
 \end{equation}
 Under equal-work comparison, A is better.
-This is exactly why rates should be combined harmonically, not arithmetically.
+This is the lecture's warning about buying the slower machine by averaging the wrong quantity.\footnote{\texttt{n2\_perf.pdf}, PERF-9--11.}
+The result depends on equal work per workload.
+If instead the machine spends equal \emph{time} at each rate, its total completed work divided by total time is the arithmetic mean of the rates.
+Start with total work and total time; the appropriate mean follows from what is held equal.
 
 \paragraph{Weighted workload mixes}\label{par:auto-011a}
 Real benchmark suites are often not uniform.
@@ -206,7 +225,10 @@ Chapter 2 methodology demands that architects evaluate on relevant traces and re
 
 
 \section{Cost-Aware Performance Comparison}\label{sec:auto-017a}
-Raw speedup is not always the only decision metric.
+In the January 15 lecture, the question ``What is a supercomputer?'' leads to a joke about the most expensive machine one could buy in a generation.\footnote{January 15, 2026 lecture, Notability note \emph{2. ECE 6100}, \emph{Recording 2}, approximately 06:03--06:32. This retells the teaching point rather than quoting the speaker.}
+The joke connects the pursuit of maximum performance to the price of reaching it.
+An architect still has to ask what useful work that money buys for the intended workload.
+Raw speedup is therefore only one decision metric.
 If machine $m$ costs $Cost_m$ and delivers speedup $S_m$ relative to a chosen baseline, two useful value measures are
 \begin{equation}\label{eq:auto-017b}
     \text{speedup per dollar}=\frac{S_m}{Cost_m},
@@ -240,7 +262,7 @@ Runtime and throughput are distinct objectives and must not be mixed casually.
 CPU time decomposes into IC, CPI, and cycle time, which allows precise reasoning about optimization impact.
 RISC and CISC are best evaluated as tradeoff points in Eq.~\eqref{eq:auto-002} rather than as absolute categories.
 Amdahl's Law gives hard limits for fixed-size speedup, while Gustafson's Law explains scaled-workload growth without contradiction.
-Finally, performance summaries require correct statistics: arithmetic means for time, harmonic means for rate, and weighted forms when the workload mix is not uniform.
+Finally, performance summaries require a stated workload mix: arithmetic means combine job times, harmonic means combine rates for equal work, and weights express unequal work or job frequencies.
 These tools form the quantitative core used in later chapters.
 
 

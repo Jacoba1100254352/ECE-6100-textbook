@@ -364,16 +364,18 @@ It is intentionally separate from the main text so it can be distributed or with
     \item One consistent FICO timing is:
     \[
     \begin{array}{c|c|c|c}
-        \text{Instr.} & \text{Dispatch/wait} & \text{Fire} & \text{Complete}\\
+        \text{Instr.} & \text{Dispatch} & \text{Fire} & \text{Complete}\\
         \hline
-        A:\ \texttt{LW} & 1 & 1 & 3\\
-        B:\ \texttt{ADD} & 1\text{--}2 & 3 & 3\\
-        C:\ \texttt{ADD} & 2\text{--}3 & 4 & 4\\
-        D:\ \texttt{ADD} & 4 & 5 & 5
+        A:\ \texttt{LW} & 1 & 2 & 3\\
+        B:\ \texttt{ADD} & 1 & 4 & 4\\
+        C:\ \texttt{ADD} & 2 & 5 & 5\\
+        D:\ \texttt{ADD} & 2 & 6 & 6
     \end{array}
     \]
-    The exact numbering can shift by one depending on the course's latch convention, but the key behavior is fixed: C is independent but cannot pass B while B waits for A, and D must wait for B.
-    A second ADD unit does not remove all stalls because the in-order fire rule still prevents C from bypassing the blocked B.
+    These cycles use the question's explicit next-cycle result-availability convention.
+    B waits for A, and C cannot pass the blocked B even though C is independent.
+    With one ADD unit, B, C, and D use consecutive fire cycles 4, 5, and 6.
+    A second ADD unit lets B and C fire together in cycle 4 and D fire in cycle 5, but it cannot eliminate the earlier wait for A or let C bypass B while B is blocked.
 
     \item For \texttt{LW R1,0(R3)}, the source \(R3\) comes from the register file and the destination is the first ROB producer for \(R1\).
     For \texttt{ADD R3,R2,R1}, \(R2\) comes from the register file and \(R1\) waits on the load's ROB tag.
@@ -490,7 +492,8 @@ It is intentionally separate from the main text so it can be distributed or with
     \item Without coherence, \(P_2\) may hold or read a stale copy of \(x=1\).
     Its \texttt{x++} can therefore compute 2 even though other processors have written 22 and 44 elsewhere.
 
-    \item Coherence requires write propagation, write serialization, and preservation of a processor's own program order for writes.
+    \item Coherence requires eventual write propagation, agreement on the order of writes to each location, and a processor reading back its own write when no intervening write changes that location.
+    These per-location requirements do not establish a global program order across different locations.
     Propagation must allow ``sufficient time'' because real systems cannot make an update physically visible everywhere instantaneously.
 
     \item In MSI, \texttt{M} means this cache has the only valid copy and it is dirty relative to memory.
@@ -597,6 +600,7 @@ It is intentionally separate from the main text so it can be distributed or with
     \item Load-link records a reservation on a memory location.
     Store-conditional succeeds only if the reservation is still valid.
     A conflicting write or invalidating coherence event to the reserved block causes the store-conditional to fail.
+    An ISA can also permit reservation loss or spurious failure for other reasons, so failure alone does not prove that the value changed.
 
     \item Fetch-and-op atomically applies a general operation to a memory location and returns the old value.
     Fetch-and-add is the addition-specific case.
@@ -651,9 +655,9 @@ It is intentionally separate from the main text so it can be distributed or with
     But each processor's program order places its own write before its read.
     Those four ordering requirements form a cycle, so no sequentially consistent interleaving can produce both reads as 0.
 
-    \item A store fence prevents older stores from being reordered after later memory operations.
-    A load fence prevents older loads from being reordered after later memory operations.
-    A full fence enforces both load and store ordering around the fence.
+    \item In a minimal teaching model, a store-ordering fence orders earlier stores before later stores, and a load-ordering fence orders earlier loads before later loads.
+    A full memory fence orders the specified earlier loads and stores before the specified later loads and stores.
+    Exact predecessor/successor guarantees depend on the ISA; fence names alone do not establish every cross-type ordering.
     Fences are expensive because they can drain store buffers, block speculation, and stall memory-level parallelism.
 
     \item Read-only shared data creates no invalidations and no write-write or read-write races after initialization.
@@ -692,8 +696,9 @@ It is intentionally separate from the main text so it can be distributed or with
     A 4-ary 2-mesh has one set of four links across a dimension-aligned bisection.
     The corresponding torus has wraparound links crossing the cut as well, giving twice the crossing bandwidth with the same per-link bandwidth.
 
-    \item Dimension-aligned equal cuts compare the structural bottleneck the topology is designed around.
-    Arbitrary diagonal cuts can count links in a way that does not correspond to a realistic worst-case separation of two equal halves.
+    \item A dimension-aligned equal cut attains the minimum in the regular square mesh and torus examples and makes their crossing links easy to count.
+    Other equal-halves partitions are still included in the definition.
+    A partition with more crossing links cannot raise the minimum bisection bandwidth.
 
     \item A full crossbar can connect many input-output pairs directly but grows very quickly in hardware cost.
     A multi-stage indirect network is cheaper and more regular, even though some input-output combinations can block each other.

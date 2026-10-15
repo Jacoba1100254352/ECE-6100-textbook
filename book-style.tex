@@ -1,0 +1,36 @@
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\geometry{letterpaper, margin=1in, headheight=15pt, headsep=20pt}
+\linespread{1.04}
+\raggedbottom
+\setlength{\emergencystretch}{1.5em}
+\setcounter{tocdepth}{1}
+\hypersetup{pdftitle={High-Performance Computer Architecture},pdfauthor={ECE 4100/6100},pdfsubject={Course companion: performance, memory, parallelism, and communication}}
+\definecolor{bookaccent}{HTML}{254D63}
+\definecolor{booklight}{HTML}{EEF3F5}
+\definecolor{bookwarm}{HTML}{A35230}
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\color{bookaccent}}
+  {\normalfont\large\sffamily\chaptertitlename\ \thechapter}{0.6em}{}
+\titlespacing*{\chapter}{0pt}{12pt}{24pt}
+\titleformat{\section}{\normalfont\Large\bfseries\color{bookaccent}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{0.7em}{}
+\captionsetup{font=small,labelfont=bf,justification=raggedright,singlelinecheck=false}
+\setlist{topsep=0.5\baselineskip,itemsep=0.25\baselineskip,parsep=0pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\sffamily\nouppercase{\leftmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\chaptermark}[1]{\markboth{\thechapter\quad #1}{}}
+\renewcommand{\headrulewidth}{0.3pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\thepage}\renewcommand{\headrulewidth}{0pt}}
+\tikzset{
+  bookbox/.style={draw=bookaccent,rounded corners=2pt,fill=booklight,align=center,minimum height=8mm,font=\small},
+  bookarrow/.style={-{Stealth[length=2mm]},thick,draw=bookaccent},
+  booklabel/.style={font=\small,align=center}
+}

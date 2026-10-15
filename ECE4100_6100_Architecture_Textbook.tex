@@ -1,4 +1,4 @@
-\documentclass[11pt]{book}
+\documentclass[11pt,oneside,openany]{book}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
@@ -8,19 +8,20 @@
 \usepackage{amssymb}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,calc}
-\geometry{letterpaper, margin=1in}
-\raggedbottom
+\input{book-style}
 
-\title{High-Performance Computer Architecture\\A Concise Review Textbook for Chapters 1--10, Cache Simulation, and Advanced Topics}
+\title{High-Performance Computer Architecture\\[0.6em]\large A Companion to ECE 4100/6100}
 \author{ECE 4100/6100}
 \date{Spring 2026}
 
 \begin{document}
 
+    \frontmatter
     \maketitle
     \tableofcontents
 
     \input{chapters/00-scope-topic-map}
+    \mainmatter
     \input{chapters/01-introduction-n1}
     \input{chapters/02-performance-evaluation-n2}
     \input{chapters/03-cache-memories-n3}
@@ -38,5 +39,6 @@
     \input{appendices/app-c-glossary-core-definitions}
     \input{appendices/app-d-advanced-topics}
     \input{appendices/app-e-final-review-checklist}
+    \input{appendices/app-f-source-notes}
 
 \end{document}

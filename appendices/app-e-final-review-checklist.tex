@@ -111,7 +111,8 @@ They are expensive when overused because fast threads idle while waiting for slo
 Bisectional bandwidth is a topology figure of merit.
 For a legal equal-halves cut, sum the bandwidths of the links crossing the cut.
 The bisectional bandwidth is the minimum such aggregate over the allowed equal splits.
-For regular meshes and tori, the intended cuts are along topology dimensions, not arbitrary diagonal cuts chosen to inflate the count.
+For the regular square meshes and tori used here, a dimension-aligned equal cut attains the minimum.
+Other equal-halves partitions are still legal candidates; the definition always takes the minimum over all of them.
 This value is a potential maximum, not a guarantee: routing, buffering, and traffic conflicts can keep real throughput below it.
 
 

@@ -1,0 +1,25 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=1cm,y=1cm]
+    \draw[fill=booklight,draw=bookaccent] (0,3.6) rectangle (6,4.4);
+    \draw[fill=bookaccent!20,draw=bookaccent] (6,3.6) rectangle (9,4.4);
+    \draw[fill=bookwarm!15,draw=bookaccent] (9,3.6) rectangle (11.5,4.4);
+    \node[booklabel] at (3,4) {Tag};
+    \node[booklabel] at (7.5,4) {Index};
+    \node[booklabel] at (10.25,4) {Offset};
+    \node[bookbox,minimum width=3.6cm] (setlookup) at (7.5,2.5) {Select one set};
+    \draw[bookarrow] (7.5,3.6) -- (setlookup);
+    \node[bookbox,minimum width=4.8cm] (wayzero) at (3,1) {Way 0: valid, stored tag, data};
+    \node[bookbox,minimum width=4.8cm] (wayone) at (9,1) {Way 1: valid, stored tag, data};
+    \draw[bookarrow] (setlookup.south) -- (7.5,1.9) -| (wayzero.north);
+    \draw[bookarrow] (7.5,1.9) -| (wayone.north);
+    \node[booklabel] (tagchecks) at (3,2.55) {Compare the requested tag\\with both valid stored tags};
+    \draw[bookarrow] (3,3.6) -- (tagchecks);
+    \node[bookbox,minimum width=5.8cm] (choose) at (6,-0.45) {Matching way's data, then select bytes};
+    \draw[bookarrow] (wayzero.south) -- (3,0.25) -| (choose.north);
+    \draw[bookarrow] (wayone.south) -- (9,0.25) -| (choose.north);
+    \draw[bookarrow] (11.5,4) -- (12,4) |- (choose.east);
+  \end{tikzpicture}
+  \caption{A conceptual two-way cache lookup. The index chooses a set, valid tag matches choose the way, and the offset chooses bytes within its block. Field widths are illustrative. If neither valid tag matches, the access misses.}
+  \label{fig:cache-set-lookup}
+\end{figure}

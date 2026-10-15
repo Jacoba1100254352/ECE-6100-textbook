@@ -1,5 +1,11 @@
 \chapter[Compiler-Scheduled ILP]{Compiler-Scheduled ILP: VLIW and Software Pipelining}\label{ch:compiler-scheduled-ilp}
 
+The previous chapter asked the processor to find ready work while the program ran.
+For a regular loop, much of that work can be planned earlier.
+The compiler already knows which operations use each result and which functional units the target machine provides.
+It can arrange a schedule in advance, including an overlap in which one iteration loads data while another computes and a third stores its result.
+This chapter follows that alternative, along with the uncertainty that a static plan cannot remove.
+
 
 \section{VLIW as a Compiler-Scheduled Alternative}\label{sec:ilp-vliw}
 One response to dynamic-scheduling complexity is to shift more of the scheduling work into the compiler.
@@ -15,7 +21,8 @@ This tradeoff is attractive in domains such as \textit{digital signal processors
 
 Compiler design must balance three competing goals: code quality, compilation time, and maintainability.
 In practice, that usually rules out algorithms much worse than quadratic for large compiler passes, and even cubic methods are used cautiously.
-Because the optimal schedule for a dependence-constrained block is exponential in block size, practical VLIW compilers rely on heuristics rather than exact search.
+Optimal scheduling with general dependence and resource constraints is computationally difficult; exhaustive search grows rapidly with block size.
+Practical VLIW compilers therefore rely on heuristics rather than exact search for every block.
 List scheduling is one of the standard heuristics for this job.
 The broader performance point is that widening fetch and scheduling machinery yields diminishing returns: useful IPC usually grows sublinearly with front-end width, while the cost of dynamic scheduling hardware grows quickly.
 

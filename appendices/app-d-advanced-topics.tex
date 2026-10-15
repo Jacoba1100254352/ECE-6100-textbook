@@ -39,11 +39,12 @@ This creates a new architecture problem: the machine must repeatedly extract err
 Decoder design and topology-aware error correction are therefore architectural topics, not just physics topics.
 
 \subsection{Quantum Programs and Reversibility}\label{subsec:appd-quantum-programs}
-Quantum operations must be reversible.
-That is a major difference from ordinary classical functions.
+Quantum gates describing the evolution of an isolated system must be reversible (unitary).
+Measurement and reset are different kinds of operation and need not be reversible on the measured system.
+The gate requirement is a major difference from ordinary classical functions.
 For example, a classical function $f(x)$ that maps many inputs to one output may not have an inverse, so it cannot be used directly as a quantum operation.
 
-A common trick is to convert the classical function into a reversible phase operation:
+A Boolean function $f(x)\in\{0,1\}$ can instead be represented by a reversible phase operation:
 \begin{equation}\label{eq:appd-phase-oracle}
     U_f\lvert x\rangle = (-1)^{f(x)}\lvert x\rangle.
 \end{equation}

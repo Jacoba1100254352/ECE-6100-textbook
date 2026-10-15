@@ -1,11 +1,15 @@
 \chapter{Introduction}\label{ch:auto-002}
 
+A processor can have three adders and still finish only one useful addition at a time.
+If each addition needs the preceding result, the extra hardware must wait.
+Give those same adders three independent calculations and all three can work together.
+This small contrast, used in the introductory lecture, is the starting point for the book: performance comes from matching a machine to the work it can actually overlap.\footnote{Course handout \texttt{n1\_intro.pdf}, slide INTRO-6. Lecture-source references use the identifiers collected in Appendix~\ref{ch:source-notes}.}
+
 
 \section{What Computer Architecture Is}\label{sec:auto-003}
-Computer architecture is the discipline of designing computing systems that execute real workloads efficiently under practical constraints.
-In this text, architecture means deciding how a processor and memory system should be organized so that useful work is completed quickly, reliably, and within power and cost limits.
-It is important to separate this from neighboring fields.
-Architecture is not transistor fabrication, circuit layout, or process chemistry, even though those influence what architects can build.
+Computer architecture asks how a processor and memory system should be organized to finish useful work efficiently.
+``Efficiently'' might mean a shorter wait for one result, more completed jobs per second, or less energy per calculation.
+Circuits, fabrication, software, and algorithms set the possibilities; the architect chooses how to arrange the machine within them.
 
 Every architectural decision is a tradeoff among competing goals.
 A design that minimizes latency for one task may reduce throughput for a server-style workload.
@@ -19,28 +23,28 @@ Most performance techniques in modern processors can be traced to three closely 
 \textit{Parallelism} increases performance by doing multiple useful operations at the same time.
 \textit{Speculation} increases performance by doing work early, before the machine is fully certain that this work will be needed.
 \textit{Prediction} estimates uncertain future behavior (for example branch direction or branch target) so speculative work is directed toward the most likely path.
-Prediction is not a third independent speedup method; it is a tool that makes speculation more selective and efficient.
-Parallelism is one direct source of speedup.
-Speculation is the second.
-Prediction supports the second by improving the chance that speculative work is useful rather than discarded.
+Prediction makes speculation more selective: a good estimate directs early work toward a result the program will actually need.
 
 \paragraph{Classifying common optimizations}\label{par:auto-005a}
 This distinction is useful because many architectural features combine these ideas differently.
 Packed-word SIMD instructions and multicore processors are primarily forms of parallelism.
-A cache, a victim cache, or a write buffer relies largely on speculation without prediction: the machine keeps or moves data before it can prove the data will be needed immediately, trusting locality to make that early work useful.
+The course uses \emph{speculation without prediction} broadly for locality-based choices such as retaining cache blocks in case they are needed again.
+That is a useful teaching category, but a cache hit does not necessarily execute an uncommitted instruction, and ordinary buffering need not involve a guess.
 Branch prediction is speculation with prediction.
 Out-of-order superscalar execution combines both parallelism and speculation because the machine overlaps independent work while also allowing some work to proceed before the final architectural outcome is known.
 
 \subsection{Speculation Without Prediction}\label{subsec:auto-001}
 Speculation does not require a learned predictor.
-A processor can speculate by optimistic overlap: continue execution under the assumption that an operation will complete normally, and recover only if that assumption fails.
-This is useful because waiting for every operation to retire before moving on would underutilize the pipeline.
+A processor can use a fixed optimistic rule rather than a learned estimate.
+For example, it may execute a load before the addresses of older stores are known, assuming that the load will not read a location one of those stores changes.
+If the assumption fails, the machine must detect the ordering violation and replay the affected work.
+No history-based predictor is required, though one could make that decision more selective.
 
-\paragraph{Example: write buffer}\label{par:auto-006}
-A write buffer is a standard example.
-When the core executes a store, it can enqueue the write and continue with subsequent instructions before that store reaches the lower memory hierarchy.
-If the store later encounters a fault condition, architectural recovery and exception handling restore correctness.
-The processor did not predict branch direction or data values in this case; it simply advanced optimistically to avoid stalling.
+\paragraph{Related idea: a write buffer}\label{par:auto-006}
+A write buffer lets the core continue while a store waits to reach the next memory level.
+The important gain is overlap, and the buffer alone does not prove that the store is speculative.
+In a machine with precise exceptions, translation and permission faults must be resolved before a store becomes irrevocable.
+An uncommitted store can wait in a speculative store queue; a committed store can drain from a buffer later without being a guess about whether the instruction should execute.
 
 \subsection{Speculation With Prediction}\label{subsec:auto-002}
 When prediction is added, speculation becomes more selective and usually more efficient.
@@ -65,6 +69,8 @@ Consider two arithmetic instructions: \texttt{R1=R2+R3} and \texttt{R4=R5+R6}.
 Because neither depends on the other, a dual-issue machine can dispatch them together.
 In contrast, \texttt{R1=R2+R3} followed by \texttt{R4=R1+R6} introduces a data dependence that limits overlap.
 This illustrates the central ILP limitation: dependencies, control hazards, and hardware resource conflicts bound achievable parallel speedup.
+Figure~\ref{fig:independent-additions} makes the introductory lecture's comparison explicit.
+\input{figures/independent-additions}
 
 At \textit{thread-level parallelism (TLP)}, multiple threads execute concurrently on multithreaded or multicore hardware.
 TLP can provide substantial throughput gains, but only if the workload contains enough independent work and synchronization overhead remains controlled.
@@ -139,6 +145,13 @@ The difference is the standard vector-pipeline gain: the pipeline still pays 6-s
 Vector chaining improves this further.
 If a second vector operation consumes results from a first operation, the hardware can forward early produced elements directly into the consumer pipeline instead of waiting for the full vector to complete.
 Chaining reduces producer-consumer delay and improves sustained throughput in vectorized loops.
+
+\paragraph{Why the Cray example belongs here}
+The introductory slides use the Cray-1 to make vector processing concrete.\footnote{\texttt{n1\_intro.pdf}, INTRO-13--14; see also the Cray manual listed in Appendix~\ref{ch:source-notes}.}
+Its vector registers could hold 64 elements, so one vector instruction described a stream of work rather than a single scalar operation.
+With chaining, an early element could enter the next functional unit while later elements were still passing through the first.
+The useful comparison is to a line of workstations: the second workstation can start on the first item without waiting for the entire batch.
+The six-stage calculation above is a teaching model, not a claim about the Cray-1's exact functional-unit latencies.
 
 
 \section{Common Chapter 1 Pitfalls}\label{sec:auto-008}

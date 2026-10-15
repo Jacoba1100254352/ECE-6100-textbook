@@ -1,0 +1,34 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=0.85cm,y=0.85cm]
+    \foreach \panel/\shift/\paneltitle in {mesh/0/Mesh,torus/7/Torus} {
+      \begin{scope}[xshift=\shift cm]
+        \node[font=\bfseries] at (1.5,4) {\paneltitle};
+        \foreach \row in {0,...,3} {
+          \draw[bookaccent] (0,\row) -- (3,\row);
+        }
+        \foreach \column in {0,...,3} {
+          \draw[bookaccent] (\column,0) -- (\column,3);
+        }
+        \foreach \row in {0,...,3} {
+          \draw[bookwarm,very thick] (1,\row) -- (2,\row);
+        }
+        \draw[bookwarm,dashed,thick] (1.5,-0.4) -- (1.5,3.5);
+        \foreach \row in {0,...,3} {
+          \foreach \column in {0,...,3} {
+            \fill[bookaccent] (\column,\row) circle (2.2pt);
+          }
+        }
+      \end{scope}
+    }
+    \begin{scope}[xshift=7cm]
+      \foreach \row in {0,...,3} {
+        \draw[bookwarm,thick] (0,\row) to[bend left=35] (3,\row);
+      }
+      \node[booklabel] at (1.5,-1.1) {4 middle links + 4 wrap links};
+    \end{scope}
+    \node[booklabel] at (1.5,-1.1) {4 crossing links};
+  \end{tikzpicture}
+  \caption{Equal halves in a $4\times4$ mesh and torus. Brown links cross the dashed partition. The torus's horizontal wraparound links add four crossings; vertical wraparound links are omitted because they stay within each half. Count each bidirectional link once using the same bandwidth convention in both panels.}
+  \label{fig:mesh-torus-bisection}
+\end{figure}

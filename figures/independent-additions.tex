@@ -1,0 +1,19 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=1cm,y=1cm]
+    \node[booklabel,anchor=west] at (0,2.2) {Dependent additions};
+    \node[bookbox,minimum width=3.4cm] (firstadd) at (1.75,1.2) {$A:\ R1\leftarrow R2+R3$};
+    \node[bookbox,minimum width=3.4cm] (secondadd) at (6,1.2) {$B:\ R4\leftarrow R1+R2$};
+    \node[bookbox,minimum width=3.4cm] (thirdadd) at (10.25,1.2) {$C:\ R5\leftarrow R6+R4$};
+    \draw[bookarrow] (firstadd) -- node[above,font=\scriptsize] {$R1$} (secondadd);
+    \draw[bookarrow] (secondadd) -- node[above,font=\scriptsize] {$R4$} (thirdadd);
+    \node[booklabel,anchor=west] at (0,0.35) {Three available adders, but a chain of three result latencies.};
+    \node[booklabel,anchor=west] at (0,-0.65) {Independent additions};
+    \node[bookbox,minimum width=3.4cm] at (1.75,-1.65) {$X:\ R1\leftarrow R3+R4$};
+    \node[bookbox,minimum width=3.4cm] at (6,-1.65) {$Y:\ R5\leftarrow R2+R3$};
+    \node[bookbox,minimum width=3.4cm] at (10.25,-1.65) {$Z:\ R7\leftarrow R6+R4$};
+    \node[booklabel,anchor=west] at (0,-2.5) {All three can start together if issue width and operand ports permit.};
+  \end{tikzpicture}
+  \caption{Hardware width is useful only when the work is independent. Assume equal add latency, ready inputs, three adders, and enough issue bandwidth; ignore fetch and write-back overhead.}
+  \label{fig:independent-additions}
+\end{figure}
