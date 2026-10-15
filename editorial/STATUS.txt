@@ -42,6 +42,13 @@ Completed in the first editorial pass
 - The guest-led cache lecture's rectangle analogy now has a direct-mapped,
   two-way, and fully associative comparison using the same eight data blocks.
   The source is identified as guest-led rather than attributed to Conte.
+- The umbrella comparison and victim-cache wheels analogy now have recording
+  references. A one-entry swap trace distinguishes four L1 misses from two
+  downstream fetches, rather than treating the combined system as a bigger L1.
+- A first-order Markov example separates successor-count predictions from data
+  storage and insertion policy. Prefetch degree, confidence, and block-number
+  units are explicit. The controller recollection distinguishes a successful
+  average-case run from verification of rare state combinations.
 - New diagrams and timing views explain dependencies, Amdahl's limit, cache lookup,
   pipeline overlap, translation/lookup overlap, false sharing, release/acquire,
   network bisection, register versions, result-bus contention, and loop draining.
@@ -59,7 +66,7 @@ Completed in the first editorial pass
   tighter chapter conclusions and question wording remove their cause without
   dropping questions, changing exercise assumptions, or shrinking the type.
   That pagination-only increment reduced the book to 164 pages. The current
-  recording-expanded book is 168 pages, without isolated spillover question pages.
+  recording-expanded book is 169 pages, without isolated spillover question pages.
 - Corrections distinguish buffering from speculation, equal-work from equal-time
   rate averaging, atomicity from ordering, reservation failure from interference,
   dynamic from guided scheduling, and unitary gates from measurement/reset.
@@ -114,13 +121,19 @@ Detailed reading and audit pass
   versus equal-time averaging, and conditional miss-ratio conventions.
 - Independent checks reproduce the 20 J versus 25 J comparison, energy-delay
   products, and all 65,536 low-byte input pairs for the packed-lane example.
-  The latest 168-page book and 16-page answer sheet pass PDF structural checks
+  The latest 169-page book and 16-page answer sheet pass PDF structural checks
   and build without warnings. New figures, formula spacing, chapter-one questions,
   glossary entries, and source references have received changed-page visual QA.
 - The cache-geometry drawing passes capacity/index checks and 768 address
   reconstruction cases. The book's bit-matrix convention agrees with a recency
   list for 24,576 four-way LRU traces. CPI prose, cache graphics, and added source
   entries pass changed-page visual QA; a figure no longer interrupts a sentence.
+- Exact transition counts reproduce the Markov example's 3/4 successor estimate.
+  The one-entry victim-cache model matches an independent two-entry LRU model
+  on all 9,840 one-set traces of lengths 1-8 over three block names. This check
+  is not a claim of global LRU equivalence for arbitrary victim-cache systems.
+  The revised narrative, swap table, chapter-one questions, and source entries
+  have received changed-page visual QA after the warning-free build.
 - All 123 chapter questions and the 10 advanced true/false prompts have matching
   answers, for 133 total pairs. The current book and
   answer sheet build without warnings; revised figures and source pages have
@@ -135,11 +148,11 @@ Detailed reading and audit pass
 Remaining before the complete revision can be declared finished
 - Finish the contextual recording-selection pass across the earlier long
   drafts. All 72 segments have completed local automatic transcription. The
-  late lectures (notes 26-28), final review, 21 earlier short segments, and the
-  four longer segments in notes 1-2 and four in notes 3 and 5 have been read in
-  context, totaling 39 of 72 complete automatic drafts; selected excerpts from
-  other lectures are already used. The remaining 33 earlier long drafts still
-  need contextual review.
+  late lectures (notes 26-28), final review, 21 earlier short segments, and
+  longer segments through the first pipeline note have been read in context,
+  totaling 49 of 72 complete automatic drafts. Selected excerpts from other
+  lectures are already used. The remaining 23 long drafts still need contextual
+  review.
   Automatic text is not authority for exact quotations, names, or numbers.
 - Integrate additional useful lecture stories with source/time references.
 - Finish checking continuity across the complete book while preserving useful

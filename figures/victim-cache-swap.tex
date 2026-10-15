@@ -1,0 +1,15 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tabular}{cccc}
+    \toprule
+    Read & L1 set after read & Victim entry after read & Lower-level action \\
+    \midrule
+    $A$ & $A$ & empty & fetch $A$ \\
+    $B$ & $B$ & $A$ & fetch $B$ \\
+    $A$ & $A$ & $B$ & none: swap \\
+    $B$ & $B$ & $A$ & none: swap \\
+    \bottomrule
+  \end{tabular}
+  \caption{One victim entry breaks repeated lower-level fetching for a two-block conflict. Both blocks map to the same direct-mapped L1 set, both structures start empty, and every access is a read. The state shown is after each access. All four accesses miss in L1; the last two hit in the victim cache.}
+  \label{fig:victim-cache-swap}
+\end{figure}

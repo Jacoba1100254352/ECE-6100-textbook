@@ -54,8 +54,8 @@ Executing the predicted path before the branch resolves is speculation with pred
 Out-of-order superscalar execution combines both parallelism and speculation because the machine overlaps independent work while also allowing some work to proceed before the final architectural outcome is known.
 
 \subsection{Speculation Without Prediction}\label{subsec:auto-001}
-Speculation need not choose a winner in advance.
-In \textit{eager execution}, a machine can start work on both paths of a branch and retain the correct path once the condition is known.
+Conte's umbrella comparison captures preparation without a forecast: carry one in case it rains.
+In \textit{eager execution}, a machine starts both branch paths before the condition is known, then retains only the correct path.
 Irrevocable effects must wait, and exceptions from the untaken path must not be reported.
 This spends execution resources on both possibilities instead of relying on a direction prediction.
 

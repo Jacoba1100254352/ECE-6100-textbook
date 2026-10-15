@@ -418,11 +418,22 @@ Hardware prefetching tries to move a predictable future access off the demand pa
 It can reduce demand misses without reducing total memory traffic, because the data still has to be fetched and some predictions are unused.
 A \textit{$+1$ prefetcher} fetches block $i+1$ when block $i$ is accessed.
 A \textit{stride prefetcher} detects constant deltas (for example $i, i+k, i+2k$) and fetches the next predicted address.
+Here the arithmetic uses block numbers: $+1$ means the next whole block, not the next byte.
+A degree-$D$ scheme can request up to $D$ blocks ahead along the stride; a confidence rule can wait for repeated evidence before issuing requests.
 A \textit{Markov prefetcher} uses a correlation table to learn non-linear transitions; if address $A$ is often followed by $B$ then $C$, the predictor learns and issues those future blocks when $A$ appears.
 A \textit{hybrid prefetcher} combines a richer predictor such as Markov correlation with a simpler fallback such as next-block prefetching, so the machine can still make a reasonable guess when the correlation table has no useful entry.
 To prevent \textit{cache pollution} (evicting useful data for speculative data that might not be used), many designs use a \textit{prefetch buffer}.
 This is a small, separate storage area where prefetched lines sit until they are actually demanded by the CPU\@.
 If demanded, they are moved into the main cache.
+
+\paragraph{Learning a successor, not storing its bytes}
+In a simple first-order Markov model, a row is keyed by the current block number and records successor block numbers with observation counts.
+It stores predictions, not the prefetched data itself.
+For a miss-triggered version, consider the observed miss stream $A,B,A,C,A,B,A,B$, where the letters name blocks rather than hexadecimal digits.
+Of the four observed transitions from $A$, three lead to $B$ and one to $C$.
+The table therefore estimates $P(B\mid A)=3/4$ and favors $B$ after a later miss on $A$.
+This is evidence about the past, not a promise about the next access.
+A bounded table must decide which rows and successors to retain; predicting what to fetch remains separate from deciding where to insert the fetched block.
 
 \paragraph{Prefetch insertion policy matters}\label{par:auto-021e}
 Prefetched lines are often installed with a low-priority policy such as \textit{least recently used insertion policy (LIP)} rather than as most-recently used lines.
@@ -510,10 +521,20 @@ Read hits and read misses form a meaningful reuse ratio because reads probe the 
 Writes, by contrast, may simply reflect L1 writebacks or pass-through stores and may not allocate lines on a miss.
 For that reason, many reports define L2 hit ratio and miss ratio over \textit{reads only} rather than over total L2 traffic.
 
-Victim caches are also miss-penalty tools.
-A small fully associative buffer captures lines evicted from the primary cache.
-On a later conflict-driven re-reference, data can be swapped back quickly without going to DRAM\@.
-Conceptually, a victim cache provides a small amount of flexible associativity exactly where pressure appears.
+\paragraph{A little associativity on wheels}
+A small fully associative \textit{victim cache} captures lines evicted from the primary cache.
+Conte pictures it as extra associativity on wheels: its entries can help whichever sets are under pressure, rather than adding a fixed way to every set.
+It adds some storage too; it does not literally change the associativity of the whole L1.
+On a victim hit, swap the requested block into L1 and keep the displaced block in the victim entry.
+
+For example, start with an empty direct-mapped L1 and an empty one-entry victim cache.
+Read $A,B,A,B$, with both blocks mapping to the same L1 set and no other accesses.
+Figure~\ref{fig:victim-cache-swap} shows the resulting swaps for clean, read-only blocks.
+L1 still misses on all four reads, but only the first two need a lower-level fetch; without the victim cache, all four would.
+Keep those counters separate when evaluating the combined system.
+Whether the extra lookup and swap affect the fast path depends on the implementation; the buffer is not a universal zero-latency addition.
+
+\input{figures/victim-cache-swap}
 
 \paragraph{Victim cache versus L2}\label{par:auto-021b}
 A victim cache and an L2 do not solve exactly the same problem.
@@ -673,6 +694,11 @@ Use address geometry to determine where a block can live, a trace to determine w
 Software helps by arranging reuse before eviction; prefetching tries to arrange arrival before demand.
 Neither creates free capacity or bandwidth.
 When a design improves a counter, follow the consequence through the rest of the hierarchy before declaring it faster.
+
+Conte also recalls machines that ran for weeks before a subtle cache-controller bug made them lock up.
+The lesson is that small buffers create more combinations of queued writes, fills, and replacements that must be coordinated correctly.
+A good average access time, or a long successful run, is not by itself a proof that every controller state is safe.
+
 Keeping data nearby addresses one source of waiting; the next chapter asks how to overlap the instruction work around it.
 
 
