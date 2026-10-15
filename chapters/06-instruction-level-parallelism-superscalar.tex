@@ -8,19 +8,20 @@ Out-of-order execution begins with that question and earns its complexity by ans
 
 \section{Why Cycles per Instruction Can Go Below One}\label{sec:ilp-cpi-ipc}
 In basic single-issue pipelines, designers often treat cycles per instruction (CPI) near 1 as a practical lower bound.
-Superscalar execution challenges that assumption by allowing multiple instructions to make progress in the same cycle.
+Superscalar execution allows more than one instruction to start execution in a cycle, rather than merely overlapping different stages of successive instructions.
 This broader goal is usually described as instruction-level parallelism (ILP).
 In this context, instructions per cycle (IPC) is the natural companion metric, as shown in Eq.~\eqref{eq:ilp-ipc-cpi}:
 \begin{equation}\label{eq:ilp-ipc-cpi}
     IPC=\frac{1}{CPI}.
 \end{equation}
 So achieving $CPI<1$ is exactly equivalent to achieving $IPC>1$.
-A useful way to view design limits is that average retire throughput cannot exceed the average throughput of the stages before it (Eq.~\eqref{eq:ilp-throughput-bound}):
+Over a sustained run, useful retirement throughput cannot exceed the supply and service capacities of the preceding stages:
 \begin{equation}\label{eq:ilp-throughput-bound}
     IPC_{retire} \le \min\!\left(IPC_{fetch},\ IPC_{dispatch},\ IPC_{execute},\ IPC_{state\ update}\right).
 \end{equation}
 If any major stage can only handle one instruction per cycle on average, then the whole machine cannot retire two instructions per cycle on average, even if another stage is wide enough to do so.
 In other words, the minimum term in Eq.~\eqref{eq:ilp-throughput-bound} is the throughput bottleneck.
+This is a sustained-rate bound, not a rule for every short measurement window: retirement can briefly drain already completed work faster than the front end supplies new instructions.
 
 Each term corresponds to a different possible limit.
 $IPC_{fetch}$ asks how many useful instructions the front end can supply per cycle.
@@ -62,7 +63,6 @@ Multiple FUs allow parallel progress.
 
 \paragraph{5. State Update (SU)}\label{par:ilp-state-update}
 State update gathers completed results, handles squash or recovery, and prepares instructions for precise architectural completion.
-This unit supports squash/recovery when speculation is wrong.
 The final outgoing flow from this unit is the retirement or commit action, where results become architecturally visible in program order.
 In Fig.~\ref{fig:ilp-superscalar-pipeline}, retirement is represented by the final outgoing arrows below State Update rather than by a separate boxed stage.
 
@@ -193,6 +193,8 @@ A simplified FICO-style fire condition is shown in Eq.~\eqref{eq:ilp-fire-condit
 \end{equation}
 When an instruction fires, destination and function-unit busy state are set.
 When the instruction completes, those busy states are cleared according to the implementation timing rules.
+Here $busy(FU)$ means that the unit cannot accept another operation, not simply that some older operation remains inside its pipeline.
+This simplified in-order-fire design reads source values before younger writers can pass them; a general out-of-order scoreboard needs additional WAR protection.
 The result is correct execution with moderate hardware complexity, but some parallel opportunities remain unused compared with more aggressive out-of-order firing.
 
 
@@ -210,31 +212,31 @@ If the machine has only one ALU, one multiplier, and one load/store path, the sc
 Adding more execution resources, including additional FUs such as ALUs, multipliers, or more load/store capacity, gives the scheduler more flexibility to overlap different instruction classes and reduce structural conflicts.
 Designers therefore optimize both unit availability and scheduling policy, not just raw clock frequency.
 The practical goal is not merely to make individual operations fast, but to ensure that the mix of latencies, FU counts, and pipeline structure supports high average IPC on realistic workloads.
-A common simplified latency model is shown in Table~\ref{tab:ilp-typical-latencies}.
+Table~\ref{tab:ilp-typical-latencies} gives the course's illustrative cycle counts, not universal timings for those instruction classes or fixed hardware stage boundaries.
 \begin{table}[t]
     \centering
     \begin{tabular}{|l|c|p{2.7in}|}
         \hline
-        Type                         & Typical latency & Why                                                                                                                                              \\
+        Type                         & Model latency & Interpretation \\
         \hline
-        Floating-point (FP) multiply & 3               & Denormalize, multiply, renormalize.                                                                                                              \\
+        Floating-point (FP) multiply & 3 & Illustrative pipelined multiply, including exponent and significand handling. \\
         \hline
-        FP add                       & 2               & Denormalize and add, then renormalize.                                                                                                           \\
+        FP add                       & 2 & Align significands, add, then normalize and round. \\
         \hline
-        Load                         & 2               & Typical cache pipeline behavior.                                                                                                                 \\
+        Load                         & 2 & An assumed cache-hit latency; misses take longer. \\
         \hline
-        Store                        & 1               & Write buffering, or a load/store buffer, can hide much of the visible latency.                                                                   \\
+        Store                        & 1 & Admission to a buffer, not completion at every observer. \\
         \hline
-        Divide                       & Variable        & Often implemented with unpipelined iterative methods such as Newton iteration, and many simplified models treat divide as too rare to emphasize. \\
+        Divide                       & Variable & Iterative or pipelined implementations have different latency and initiation intervals. \\
         \hline
         ALU                          & 1               & Most common operation, so short latency is especially valuable.                                                                                  \\
         \hline
     \end{tabular}
-    \caption{Typical simplified function-unit latencies used in superscalar examples.}
+    \caption{Illustrative function-unit latencies. Actual designs and workloads differ; the one-cycle store entry denotes buffer admission rather than global visibility.}
     \label{tab:ilp-typical-latencies}
 \end{table}
-In this simplified performance model, the exact cycle count for divide is not emphasized because divide is used relatively rarely.
-In real designs, however, divide often has high latency and is less deeply pipelined than common ALU operations.
+Whether divide is rare depends on the workload.
+What matters for scheduling is its stated latency and how often its unit can accept a new operation.
 
 
 \section{Worked FICO Timing Example}\label{sec:ilp-fico-example}
@@ -249,6 +251,10 @@ The following seven-instruction sequence illustrates the scoreboard idea in a co
     G&:\ \texttt{ADD}\ R4,R3,R5
 \end{align*}
 Assume a fetch rate of two instructions per cycle, one ALU with latency one cycle, one multiplier with latency three cycles, and a simplified \textit{state update (SU)} stage used to make completion visible.
+Both units accept one new operation per cycle.
+DISP scans at most two instructions in program order, stopping at the first blocked instruction.
+During cycle $k$, it may see busy bits cleared by EX in that cycle and select operations to start EX in cycle $k+1$.
+Sources are captured at that selection point, and SU has enough bandwidth for two results per cycle.
 Table~\ref{tab:ilp-fico-timing} shows one compact timing schedule for this example.
 The stage labels are \textit{instruction fetch (IF)}, \textit{dispatch (DISP)}, \textit{execute (EX)}, and \textit{state update (SU)}.
 Repeated DISP entries indicate that the instruction is blocked in the in-order fire logic, not that it is being redispatched from scratch.
@@ -304,10 +310,13 @@ This distinction matters because several in-flight instructions may all refer to
 Rather than repeatedly reusing one architectural name and creating false WAR/WAW conflicts, the machine can assign a different physical register to each new write while still preserving the illusion of a small fixed architected register set.
 Older instructions can continue reading the older physical version, while younger instructions are redirected to the newer one.
 A \textit{register alias table (RAT)} maps each architected register name to the physical register that currently holds its most recent value.
+More precisely, the speculative RAT names the latest \emph{renamed producer}, whose value may still be unfinished.
 When dispatch renames a destination, it allocates a fresh physical register and updates the RAT so younger instructions will refer to the new location rather than the older one.
 Ready bits in the physical register file then indicate whether each renamed value has actually been produced yet.
 Some architectures describe the same underlying status with \textit{busy bits} instead.
 The terminology varies, but the idea is the same: one convention marks a value as ready to use, while the other marks it as still busy or unavailable.
+Figure~\ref{fig:register-versions} follows two versions of one name.
+\input{figures/register-versions}
 
 
 \section{Tomasulo's Algorithm}\label{sec:ilp-tomasulo}
@@ -326,7 +335,8 @@ If the needed value is already ready, the value is copied into the reservation s
 If it is not ready, the reservation station records the producing tag instead.
 The destination is renamed so younger instructions refer to the new producer rather than to the older architectural name.
 Later, when both sources are ready and a matching FU is available, the instruction can fire even if an older unrelated instruction is still waiting somewhere else in the machine.
-Completion is a separate event from firing: when an instruction completes, it broadcasts its tag and value on the common data bus (CDB) so dependent instructions can wake up and the renamed register file can be updated.
+Producing a result and publishing it are separate events: an instruction may finish computation but wait for the common data bus (CDB) before broadcasting its tag and value.
+The broadcast wakes dependents and updates the appropriate value storage; in this example, \emph{complete} means that publication has occurred.
 
 \paragraph{Illustrative four-instruction trace}\label{par:ilp-tomasulo-trace}
 The following short trace captures the key behavior.
@@ -335,48 +345,29 @@ Instruction \textit{B} is an add that depends on \textit{A}\@.
 Instruction \textit{C} is an independent load that hits in the cache.
 Instruction \textit{D} is an add that depends on \textit{C}\@.
 Because the machine is out of order and the cache is non-blocking, \textit{C} and then \textit{D} can make progress while \textit{A} is still waiting on the miss.
-Figure~\ref{fig:ilp-tomasulo-cycle-table} gives a compact cycle-by-cycle reference for the same sequence before the text walks through it in words.
-Each cell shows the dominant structure label first---dispatch (DISP), reservation station (RS), execute (EX), or common data bus (CDB)---followed by the local action.
-\begin{figure}[t]
-    \centering
-    \setlength{\tabcolsep}{4pt}
-    \renewcommand{\arraystretch}{1.2}
-    \newcommand{\stagecell}[2]{\shortstack[c]{\rule{0pt}{2.9ex}\textbf{#1}\\[-0.1ex]\strut #2}}
-    \newcommand{\rowlabel}[1]{\shortstack[c]{\rule{0pt}{2.5ex}\textbf{#1}\\[-0.1ex]\rule[-0.9ex]{0pt}{2.0ex}}}
-    \resizebox{\textwidth}{!}{%
-        \begin{tabular}{|>{\raggedright\arraybackslash}m{28mm}|c|c|c|c|c|c|c|}
-            \hline
-            \textbf{Instruction / event} & \textbf{0}                 & \textbf{1}                         & \textbf{2}                         & \textbf{3}                         & \textbf{4} & \textbf{5} & \textbf{6} \\
-            \hline
-            \rowlabel{\textit{A}}        & \stagecell{DISP}{Dispatch} & \stagecell{EX}{Fire}               & \stagecell{EX}{Miss wait} & \stagecell{EX}{Miss wait} & \stagecell{EX}{Miss wait} & \stagecell{EX}{Miss wait} & \stagecell{CDB}{Complete} \\
-            \hline
-            \rowlabel{\textit{B}}        & \stagecell{DISP}{Dispatch} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Wait on \textit{A}} & \stagecell{RS}{Ready after \textit{A}} \\
-            \hline
-            \rowlabel{\textit{C}}        & \stagecell{DISP}{Dispatch} & \stagecell{EX}{Fire}               & \stagecell{EX}{Hit wait} & \stagecell{EX}{Hit wait} & \stagecell{CDB}{Complete} &  &  \\
-            \hline
-            \rowlabel{\textit{D}}        & \stagecell{DISP}{Dispatch} & \stagecell{RS}{Wait on \textit{C}} & \stagecell{RS}{Wait on \textit{C}} & \stagecell{RS}{Wait on \textit{C}} & \stagecell{RS}{Wake on \textit{C}} & \stagecell{EX}{Fire} & \stagecell{CDB}{Complete after \textit{A}} \\
-            \hline
-            \rowlabel{CDB}               &                            &                                    &                                    &                                    & \stagecell{CDB}{\textit{C}}        &                                    & \stagecell{CDB}{\textit{A} then \textit{D}} \\
-            \hline
-        \end{tabular}}
-    \caption{Compact cycle table for the four-instruction Tomasulo trace. The table emphasizes logical ordering rather than exact micro-timing details.}
-    \label{fig:ilp-tomasulo-cycle-table}
-\end{figure}
+Use one pipelined load/store unit that accepts one request per cycle, one ALU, and one CDB.
+Take the load-response times as given: $C$'s result is available for broadcast in cycle 4, and $A$'s in cycle 6.
+An add that fires in cycle $k$ is eligible to broadcast in cycle $k+1$.
+Dependents may fire in the cycle after their source broadcasts, and the oldest eligible instruction wins a CDB conflict.
+Figure~\ref{fig:ilp-tomasulo-cycle-table} follows these rules, matching the sequence in the lecture handout.\footnote{Conte, \texttt{n5\_ilp\_part1.pdf}, slides ILP-23--24.}
+\input{figures/tomasulo-result-bus}
 \begin{description}
     \item[Cycle 0.] \textit{A}, \textit{B}, \textit{C}, and \textit{D} dispatch into reservation stations.
     Sources that are already available are copied in as values; missing sources are recorded as tags.
     Destinations are renamed, and the corresponding destination entries are marked not ready.
-    \item[Cycle 1.] \textit{A} fires, and independent instruction \textit{C} can also fire because it does not depend on \textit{A}\@.
-    This is the key gain from out-of-order scheduling: an older miss does not automatically freeze younger independent work.
-    \item[Cycles 2--3.] Nothing new completes.
-    \textit{B} is still waiting for \textit{A}, and \textit{D} is still waiting for \textit{C}\@.
+    \item[Cycle 1.] \textit{A} fires and encounters its cache miss.
+    \item[Cycle 2.] Independent load \textit{C} fires while \textit{B} remains blocked on \textit{A}\@.
+    This is the gain from out-of-order scheduling and hit-under-miss support: the older miss does not freeze independent work.
+    \item[Cycle 3.] Nothing completes; \textit{B} still waits for \textit{A}, and \textit{D} for \textit{C}\@.
     \item[Cycle 4.] \textit{C} completes first and broadcasts its tag and value on the common data bus (CDB).
     Reservation stations compare that tag against all waiting operands, so \textit{D} wakes up and becomes ready to fire.
     \item[Cycle 5.] \textit{D} fires and begins its add using the value from \textit{C}\@.
     \item[Cycle 6.] \textit{A} finally completes its miss and \textit{D} also wants to complete.
     With only one CDB, both cannot broadcast at once, so the usual rule is to let the older instruction win.
-    \textit{A} therefore broadcasts first, and \textit{B} immediately becomes ready.
-    \textit{D} then broadcasts its own result, and \textit{B} can fire as soon as the machine allows post-broadcast wakeup.
+    \textit{A} wins this cycle, and \textit{B} becomes ready for the next cycle.
+    \textit{D} retains its result while waiting for the bus.
+    \item[Cycle 7.] \textit{B} fires, and \textit{D} broadcasts its delayed result.
+    \item[Cycle 8.] \textit{B} broadcasts its result.
 \end{description}
 This trace shows why it is important to distinguish \textit{fire} from \textit{complete}.
 Firing sends operands into an FU and begins execution.
@@ -392,26 +383,28 @@ That improves throughput, but it also makes control more complex because the cac
 
 
 \section{Result Buses and Physical Register Files}\label{sec:ilp-result-bus-prf}
-Basic Tomasulo has an obvious bottleneck: if all completed instructions must use one common data bus (CDB), then only one completion can be broadcast in a cycle.
-That limitation can be summarized as Eq.~\eqref{eq:ilp-result-bus-bound}.
+Basic Tomasulo has an obvious bottleneck: one common data bus can publish only one result per cycle.
+For instructions that each require one such broadcast, the sustained completion rate is bounded by Eq.~\eqref{eq:ilp-result-bus-bound}.
 \begin{equation}\label{eq:ilp-result-bus-bound}
     IPC_{complete} \le N_{result\ buses}.
 \end{equation}
 Adding more result buses raises the completion ceiling, but it also increases wakeup complexity because each reservation station must compare against more simultaneous broadcasts.
+This is a bound on that class of result producers, not necessarily on every instruction: stores and branches may use different completion paths.
 
-One historical way to manage this cost is to redesign Tomasulo around an explicit physical register file and a RAT rather than storing all transient values only in reservation-station entries.
-With physical registers, the scheduler can often replace some associative tag searches with direct lookup by physical register number.
-That is faster and usually lower power than asking every waiting instruction to compare against every possible producer all the time.
+An explicit physical register file (PRF) stores values at locations selected by physical register number.
+The scheduler need not hold a full copy of every operand value, but it still has to learn when each source becomes ready.
+Conventional designs may retain associative wakeup comparisons on physical-register tags.
+The course also considers directly polling a ready-bit table; that is a scheduling choice, not an automatic consequence of using a PRF.
 
-The tradeoff is a heavier register file.
-If many reservation-station entries are checked each cycle, the physical register file may need substantial read bandwidth.
-A common first-order estimate is shown in Eq.~\eqref{eq:ilp-prf-port-estimate}.
+Separate the bandwidth for values from the bandwidth for readiness.
+If at most $W_{issue}$ two-source operations read their operands each cycle, a simple unbanked PRF provisioned for full bandwidth needs approximately
 \begin{equation}\label{eq:ilp-prf-port-estimate}
-    N_{read\ ports}\approx 2N_{sched},\qquad
+    N_{data\ read\ ports}\approx 2W_{issue},\qquad
     N_{write\ ports}\approx N_{result\ buses}.
 \end{equation}
-The factor of two on the read side comes from the common case of two source operands per instruction.
-Real designs use banking, clustering, bypass paths, operand caching, and other tricks to reduce this raw multi-port cost, but the estimate is a useful baseline for understanding why renamed out-of-order cores are expensive.
+Polling both source-ready bits for every one of $N_{sched}$ waiting instructions instead requires up to $2N_{sched}$ one-bit status checks per cycle, not that many full-width data reads.
+Banking, clustering, bypass paths, and operand caching change the port requirements.
+Neither the storage organization nor its power cost can be judged from the presence of physical registers alone.
 
 
 \section{RATs, Ready Bits, and Dispatch in Renamed Machines}\label{sec:ilp-rat-ready}
@@ -433,9 +426,10 @@ The same logical condition is shown in Eq.~\eqref{eq:ilp-ready-fire}.
 Each scheduling-queue entry is a reservation station that records the FU type, the destination physical register or tag, and either ready source values or the physical-register identities that will eventually supply them.
 When a producing instruction completes, the result bus updates the physical register file and wakes any waiting entries that need that value.
 
-The speculative physical-register state may be called the \textit{future file} or the \textit{messy register file}.
-In either case, the term refers to a speculative state that may be ahead of the last coherent architectural state.
-The key idea is the same: the speculative state can move ahead aggressively, while the committed state must remain precise.
+Do not equate a PRF with a \textit{future file}.
+A future-file organization keeps a latest speculative value per architectural name and a separate committed data file; a PRF keeps multiple physical versions, with maps selecting speculative and committed views.
+Both separate speculative progress from precise state, but they store and recover that state differently.
+Register renaming also does not settle whether a load and store refer to the same memory address; memory-dependence tracking remains a separate job.
 
 
 \section{Precise State and Recovery}\label{sec:ilp-precise-state}
@@ -444,14 +438,15 @@ If an interrupt, page fault, or other exception occurs at the wrong moment, soft
 That requirement is usually stated as the \textit{precise exception} property in Eq.~\eqref{eq:ilp-precise-state}.
 \begin{equation}\label{eq:ilp-precise-state}
     \begin{aligned}
-        \text{precise exception at }i \Rightarrow\ &\text{all instructions older than }i\text{ are committed}\\
-        &\wedge\ \text{no instruction younger than }i\text{ is architecturally visible}
+        \text{restartable fault at }i \Rightarrow\ &\text{all older instructions are committed}\\
+        &\wedge\ \text{$i$ and all younger instructions have no committed effects}
     \end{aligned}
 \end{equation}
 
 This requirement was not always imposed in the same way.
 In Tomasulo's original floating-point setting on the IBM System/360 Model 91, the out-of-order machinery covered a narrower part of the processor, and the machine could tolerate \textit{imprecise exceptions} in situations that modern general-purpose cores cannot.
-Once out-of-order execution extended to ordinary integer, load/store, and control-flow instructions under virtual memory, recovery to an exact sequential state became mandatory rather than optional.
+General-purpose ISAs and operating systems normally require precise restart for faults such as a page-faulting load.
+The faulting instruction itself must not commit its result; trap-like events can define a different architectural boundary.
 
 
 \section{Reorder Buffers and Retirement}\label{sec:ilp-rob}
@@ -459,7 +454,8 @@ The standard answer to precise-state recovery is the \textit{reorder buffer (ROB
 Dispatch allocates ROB entries in program order.
 Execution may finish out of order, but retirement occurs in order from the ROB head, which creates a clean boundary between speculative work and architecturally committed state.
 
-A typical ROB entry stores destination information, a result field, a ready bit, an exception flag, and enough control information to recover the correct program counter (PC)\@.
+A ROB entry tracks destination information, completion status, exception state, and the information needed to recover the correct program counter (PC)\@.
+In a data-in-ROB organization it also holds a result value; in an explicit-PRF organization the value lives in the PRF, so the ROB can hold register identities and recovery metadata instead.
 In simple form, retirement follows Eq.~\eqref{eq:ilp-rob-retire}.
 \begin{equation}\label{eq:ilp-rob-retire}
     retire \Leftarrow ready(ROB_{head})\wedge \neg exception(ROB_{head}).
@@ -565,22 +561,27 @@ For any such trace, once the total elapsed cycles are known, fragment IPC is ret
 
 \paragraph{Freeing physical registers}\label{par:ilp-freeing-pregs}
 Renamed machines also need a rule for reclaiming old physical registers.
-The exact policy differs across implementations, but the underlying principle is simple: an old physical register cannot return to the free list until no older in-flight instruction can still need it.
+The exact policy differs across implementations, but an old physical register cannot return to the free list while any surviving reader or recovery path still needs that version.
 Common implementations describe this with use counters, pending-free bits, or retirement-based reclamation.
 For example, if an architected register was formerly mapped to physical register $P23$ and rename later redirects that architected name to $P27$, the old $P23$ mapping cannot be recycled immediately.
 It becomes reclaimable only after no older instruction can still read it and the newer mapping has safely become the committed architectural version.
 The details vary, but all correct schemes delay reuse until the older mapping is no longer architecturally or speculatively required.
 
-\paragraph{When architected registers are actually written}\label{par:ilp-areg-write-timing}
+\paragraph{When the architectural view changes}\label{par:ilp-areg-write-timing}
 Completion and retirement are not the same event.
-Completion usually writes the speculative destination into the physical register file and marks the matching ROB entry ready.
-The architected register file is updated only when that ROB entry reaches the head and retires in order.
+In an explicit-PRF design, completion writes the destination physical register and marks the matching ROB entry ready.
+Retirement updates the committed mapping and permits reclamation of the previous physical version; it need not copy the value into a second data file.
+In a data-in-ROB design, retirement instead copies the result into a separate architected register file.
 This separation is what allows the machine to execute aggressively while still presenting precise sequential state to software.
+A retiring store may remain in a committed store buffer until it can drain under the memory system's ordering rules; retirement is not immediate global visibility.
 
 \paragraph{Worked PRegs/RAT/ROB end-state trace}\label{par:ilp-preg-rob-worked}
 The following short trace makes the bookkeeping easier to follow.
 Assume the initial mappings are $R0\rightarrow P0$, $R1\rightarrow P1$, $R2\rightarrow P2$, and $R3\rightarrow P3$, with $P4$ through $P7$ free.
-Assume two-wide fetch and dispatch, two-wide retirement, two 1-cycle ALUs, one 1-cycle LSU, and a back-to-front cycle evaluation so that Execute can mark a destination physical register ready before Schedule runs later in the same cycle.
+Assume two-wide fetch and dispatch, two-wide retirement, two 1-cycle ALUs, and one 1-cycle LSU.
+Evaluate each cycle in the order Retire, Complete, Schedule, Dispatch, Fetch.
+An instruction firing in cycle $k$ completes in cycle $k+1$; Schedule can use a result published earlier in that same cycle, but Retire has already run and must wait until the next cycle.
+These are this example's conventions; the preceding CDB example uses next-cycle wakeup instead.
 Consider the following sequence:
 
     {\small
@@ -600,12 +601,12 @@ One legal cycle-by-cycle interpretation is:
     \item[Cycle 3.] \textit{A} fires on the LSU. Dispatch \textit{C}, which now reads $P2$ and $P5$, allocates $P6$ as the new destination for $R2$, and records old mapping $P2$ in its ROB entry.
     \item[Cycle 4.] \textit{A} completes, marking $P4$ ready and its ROB entry ready.
     Because that completion is visible before scheduling in the same cycle, \textit{B} can now fire.
-    \item[Cycle 5.] \textit{A} retires, so the architected copy of $R3$ now comes from $P4$ and old mapping $P3$ can be freed. \textit{B} completes, marking $P5$ ready, and \textit{C} can then fire.
-    \item[Cycle 6.] \textit{B} retires, so the architected copy of $R1$ now comes from $P5$ and old mapping $P1$ can be freed. \textit{C} completes, marking $P6$ ready.
-    \item[Cycle 7.] \textit{C} retires, so the architected copy of $R2$ now comes from $P6$ and old mapping $P2$ can be freed.
+    \item[Cycle 5.] \textit{A} retires, so the committed mapping of $R3$ becomes $P4$ and old mapping $P3$ can be freed. \textit{B} completes, marking $P5$ ready, and \textit{C} can then fire.
+    \item[Cycle 6.] \textit{B} retires, so the committed mapping of $R1$ becomes $P5$ and old mapping $P1$ can be freed. \textit{C} completes, marking $P6$ ready.
+    \item[Cycle 7.] \textit{C} retires, so the committed mapping of $R2$ becomes $P6$ and old mapping $P2$ can be freed.
 \end{description}
 
-The exact cycle numbers can shift by one under a different but internally consistent simulator ordering, but the final renamed state does not change.
+Different simulator orderings can change the cycle numbers, but not the required data dependences or final committed mapping for this allocation sequence.
 
     {\small
 \begin{center}
@@ -685,15 +686,16 @@ Three rules determine the outcome.
 Dispatch allocates the next free physical destination and records the previous architectural mapping in the ROB\@.
 Completion makes the speculative destination ready for younger consumers.
 Retirement is the event that both updates the architected view and frees the previous physical mapping.
+The final mapping table is the committed view, not evidence of a separate copy of every value.
+Ready bits on free registers are irrelevant stale state and must be initialized appropriately when those registers are allocated again.
 
 
 \section{Future Files and Checkpoint/Repair}\label{sec:ilp-future-file-checkpoint}
-One useful way to describe renamed out-of-order state is to separate it into two layers.
-The \textit{future file} holds the most recent speculative values that execution is building toward.
-The \textit{architected register file} holds only committed state.
-Execution and wakeup consult the speculative state, while retirement copies correct in-order results into the architected state.
-This explains how the machine can behave aggressively internally while still presenting a sequential interface to software.
-In a physical-register implementation, this often means retirement copies the committed value from the current physical register into the architected register file, while exception recovery can restore a precise view by redirecting the register alias table (RAT) back to the committed architectural mappings.
+The course's \textit{future-file} organization uses two data views: a latest speculative value per architectural name and a separate file of committed values.
+Producer tags ensure that an older completion does not overwrite a newer version of the same name.
+Retirement copies the correct in-order result into the committed data file; on recovery the speculative view can be rebuilt from committed state.
+An explicit-PRF design solves the same problem with multiple physical versions and recoverable maps instead of requiring that second value copy.
+Keeping these organizations distinct makes the recovery mechanism easier to follow.
 
 \paragraph{Comparison with tag-only Tomasulo}\label{par:ilp-tag-vs-preg}
 A physical-register plus RAT design does not automatically increase the amount of ILP that the scheduler can discover.
@@ -707,14 +709,17 @@ One common description uses three conceptual views of the state: a messy current
 
 The key control concept is the \textit{instruction boundary}.
 Dispatch chooses a dynamic boundary, often denoted by markers such as IB1 and IB2.
-Instructions that complete before the current boundary update both the messy state and the working copy.
-Instructions that complete after the boundary update only the messy state.
-Once every instruction older than the boundary has completed, the working copy has become coherent and may be promoted to the new golden copy.
+Instructions older than the current boundary in \emph{program order} contribute to both the messy state and the working copy.
+Younger instructions contribute only to the messy state, even if they finish earlier in wall-clock time.
+Version tracking must preserve the youngest writer within each view when multiple instructions write the same architectural name.
+Once every instruction older than the boundary has completed without an unhandled fault, and each register reflects its youngest writer in that prefix, the working copy may be promoted to the new golden copy.
 The machine then chooses a new boundary and repeats the process.
 
 If an exception occurs, the machine restores the golden copy and continues from that last coherent point.
 It may then re-execute younger instructions sequentially or under tighter control until it reaches the faulting instruction and handles the event precisely.
 This can reduce some of the timing pressure associated with aggressive ROB-bypass logic, though it introduces its own bookkeeping and copying costs.
+Restoring registers alone cannot undo a younger store that has escaped to memory or a device.
+Stores and other externally visible effects must therefore be deferred, buffered, or otherwise recoverable until the chosen recovery boundary is safe.
 
 
 \section{Speculation Without and With Prediction}\label{sec:ilp-speculation}
@@ -736,7 +741,8 @@ The attacker then measures timing differences to infer information that should n
 Shared-core execution can make this worse.
 With \textit{hyperthreading}, or more generally simultaneous multithreading, two threads share parts of one physical core.
 That increases the opportunity for one thread to observe side effects caused by another thread's speculative activity.
-The security lesson is broader than any single named vulnerability: microarchitectural cleanup matters, not just architectural rollback.
+The security lesson is broader than any single named vulnerability: architectural rollback is not a complete isolation mechanism.
+Mitigations may need to prevent unsafe speculative accesses or isolate their observable effects, not merely try to clean up afterward.
 
 
 \section{Implementation Pressure}\label{sec:ilp-implementation-pressure}
@@ -755,9 +761,10 @@ Those counters are useful only when their meanings and denominators are clear.
 \paragraph{Fetched versus retired instructions}\label{par:ilp-fetched-vs-retired}
 The architecturally meaningful IPC uses retired instructions, not fetched instructions.
 \textit{Trace instructions} count the dynamic instructions in the workload itself.
-\textit{Fetched instructions} count every instruction the front end brought in, including wrong-path work fetched before a branch misprediction was repaired.
+In an execution-driven model, \textit{fetched instructions} can include wrong-path work fetched before a branch misprediction was repaired.
 \textit{Retired instructions} count only the instructions that reached precise architectural state.
-In a correct full run, retired instructions usually match the trace instruction count, while fetched instructions may be much larger when prediction accuracy is poor.
+Some trace-driven models never fetch actual wrong-path instructions and instead impose a modeled penalty, so their counters need not behave this way.
+For a fully drained run over a committed-path trace, retired instructions should match the trace count; warm-up boundaries and partially drained windows require separate accounting.
 
 \paragraph{Miss and misprediction counters}\label{par:ilp-miss-mispredict-counters}
 Branch-misprediction counts measure control-flow repair events.
@@ -767,23 +774,22 @@ These counters therefore explain why IPC may fall even when the machine nominall
 \paragraph{Queue-pressure counters}\label{par:ilp-queue-pressure}
 Maximum and average dispatch-queue, scheduling-queue, and ROB occupancy show where pressure accumulates.
 If ROB usage remains near its limit and dispatch is frequently blocked because the ROB is full, then commit bandwidth, long-latency instructions, or recovery delays are throttling forward progress.
-If scheduling queues remain lightly used but \textit{no-fire cycles} are high, then the machine is more likely waiting on ready operands or memory completion than on queue capacity.
+Lightly used scheduling queues with many \textit{no-fire cycles} do not by themselves identify the cause.
+Check whether the queue is empty because fetch is starved, occupied by instructions awaiting operands, or blocked by unavailable execution units.
 
 \paragraph{Isolating control and memory effects}\label{par:ilp-isolate-effects}
 Many simulators also offer a no-miss or no-misprediction mode.
 Such a configuration does not model real execution, but it is analytically useful because it isolates pure width, scheduling, and dependence limits from penalties caused by cache misses and poor control-flow prediction.
 
 
-\section{Chapter 6 Summary}\label{sec:chapter6-summary-ilp}
-Chapter 6 develops dynamic instruction-level parallelism as a concrete microarchitectural path to $CPI<1$.
-Superscalar design achieves this by widening the pipeline's effective throughput and managing dependencies, hazards, and speculative state carefully.
-FICO-style scoreboarding illustrates the basic mechanism, while renaming, Tomasulo-style wakeup and result broadcast, and stronger out-of-order policies push performance further.
-Once the machine executes and completes work out of order, however, scheduling is no longer enough by itself.
-The core must also maintain precise architectural state through mechanisms such as physical-register renaming, reorder buffers, future files, or checkpoint/repair schemes.
-Modern processors therefore combine ILP techniques with careful recovery, retirement, and microarchitectural side-effect control.
-Operationally, this chapter is best checked through throughput-bound calculations, dependence-height reasoning on DDGs, cycle tables for FICO timing, reservation-station and RAT snapshots, and careful separation of speculative completion from architectural retirement.
-Simulator-visible counters such as fetched-versus-retired instructions, misprediction counts, miss counts, queue occupancy, and ROB pressure then provide a practical way to diagnose which limits are dominating a given design point.
-These ideas together form the bridge from classic five-stage thinking to modern high-throughput scalar cores.
+\section{What to Carry Forward}\label{sec:chapter6-summary-ilp}
+A younger instruction can make useful progress while an older one waits, provided the machine keeps the right value versions and respects true dependences.
+Renaming removes conflicts caused by reused names; it does not manufacture a missing operand or settle a memory alias.
+Result bandwidth determines when completed computations can publish their values, and in-order retirement determines when their effects become committed state.
+
+Read a timing table with those separate events in mind: dispatch, fire, result production, publication, and retirement.
+State the within-cycle convention before counting cycles, and distinguish value-storage ports from scheduler readiness checks.
+The next chapter moves scheduling work toward the compiler and asks how much of this overlap can be arranged before the program runs.
 
 
 \section{Practice Questions}\label{sec:ch6-practice}

@@ -20,7 +20,7 @@ The tradeoff is that the compiler must do much more work up front, and the resul
 This tradeoff is attractive in domains such as \textit{digital signal processors (DSPs)}, where workloads are regular and low-power execution is important.
 
 Compiler design must balance three competing goals: code quality, compilation time, and maintainability.
-In practice, that usually rules out algorithms much worse than quadratic for large compiler passes, and even cubic methods are used cautiously.
+The acceptable search cost depends on block size, optimization level, and whether compilation happens ahead of time or during execution.
 Optimal scheduling with general dependence and resource constraints is computationally difficult; exhaustive search grows rapidly with block size.
 Practical VLIW compilers therefore rely on heuristics rather than exact search for every block.
 List scheduling is one of the standard heuristics for this job.
@@ -30,17 +30,20 @@ The broader performance point is that widening fetch and scheduling machinery yi
 \section{Dependence Graphs and List Scheduling}\label{sec:ilp-vliw-list-scheduling}
 The compiler begins with a \textit{data dependence graph}.
 True flow edges capture read-after-write dependencies, while anti-dependence and output-dependence edges capture false constraints caused by register reuse.
-Pure flow dependence always takes priority over false dependence because it represents real data movement.
-If the code contains loops, this graph can contain cycles, so it is not necessarily a directed acyclic graph.
+True dependences cannot be removed merely by renaming; false dependences must also be respected unless a transformation actually removes them.
+A basic block's program-order dependence graph is acyclic.
+A compact loop graph can contain cycles because its edges also represent dependences across iterations.
 Constructing the graph by hand is mechanical.
 Draw one node per op, then add all true flow edges from each definition to the later uses that require that value.
 Next add anti-dependence edges from a read to a later write of the same architectural name, and output-dependence edges between two writes of the same name.
-If two operations are already ordered by a true flow dependence, that true edge is the one that matters for scheduling because it already enforces the required order.
+An ordering edge may be omitted only if the remaining paths enforce all of its timing requirements.
 
 Table~\ref{tab:ilp-vliw-block} gives a compact block that will be used for the scheduling example.
 Assume one pipelined load/store unit, one pipelined arithmetic logic unit (ALU), and one pipelined multiplier.
 Each unit can accept a new op every cycle; the listed latencies describe when results become available, not how long the unit remains occupied.
 Also assume the compiler has already assigned registers so that the remaining constraints shown in the table are dominated by true dependences rather than by avoidable name conflicts.
+Treat $X$, $Y$, and $Z$ as distinct, nonvolatile memory locations with nonfaulting accesses in this simplified model.
+The load from $X$ must still precede the store to $X$; that memory anti-dependence is separate from the register edges.
 \begin{table}[t]
     \centering
     \renewcommand{\arraystretch}{1.15}
@@ -110,7 +113,7 @@ Figure~\ref{fig:ilp-vliw-ddg} shows the same block in a more visual form: the or
             \node[depnode] (G) at (0,-3.3) {G};
             \node[depnode] (H) at (0,-4.4) {H};
 
-            \node[hlabel, left=1.5mm of A] {$5$};
+            \node[hlabel, above=1.5mm of A] {$5$};
             \node[hlabel, above=1.5mm of B] {$7$};
             \node[hlabel, above=1.5mm of C] {$3$};
             \node[hlabel, left=1.5mm of D] {$1$};
@@ -118,7 +121,7 @@ Figure~\ref{fig:ilp-vliw-ddg} shows the same block in a more visual form: the or
             \node[hlabel, left=1.5mm of F] {$5$};
             \node[hlabel, right=1.5mm of I] {$1$};
             \node[hlabel, left=1.5mm of G] {$2$};
-            \node[hlabel, left=1.5mm of H] {$1$};
+            \node[hlabel, right=1.5mm of H] {$1$};
 
             \draw[->] (A) -- (D);
             \draw[->] (A) -- (E);
@@ -128,6 +131,7 @@ Figure~\ref{fig:ilp-vliw-ddg} shows the same block in a more visual form: the or
             \draw[->] (C) -- (I);
             \draw[->] (F) -- (G);
             \draw[->] (G) -- (H);
+            \draw[->,dashed] (A) to[out=180,in=180,looseness=1.8] (H);
         \end{tikzpicture}
     \end{minipage}\hfill
     \begin{minipage}[t]{0.20\textwidth}
@@ -146,12 +150,12 @@ Figure~\ref{fig:ilp-vliw-ddg} shows the same block in a more visual form: the or
             $H$ $(1)$
         \end{tabular}
     \end{minipage}
-    \caption{Original operations, dependence graph, and one priority ordering for the VLIW list-scheduling example. The small numeric annotations next to nodes indicate dependence height. Ties may be broken arbitrarily.}
+    \caption{Operations, dependence graph, and a height-based priority list. The dashed $A\rightarrow H$ edge preserves the load-before-store order at $X$. Numbers indicate dependence height; ties may be broken arbitrarily.}
     \label{fig:ilp-vliw-ddg}
 \end{figure}
 
 One common priority heuristic is \textit{dependence height}, which estimates how much latency remains below a node on the longest dependent path.
-If the heuristic includes the latency of the current instruction itself, one convenient definition is Eq.~\eqref{eq:ilp-dependence-height}.
+For an acyclic graph, a heuristic that includes the current instruction's latency is Eq.~\eqref{eq:ilp-dependence-height}.
 \begin{equation}\label{eq:ilp-dependence-height}
     height(i)=
     \begin{cases}
@@ -162,14 +166,18 @@ If the heuristic includes the latency of the current instruction itself, one con
 Higher-height instructions receive higher priority because delaying them is more likely to lengthen the critical path.
 To annotate a graph by hand, start from the sinks and assign each sink its own latency.
 Then sweep backward, adding the current node latency to the maximum height among its successors.
-The ready list is obtained by sorting nodes from highest height to lowest and breaking ties either arbitrarily or by an explicit secondary rule such as program order.
+The priority list sorts nodes from highest height to lowest, with an explicit tie rule such as program order.
+At each scheduling step, only nodes whose predecessors have been placed and whose timing constraints permit issue are ready candidates.
 For the block in Table~\ref{tab:ilp-vliw-block}, the longest true-dependence chain is $B\rightarrow F\rightarrow G\rightarrow H$, so the heuristic tends to prioritize $F$ ahead of $E$ once both become candidates for the single multiplier.
 
 List scheduling then places the highest-priority ready instructions into each cycle, subject to both dependence timing and resource availability.
 A simple legality condition is shown in Eq.~\eqref{eq:ilp-list-schedule-legal}.
 \begin{equation}\label{eq:ilp-list-schedule-legal}
-    cycle(i)=\min\!\left\{c\ \middle|\ \forall j\in pred(i),\ c\ge cycle(j)+lat(j),\ \text{and a compatible FU is free in }c \right\}.
+    cycle(i)=\min\!\left\{c\ \middle|\ \forall j\in pred(i),\ c\ge cycle(j)+\delta_{ji},\ \text{resources are legal in }c \right\}.
 \end{equation}
+Here $\delta_{ji}$ is the required issue separation on edge $j\rightarrow i$.
+For a RAW edge in this fixed-latency model, it is $lat(j)$; WAR, WAW, and memory edges depend on when operands are read and effects occur.
+The resource test asks whether a unit can \emph{accept} an operation, not whether its pipeline is entirely empty.
 This is not an optimal algorithm, but it is practical and captures the central VLIW idea: schedule as much parallel work as possible before runtime while still respecting dependencies and resource limits.
 
 Table~\ref{tab:ilp-vliw-schedule} shows one possible compiler-produced schedule for the block running on a machine with one arithmetic logic unit (ALU), one multiplier, and one load/store unit.
@@ -254,7 +262,8 @@ If the tail bit is 1, the current op ends the current multi-op.
 The following op then begins a new multi-op.
 This lets the instruction stream represent a variable number of ops per cycle without requiring every cycle to contain the same number of explicit no-op fillers.
 
-A related field is a \textit{pause field}, which tells the front-end control logic to wait a specified number of cycles before beginning the next multi-op.
+A related field is a \textit{pause field}, which inserts a specified number of empty issue cycles before the next multi-op.
+Thus a multi-op issued in cycle $k$ with pause $p$ is followed by the next one in cycle $k+p+1$.
 In the simple scheme used here, the pause value is interpreted only on the op whose tail bit ends the current multi-op; pause values on earlier ops in the same multi-op are ignored.
 This is a compact way to represent silence between multi-ops while keeping each op's encoding regular.
 Table~\ref{tab:ilp-vliw-encoding} illustrates the idea using the schedule from Table~\ref{tab:ilp-vliw-schedule}.
@@ -327,14 +336,15 @@ The compiler first estimates a lower bound on $II$, then attempts to build a mod
 If the attempt fails, it increments $II$ and tries again.
 
 The first bound comes from resource pressure.
-If a loop contains $N_t$ operations of type $t$ and the machine provides $U_t$ compatible units of that type, then
+For disjoint resource classes whose units each accept one operation per cycle, a loop with $N_t$ operations of type $t$ and $U_t$ compatible units has the bound
 \begin{equation}\label{eq:ilp-res-ii}
     ResII=\max_t \left\lceil \frac{N_t}{U_t} \right\rceil
 \end{equation}
 This is the resource-constrained initiation interval.
+For a nonpipelined unit, shared port, or multi-cycle resource reservation, count occupied resource slots instead of merely counting operations.
 
 The second bound comes from loop-carried recurrences.
-If a dependence cycle $c$ has total latency $Lat(c)$ and spans $Dist(c)$ loop iterations, then
+If a dependence cycle $c$ has total required edge latency $Lat(c)$ and total iteration distance $Dist(c)>0$, then
 \begin{equation}\label{eq:ilp-rec-ii}
     RecII=\max_c \left\lceil \frac{Lat(c)}{Dist(c)} \right\rceil
 \end{equation}
@@ -359,7 +369,8 @@ An operation that would occupy cycle $x$ in a longer unrolled schedule is placed
 The naive version of ``try every initiation interval'' can become too expensive because each scheduling attempt is itself a scheduling problem.
 List scheduling is often treated as roughly $O(n^2)$ in the number of operations, so repeatedly trying many impossible values of $II$ can push the compile-time cost much higher.
 The point of $ResII$ and $RecII$ is to skip initiation intervals that cannot possibly work.
-In practice, a conservative lower bound usually lets IMS succeed after only a small number of attempts, while still guaranteeing eventual success once $II$ becomes large enough.
+A failed heuristic attempt at $MII$ does not prove that $MII$ is impossible, and the bound itself need not be attainable.
+Practical implementations limit search effort and may abandon pipelining when register pressure, code growth, or other legality constraints make it unattractive.
 
 In most textbook treatments, the underlying machine is modeled with a point-latency abstraction: an op occupies one issue slot, and its result becomes ready after a fixed latency.
 This keeps the scheduling problem manageable.
@@ -369,7 +380,11 @@ More detailed models that explicitly schedule register-file ports, result buses,
 \section{Worked Software-Pipelining Example}\label{sec:ilp-software-pipelining-example}
 The following loop illustrates the idea.
 Assume two arithmetic logic units, two memory units, one-cycle add/branch latency, and two-cycle load latency.
-The branch still logically closes the loop body even though later iterations will overlap older ones.
+Every unit accepts one operation per cycle, and a result issued in cycle $k$ is usable in cycle $k+latency$.
+Let $R10$ start at a positive trip count $N$; the loop decrements it and continues while it remains positive.
+Use a four-byte address step for aligned 32-bit words, and assume that the pointer table read by $B$ is disjoint from every location written by $C$.
+Accesses are nonvolatile and nonfaulting in this scheduling model; real code motion must preserve exception and memory semantics too.
+These address and counter conventions adapt the handout's schematic loop into a finite example.\footnote{\texttt{n5\_vliw\_spipe\_handout\_s26-1.pdf}, ILP-86--87.}
 \begin{table}[t]
     \centering
     \renewcommand{\arraystretch}{1.15}
@@ -378,13 +393,13 @@ The branch still logically closes the loop body even though later iterations wil
         Instr.
         & Operation           & Key dependences                    & Latency \\
         \hline
-        A & ADD $R2, R2, \#1$   & loop-carried on $R2$               & 1       \\
+        A & ADD $R2, R2, \#4$   & loop-carried on $R2$               & 1       \\
         \hline
         B & LW $R3, 0(R2)$      & A                                  & 2       \\
         \hline
         C & SW $R0, 0(R3)$      & B                                  & 1       \\
         \hline
-        D & ADD $R10, R10, \#1$ & loop-carried on $R10$              & 1       \\
+        D & ADD $R10, R10, \#-1$ & loop-carried on $R10$              & 1       \\
         \hline
         E & BRGTZ $R10$, LOOP   & D; branch must close the loop body & 1       \\
         \hline
@@ -393,16 +408,18 @@ The branch still logically closes the loop body even though later iterations wil
     \label{tab:ilp-swpipe-loop}
 \end{table}
 
-The cyclic dependence view of this loop contains the within-iteration edges $A_i\rightarrow B_i$, $B_i\rightarrow C_i$, and $D_i\rightarrow E_i$, plus the loop-carried edges $A_i\rightarrow A_{i+1}$ and $D_i\rightarrow D_{i+1}$.
-Those loop-carried edges are exactly the recurrences used when computing $RecII$.
+The true data-dependence view contains $A_i\rightarrow B_i$, $B_i\rightarrow C_i$, and $D_i\rightarrow E_i$, plus the recurrences $A_i\rightarrow A_{i+1}$ and $D_i\rightarrow D_{i+1}$.
+The branch must also resolve in time to decide whether to start iteration $i+1$.
+Operand capture and register allocation must preserve each $B_i$ result until $C_i$ consumes it; distinct iteration versions or rotating registers can make that bookkeeping explicit.
 
 For this loop, the resource bound is
 \[
     ResII=\max\!\left(\left\lceil \frac{3\ \text{ALU/branch ops}}{2\ \text{ALUs}} \right\rceil,
                     \left\lceil \frac{2\ \text{memory ops}}{2\ \text{memory units}} \right\rceil \right)=\max(2,1)=2.
 \]
-The loop-carried recurrences on $R2$ and $R10$ each have latency 1 and distance 1, so $RecII=1$.
-Therefore the first useful attempt is $II=2$.
+The data recurrences on $R2$ and $R10$ each have latency 1 and distance 1, giving a data-only $RecII=1$.
+If the graph also includes the non-speculative control constraint $D_i\rightarrow E_i\rightarrow D_{i+1}$, that cycle gives $RecII=2$.
+Either way, the combined lower bound is $MII=2$, and the following schedule resolves each branch before starting the next iteration.
 
 One legal modulo reservation table appears in Table~\ref{tab:ilp-swpipe-kernel}.
 The first row begins iteration $i$.
@@ -424,10 +441,11 @@ That overlap is the essence of software pipelining.
     \label{tab:ilp-swpipe-kernel}
 \end{table}
 
-\enlargethispage{-2\baselineskip}
 The emitted code must still handle loop entry and loop exit correctly.
 Table~\ref{tab:ilp-swpipe-phases} separates the schedule into prologue, kernel, and epilogue form.
 The early-exit branch $E^\ast$ is the inverted form of the loop branch; it lets the machine leave the prologue cleanly if the loop should terminate before the steady-state kernel is entered.
+Both exits go through the epilogue so the last required store is not lost.
+If zero iterations are possible, an entry test must bypass the entire transformed loop.
 \begin{table}[t]
     \centering
     \renewcommand{\arraystretch}{1.15}
@@ -439,12 +457,15 @@ The early-exit branch $E^\ast$ is the inverted form of the loop branch; it lets 
         \hline
         Kernel   & repeat every $II=2$ cycles: \quad $A_i, D_i$ \quad then \quad $B_i, C_{i-1}, E_i$ \\
         \hline
-        Epilogue & $C_{\text{last}}$                                                                 \\
+        Epilogue & one empty issue cycle, then $C_{\text{last}}$ \\
         \hline
     \end{tabular}
     \caption{Prologue, kernel, and epilogue for the software-pipelined loop.}
     \label{tab:ilp-swpipe-phases}
 \end{table}
+The empty epilogue cycle matters: the final load issues with the exit branch and its result is not usable until two cycles later.
+Figure~\ref{fig:software-pipeline-three-iterations} shows the complete three-iteration timing, including that drain interval.
+\input{figures/software-pipeline-three-iterations}
 
 This example also shows why software pipelining is attractive for VLIW machines.
 The compiler exposes the repeating parallel structure explicitly, so the hardware can execute the steady-state kernel with very little dynamic scheduling logic.
@@ -460,7 +481,9 @@ If nothing wraps across the compact kernel boundary, the prologue or epilogue ma
 \section{Memory Disambiguation}\label{sec:ilp-vliw-memory-disambiguation}
 Loads and stores create a special scheduling problem.
 If a compiler moves a load ahead of an older store to the same address, the load may read the wrong value.
-The compiler therefore needs \textit{memory disambiguation}: it must prove that two memory references do not overlap, or else preserve the original order or insert explicit synchronization.
+The compiler therefore needs \textit{memory disambiguation}: it must prove that the references do not overlap, preserve the required order, or use a supported runtime alias check with a correct fallback or recovery path.
+Adding a fence does not make a reordered aliasing load read the value from a store that has not executed yet.
+Potential faults, volatile accesses, device effects, and interthread semantics impose additional constraints even when addresses differ.
 
 This is one of the limits of VLIW compared with dynamic scheduling hardware.
 An out-of-order processor may speculate and recover if it guesses wrong.
@@ -468,28 +491,31 @@ A VLIW compiler must usually be more conservative unless it has strong alias inf
 That is one reason VLIW works best when memory behavior is regular enough for compile-time reasoning to be reliable.
 
 
-\section{Chapter 7 Summary}\label{sec:chapter7-summary-vliw}
-Chapter 7 presents compiler-scheduled ILP as an alternative to increasingly aggressive dynamic superscalar scheduling.
-Instead of building increasingly complex runtime issue logic, a VLIW machine relies on the compiler to expose parallel ops ahead of time and encode them explicitly.
-Data dependence graphs, dependence-height ordering, and list scheduling provide the basic machinery for building legal multi-ops.
-Tail-bit and pause-field encoding then translate that schedule into a compact instruction stream without filling unused slots with explicit no-ops.
-Software pipelining extends the same idea across loop iterations by constructing a prologue, steady-state kernel, and epilogue around a chosen initiation interval.
-Memory disambiguation remains the key correctness limit: compile-time scheduling can move loads and stores only when aliasing is understood well enough to preserve program behavior.
-Together, these techniques show how compiler scheduling can approach the performance of aggressive ILP hardware while trading hardware complexity for compile-time analysis.
+\section{What to Carry Forward}\label{sec:chapter7-summary-vliw}
+Static and dynamic scheduling must obey the same true dependences; they differ in when they discover and arrange the overlap.
+A compiler can make a regular loop's parallel structure explicit, but a legal steady-state kernel is only part of the result.
+Startup, final draining, register lifetimes, memory aliases, and exceptional behavior must still preserve the original program.
+
+Use $MII$ as a lower bound, not a promise of an achievable schedule.
+Then check every recurring resource slot and every dependence, including the work that crosses iteration boundaries.
+The next chapter widens the view again: instead of finding parallel instructions within one core, it coordinates processors that share data.
 
 
 \section{Practice Questions}\label{sec:ch7-practice}
 The following questions reinforce the main ideas of Chapter 7 and are intended for self-checking after the summary.
 \begin{enumerate}
     \item For the sequence \texttt{LW R1,X}; \texttt{ADD R2,R1,R3}; \texttt{ADD R1,R4,R5}; \texttt{MUL R6,R2,R1}, draw the data dependence graph and label the pure, anti-, and output dependences.
-    \item Using appropriate latencies for load, add, and multiply, compute the dependence height of each instruction in the previous question.
+    \item Using load latency 2, add latency 1, and multiply latency 3, compute the dependence height of each instruction in the previous question.
+    Keep the false dependences and use a conservative predecessor-latency separation for every edge in this exercise.
     Then list the instructions in descending order of dependence height.
     \item Assume a VLIW machine with at most one ALU op, one MUL op, and one memory op per multi-op.
+    Use the timing conventions of Question 2, with each unit able to accept one operation per cycle.
     Produce one legal list schedule for the instruction sequence in Question 1.
     \item A VLIW schedule contains the following multi-ops: row 1 has a single load; row 2 has an add and a multiply; row 3 is empty because of a dependence delay; row 4 has a store.
     Explain how a tail-bit plus pause-field encoding can represent this schedule without inserting explicit no-op instructions into every unused slot.
     \item A loop contains 3 ALU/branch operations, 1 multiply, and 3 memory operations per iteration.
     The machine has 1 ALU, 1 MUL, and 1 memory unit.
+    Each unit accepts one operation per cycle and uses a separate resource class.
     Compute $ResII$.
     Then explain how a loop-carried recurrence could still force $MII$ above that resource bound.
     \item For the loop in Question 5, suppose the strongest loop-carried recurrence has total latency 4 and distance 1.

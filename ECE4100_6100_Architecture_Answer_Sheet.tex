@@ -406,13 +406,13 @@ It is intentionally separate from the main text so it can be distributed or with
 
     \item (a) True: renaming removes WAR and WAW name dependences, but true RAW flow dependences remain.
     (b) False: a value can be present in a future file or physical register before it has retired into precise architectural state.
-    (c) True: fetched instructions include wrong-path work, so fetched-instruction IPC can overstate useful architectural progress.
+    (c) True: if the model counts wrong-path or replayed fetches, fetched-instruction IPC can overstate useful architectural progress.
 
     \item Architecturally meaningful IPC uses retired instructions:
     \[
         IPC=\frac{1200}{1000}=1.2.
     \]
-    The 400-instruction fetched/retired gap suggests wrong-path or otherwise squashed speculative work.
+    The 400-instruction fetched/retired gap suggests squashed or replayed work, or a measurement window that includes fetched instructions not yet retired; consult the simulator's counter definitions and drain policy.
     The 90 ROB-blocked dispatch cycles suggest that the reorder buffer filled or could not drain fast enough, often because older long-latency instructions delayed retirement.
 \end{enumerate}
 
@@ -475,7 +475,8 @@ It is intentionally separate from the main text so it can be distributed or with
     The kernel is the repeated steady-state schedule that launches a new iteration every \(II\) cycles.
     The epilogue drains remaining operations from the final iterations after no new iterations are started.
 
-    \item A compiler may move a load ahead of an older store only when it can prove the store and load do not access the same location, or when it has a correct speculation and recovery/checking mechanism.
+    \item A compiler may move a load ahead of an older store when it proves the accessed byte ranges do not overlap, or uses a correct runtime checking/fallback or speculation/recovery mechanism.
+    It must also preserve exception, volatile/device, and interthread semantics; an added fence alone cannot repair an aliasing load that reads before the required store.
     This is memory disambiguation because the legality depends on address aliasing and program memory order, not only on functional-unit availability.
 \end{enumerate}
 

@@ -135,10 +135,10 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Physical Register}] Internal hardware register used to hold renamed values beyond the architected register set.
     \item[\textit{Register Alias Table (RAT)}] Mapping table from architected register names to the current physical register locations.
     \item[\textit{Ready Bit}] Status bit indicating that a register or operand value has already been produced and may be consumed.
-    \item[\textit{Reorder Buffer (ROB)}] In-order retirement structure that records speculative results and enables precise exceptions.
+    \item[\textit{Reorder Buffer (ROB)}] Structure that tracks in-flight instructions for in-order retirement and precise exceptions; result values may live in the ROB or in a separate physical register file.
     \item[\textit{Future File}] Register organization that holds the most recent speculative values while a separate architected register file holds committed state.
     \item[\textit{Messy Register File}] Informal name for the current speculative register state that may contain out-of-order completions not yet reflected in a coherent sequential state.
-    \item[\textit{Precise Exception}] Exception model in which all older instructions appear committed and all younger instructions appear not to have changed architectural state.
+    \item[\textit{Precise Exception}] Exception model with a defined sequential architectural boundary. For a restartable fault, all older instructions are committed and neither the faulting instruction nor younger instructions have committed effects.
     \item[\textit{Imprecise Exception}] Exception model that reports an error without guaranteeing an exact sequential recovery point.
     \item[\textit{Checkpoint/Repair}] Recovery method that periodically captures coherent register state and restores it when an exception or mis-speculation occurs.
     \item[\textit{Instruction Boundary}] Dynamic marker used to denote a coherence point or recovery boundary in checkpoint-based schemes.

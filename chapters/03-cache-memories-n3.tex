@@ -232,6 +232,14 @@ For a cold, demand-only trace, compare with a fully associative cache of the sam
 First references are compulsory; later misses that also occur in that reference cache are capacity misses, while misses avoided by it reveal placement conflicts.
 State the reference policy, since replacement choices can change the classification.
 
+\paragraph{A full set is not necessarily a full cache}
+The lecture makes the distinction concrete with five blocks competing for one four-way set.\footnote{January 29, 2026 lecture, Notability note \emph{6. ECE 6100}, \emph{Recording 3}, approximately 03:59--05:58.}
+Starting cold with LRU replacement, access $A,B,C,D,E,A$, with all five blocks mapping to that set and no other accesses in between.
+The first five references are compulsory misses; installing $E$ evicts $A$, so the final access misses too.
+It is tempting to call that last miss a capacity problem because the set ran out of room.
+But if the whole cache can hold at least five blocks, a fully associative cache of the same capacity keeps all five and hits on the final $A$.
+The final miss is therefore a conflict miss: the shortage was placement freedom, not total storage.
+
 In practice, this taxonomy provides a diagnosis strategy.
 If misses are mainly conflict-driven, associativity or victim structures can help.
 If misses are mainly capacity-driven, larger effective storage or better blocking can help.

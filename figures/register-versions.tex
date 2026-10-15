@@ -1,0 +1,21 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    Program order & Architectural names & One renamed form \\
+    \midrule
+    $A$ & \texttt{MUL R1,R2,R3} & \texttt{MUL P10,P2,P3} \\
+    $B$ & \texttt{ADD R4,R1,R5} & \texttt{ADD P11,P10,P5} \\
+    $C$ & \texttt{ADD R1,R6,R7} & \texttt{ADD P12,P6,P7} \\
+    \bottomrule
+  \end{tabular}
+  \par\medskip
+  \begin{tikzpicture}
+    \node[bookbox,minimum width=3.5cm] (older) at (0,0) {$A$ produces $P10$};
+    \node[bookbox,minimum width=3.5cm] (consumer) at (6,0) {$B$ waits for $P10$};
+    \node[bookbox,minimum width=6.5cm] at (3,-1.4) {$C$ produces a different version, $P12$};
+    \draw[bookarrow] (older) -- (consumer);
+  \end{tikzpicture}
+  \caption{A register name is not a value's identity. Assume the incoming sources map to the shown physical registers and new destinations receive $P10$, $P11$, and $P12$. $C$ may finish before $A$, but $B$ still consumes $A$'s $P10$, not $C$'s $P12$.}
+  \label{fig:register-versions}
+\end{figure}

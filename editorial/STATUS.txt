@@ -10,12 +10,12 @@ Completed in the first editorial pass
   movement, and communication.
 - Source-supported slide examples restore the jet-simulation, Cray-vector,
   independent-addition, rate-averaging, and register-renaming context.
-- Four recording-based examples have note/recording/time references, including
+- Five recording-based examples have note/recording/time references, including
   construction scheduling, the power-wall design question, aircraft throughput,
-  and supercomputer pricing.
-- Eight new vector diagrams explain dependencies, Amdahl's limit, cache lookup,
+  supercomputer pricing, and a full cache set versus a full cache.
+- New diagrams and timing views explain dependencies, Amdahl's limit, cache lookup,
   pipeline overlap, translation/lookup overlap, false sharing, release/acquire,
-  and network bisection.
+  network bisection, register versions, result-bus contention, and loop draining.
 - Typography, running heads, front matter, contents depth, chapter openings,
   captions, and PDF metadata have been revised.
 - Corrections distinguish buffering from speculation, equal-work from equal-time
@@ -25,7 +25,7 @@ Completed in the first editorial pass
 - The FICO practice trace now states timing assumptions and has a matching key.
 
 Detailed reading and audit pass
-- Chapters 1-5 and the pipeline timing checklist have had a section-level
+- Chapters 1-7 and the pipeline timing checklist have had a section-level
   reading pass; lecture supplementation and final whole-book QA remain open.
 - Cache corrections distinguish TLB misses, page faults, and storage I/O;
   write-through propagation, coherence, and persistence; physical address width
@@ -37,12 +37,24 @@ Detailed reading and audit pass
   training threshold, and BTB/RAS policies used by the examples and exercises.
 - Independent calculations reproduced the GSelect and local-history tables and
   the integrated ten-iteration trace (23 misses, 19 writebacks).
+- Dynamic-ILP corrections separate result eligibility from broadcast, speculative
+  and committed maps from copied register values, and scheduler-ready checks
+  from full-width operand reads. A single CDB no longer publishes two results
+  in one cycle, and the faulting instruction is included in precise recovery.
+- Static-ILP examples state memory-alias, resource, latency, register-lifetime,
+  branch-control, and exit assumptions. The finite loop drains its last load
+  before issuing the final store, including the one-iteration early-exit case.
+- Independent schedules reproduce the seven-instruction FICO trace, four-op
+  CDB trace, VLIW block heights and packing, and modulo kernels for 1-8 trips.
+- All 123 practice questions still have matching answers. The current book and
+  answer sheet build without warnings; revised figures and source pages have
+  been rendered and inspected. Whole-book visual QA is still outstanding.
 
 Remaining before the complete revision can be declared finished
 - Review the available lecture recordings, using automatic transcripts as drafts
   rather than as authority for exact quotations, names, numbers, or anecdotes.
 - Integrate additional useful lecture stories with source/time references.
-- Complete the section-by-section technical and prose audit of Chapters 6-10,
+- Complete the section-by-section technical and prose audit of Chapters 8-10,
   the reference appendices, and the advanced-topics material, then check
   continuity across the complete book.
 - Reconcile each changed exercise or convention with the answer sheet.

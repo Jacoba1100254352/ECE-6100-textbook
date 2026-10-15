@@ -233,18 +233,21 @@ Here $DRAM\_AT$ excludes the per-word transfer time; Chapter 3's $T_1$ includes 
 \begin{equation}\label{eq:app-ch6-formula-result-bus}
     IPC_{complete}\le N_{result\ buses}.
 \end{equation}
+Applies to result producers that each require one broadcast, not necessarily to stores or branches using other completion paths.
 
 \paragraph{Chapter 6-F6 (Physical Register File Port Estimate)}\label{par:ch6-formula-6}
 \begin{equation}\label{eq:app-ch6-formula-prf-ports}
-    N_{read\ ports}\approx 2N_{sched},\qquad
+    N_{data\ read\ ports}\approx 2W_{issue},\qquad
     N_{write\ ports}\approx N_{result\ buses}.
 \end{equation}
+For a simple full-bandwidth PRF with two source values per issued operation.
+Polling two ready bits for every scheduling entry instead costs up to $2N_{sched}$ one-bit checks per cycle.
 
-\paragraph{Chapter 6-F7 (Precise Exception Property)}\label{par:ch6-formula-7}
+\paragraph{Chapter 6-F7 (Precise Restartable-Fault Property)}\label{par:ch6-formula-7}
 \begin{equation}\label{eq:app-ch6-formula-precise}
     \begin{aligned}
-        \text{precise exception at }i \Rightarrow\ &\text{all instructions older than }i\text{ are committed}\\
-        &\wedge\ \text{no instruction younger than }i\text{ is architecturally visible}
+        \text{restartable fault at }i \Rightarrow\ &\text{all older instructions are committed}\\
+        &\wedge\ \text{$i$ and all younger instructions have no committed effects}
     \end{aligned}
 \end{equation}
 
@@ -287,18 +290,21 @@ Here $DRAM\_AT$ excludes the per-word transfer time; Chapter 3's $T_1$ includes 
 
 \paragraph{Chapter 7-F2 (Earliest Legal List-Scheduling Cycle)}\label{par:ch7-formula-2}
 \begin{equation}\label{eq:app-ch7-formula-list-legal}
-    cycle(i)=\min\!\left\{c\ \middle|\ \forall j\in pred(i),\ c\ge cycle(j)+lat(j),\ \text{and a compatible FU is free in }c \right\}.
+    cycle(i)=\min\!\left\{c\ \middle|\ \forall j\in pred(i),\ c\ge cycle(j)+\delta_{ji},\ \text{resources are legal in }c \right\}.
 \end{equation}
+$\delta_{ji}$ is the required edge separation; for a RAW edge in the simple fixed-latency model, it is $lat(j)$.
 
 \paragraph{Chapter 7-F3 (Resource-Constrained Initiation Interval)}\label{par:ch7-formula-3}
 \begin{equation}\label{eq:app-ch7-formula-res-ii}
     ResII=\max_t \left\lceil \frac{N_t}{U_t} \right\rceil
 \end{equation}
+Assumes disjoint classes of units that each accept one operation per cycle; multi-cycle resource occupancy requires a richer reservation model.
 
 \paragraph{Chapter 7-F4 (Recurrence-Constrained Initiation Interval)}\label{par:ch7-formula-4}
 \begin{equation}\label{eq:app-ch7-formula-rec-ii}
     RecII=\max_c \left\lceil \frac{Lat(c)}{Dist(c)} \right\rceil
 \end{equation}
+For dependence cycles with positive total iteration distance, using the sum of required edge latencies.
 
 \paragraph{Chapter 7-F5 (Minimum Initiation Interval Bound)}\label{par:ch7-formula-5}
 \begin{equation}\label{eq:app-ch7-formula-min-ii}

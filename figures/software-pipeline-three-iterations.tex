@@ -1,0 +1,19 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tabular}{clll}
+    \toprule
+    Cycle & ALU/branch issue & Memory issue & Phase \\
+    \midrule
+    0 & $A_1,\ D_1$ & & Prologue \\
+    1 & $E_1^\ast$ & $B_1$ & Prologue \\
+    2 & $A_2,\ D_2$ & & Kernel \\
+    3 & $E_2$ & $B_2,\ C_1$ & Kernel \\
+    4 & $A_3,\ D_3$ & & Kernel \\
+    5 & $E_3$ (exit) & $B_3,\ C_2$ & Kernel \\
+    6 & & & Drain: $B_3$ not ready \\
+    7 & & $C_3$ & Epilogue \\
+    \bottomrule
+  \end{tabular}
+  \caption{Three iterations start two cycles apart, but the final store still has to wait for its own load. $B_1$, $B_2$, and $B_3$ become usable in cycles 3, 5, and 7. The branch decides when to stop starting iterations; it does not erase unfinished stores.}
+  \label{fig:software-pipeline-three-iterations}
+\end{figure}
