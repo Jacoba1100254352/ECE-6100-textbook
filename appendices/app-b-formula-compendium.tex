@@ -120,7 +120,7 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
 
 \paragraph{Chapter 3-F8 (Full-Block Miss Penalty Model)}\label{par:auto-061}
 \begin{equation}\label{eq:auto-073}
-    MP_{full}=T_1+(N_{sb}-1)T_f,\qquad N_{sb}=2^B/W.
+    MP_{full}=T_1+(N_{sb}-1)T_f,\qquad N_{sb}=\left\lceil 2^B/W\right\rceil.
 \end{equation}
 
 \paragraph{Chapter 3-F9 (Early-Restart Approximation)}\label{par:auto-062}
@@ -171,6 +171,21 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
     CPI\approx 1+f_{branch}\cdot \text{stall}_{branch,avg}.
 \end{equation}
 
+\paragraph{Chapter 4-F7 (History-Table Indexing)}
+\begin{align}
+    index_{GShare}&=PC_{selected}\oplus GHR,\label{eq:app-b-gshare}\\
+    index_{GSelect}&=\operatorname{concat}(PC_p,GHR_h),\qquad N_{counters}=2^{p+h}.\label{eq:app-b-gselect}
+\end{align}
+For GShare, the selected PC and history fields have equal width.
+
+\paragraph{Chapter 4-F8 (Perceptron Prediction and Training)}
+\begin{equation}\label{eq:app-b-perceptron}
+    y=w_0+\sum_{i=1}^{n}w_i x_i,\qquad x_i\in\{-1,+1\}.
+\end{equation}
+Predict taken when $y\ge0$.
+If wrong or $|y|\le\theta$, update $w_0\leftarrow w_0+t$ and $w_i\leftarrow w_i+t x_i$, where $t$ encodes the actual outcome.
+The exercises use $\theta=\lfloor1.93n+14\rfloor$ and assume no weight overflow.
+
 
 \section*{Chapter 5 and Simulation Formula Set}\label{sec:auto-060}
 
@@ -189,6 +204,7 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
 \begin{equation}\label{eq:auto-085}
     DRAM\_TIME=DRAM\_AT+DRAM\_AT\_PER\_WORD\cdot WORDS\_PER\_BLOCK.
 \end{equation}
+Here $DRAM\_AT$ excludes the per-word transfer time; Chapter 3's $T_1$ includes the first completed sub-block transfer.
 
 
 \section*{Chapter 6 Formula Set (Dynamic ILP, Superscalar, and Out-of-Order Execution)}\label{sec:ch6-formulas}

@@ -157,8 +157,8 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Compulsory Miss}] First-reference miss for data not previously loaded.
     \item[\textit{Capacity Miss}] Miss caused by working set exceeding effective cache capacity.
     \item[\textit{Conflict Miss}] Miss caused by mapping/placement constraints despite sufficient total capacity.
-    \item[\textit{Write-Back}] Write policy where modified data is propagated on eviction.
-    \item[\textit{Write-Through}] Write policy where lower level is updated on each write hit.
+    \item[\textit{Write-Back}] Write policy that defers propagation of modified data until eviction, an explicit write-back, or a coherence transaction requires it.
+    \item[\textit{Write-Through}] Write policy that also sends each write hit to the next level, possibly through a buffer.
     \item[\textit{Write-Allocate}] Write-miss policy that fetches and installs the block before write.
     \item[\textit{Write-No-Allocate}] Write-miss policy that bypasses install and writes lower level directly.
     \item[\textit{Qubit}] Quantum bit whose useful state must be isolated and controlled well enough to preserve quantum behavior during computation.
@@ -175,9 +175,9 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Cryostat}] Cooling system used to maintain cryogenic temperatures for superconducting or quantum hardware.
     \item[\textit{Energy-Delay Product (EDP)}] Efficiency metric combining energy and runtime; lower EDP indicates a better energy/performance tradeoff.
     \item[\textit{SUP}] Superconducting Unit of Performance; proposed organization combining latency-oriented and throughput-oriented superconducting resources.
-    \item[\textit{PIPT}] Physically indexed, physically tagged cache organization in which TLB translation typically precedes L1 indexing/tag lookup.
+    \item[\textit{PIPT}] Physically indexed, physically tagged cache organization whose set index and tag are defined by the physical address.
     \item[\textit{VIPT}] Virtually indexed, physically tagged cache organization that overlaps indexing with translation.
-    \item[\textit{TLB}] Translation lookaside buffer storing recent virtual-to-physical translations.
+    \item[\textit{TLB}] Translation lookaside buffer caching virtual-to-physical translations and associated access-permission information.
     \item[\textit{Structural Hazard}] Stall risk from insufficient hardware resources.
     \item[\textit{Data Hazard}] Stall risk from operand read/write ordering conflicts.
     \item[\textit{Control Hazard}] Stall risk from unresolved branch/jump control flow.

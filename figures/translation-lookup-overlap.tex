@@ -1,0 +1,22 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=1cm,y=1cm]
+    \node[booklabel,font=\bfseries] at (2.2,4) {Serialized PIPT example};
+    \node[booklabel,font=\bfseries] at (9.3,4) {VIPT overlap};
+    \node[booklabel] (physicalstart) at (2.2,3.3) {Virtual address};
+    \node[bookbox,minimum width=3.4cm] (physicaltlb) at (2.2,2.2) {TLB translation};
+    \node[bookbox,minimum width=4.5cm] (physicalcache) at (2.2,0.5) {Index, array read, tag check};
+    \draw[bookarrow] (physicalstart) -- (physicaltlb);
+    \draw[bookarrow] (physicaltlb) -- node[right,font=\scriptsize] {physical address} (physicalcache);
+    \node[booklabel] (virtualstart) at (9.3,3.3) {Virtual address};
+    \node[bookbox,minimum width=3.2cm] (virtualtlb) at (7.4,2.2) {TLB translation};
+    \node[bookbox,minimum width=3.2cm] (virtualcache) at (11.2,2.2) {Index and array read};
+    \node[bookbox,minimum width=4.4cm] (physicalcompare) at (9.3,0.5) {Physical tag comparison};
+    \draw[bookarrow] (virtualstart.south) -- (virtualtlb.north);
+    \draw[bookarrow] (virtualstart.south) -- (virtualcache.north);
+    \draw[bookarrow] (virtualtlb.south) -- node[left,font=\scriptsize] {tag} (physicalcompare.north west);
+    \draw[bookarrow] (virtualcache.south) -- node[right,font=\scriptsize] {candidate entries} (physicalcompare.north east);
+  \end{tikzpicture}
+  \caption{Overlapping translation with cache work. VIPT starts the array lookup using untranslated page-offset bits, then checks the physical tag. The simple version requires the entire set index to fit within the page offset.}
+  \label{fig:translation-lookup-overlap}
+\end{figure}

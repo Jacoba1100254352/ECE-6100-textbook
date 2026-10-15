@@ -77,7 +77,8 @@ This is the key design lesson of the trace: next-block prefetching and victim ca
 \section{Integrated Themes from Chapter 4}\label{sec:auto-049}
 Chapter 4 connects pipeline structure to observed performance.
 Reading a timing diagram is therefore an exercise in inference: the reader is reconstructing hazards, bypass paths, memory behavior, and branch-handling policy from visible stage occupancy.
-The same chapter also introduces the progression from static branch handling to dynamic predictors such as always taken, one-bit and Smith-counter schemes, GShare, GSelect, Yeh/Patt, perceptrons, and hybrid tournament predictors.
+Static direction baselines include always taken and backward taken / forward not taken.
+One-bit and Smith-counter schemes, GShare, GSelect, local-history predictors, perceptrons, and tournament predictors add runtime learning.
 
 \subsection*{Pipeline Speedup}\label{subsec:auto-012}
 Assume a 5-stage design where each stage has 250 ps logic delay and pipeline-register overhead is 30 ps.
@@ -100,6 +101,7 @@ This illustrates how even moderate branch penalties raise CPI above the ideal va
 Suppose a scalar core has base $CPI=1$.
 Loads are 30\% of all instructions, the L1 data-cache miss ratio on loads is 5\%, and each such miss adds 20 cycles.
 Branches are 18\% of all instructions, the misprediction rate is 10\%, and each misprediction adds 2 cycles.
+Assume the stated penalties are additional to base execution and do not overlap one another.
 Then the added CPI from load misses is
 \begin{equation}\label{eq:auto-048a}
     0.30\times 0.05\times 20 = 0.30,
@@ -140,11 +142,14 @@ The hierarchy model treats L1 accesses separately from L2 internals, while L2 re
 This separation makes it easier to reason about statistics at each level without conflating local policy with downstream timing.
 
 Write strategy also changes the meaning of those statistics.
-\textit{Write-back, write-allocate (WBWA)} behavior in L1 emphasizes dirty-state tracking and deferred propagation, whereas \textit{write-through, write-no-allocate (WTWNA)} behavior in L2 emphasizes immediate lower-level visibility and no allocation on write misses.
+\textit{Write-back, write-allocate (WBWA)} behavior in L1 emphasizes dirty-state tracking and deferred propagation, whereas \textit{write-through, write-no-allocate (WTWNA)} behavior in L2 forwards every write to the next level and does not allocate on write misses.
+Forwarding a write does not imply that another processor can already observe it or that it has reached persistent storage.
 
 The ordering of read-miss repair and writeback events can also matter.
 Different servicing orders change replacement-state evolution and therefore alter downstream hit, miss, and writeback counts.
-If a lower level is disabled in the model, it is often best understood as an always-miss transit layer whose contribution to AAT is only the cost of passing requests to the next active level.
+A disabled cache level requires an explicit modeling rule.
+If requests bypass it entirely, its lookup contributes no hit time; substitute the next active level's service time directly.
+If the specification instead models an always-miss lookup stage, retain only the latency that specification assigns to it.
 
 
 \section{Prefetching Concepts}\label{sec:auto-052}
@@ -154,7 +159,8 @@ If a lower level is disabled in the model, it is often best understood as an alw
 
 To interpret prefetch behavior correctly, the simulator must also distinguish demand-filled lines from prefetched lines.
 A prefetch metadata bit provides that distinction.
-The first demand use of a prefetched line contributes to prefetch-hit interpretation, while eviction before first demand use contributes to prefetch-miss interpretation.
+In this model, the first demand use of a prefetched line counts as a prefetch hit, while eviction before first demand use counts as a prefetch miss.
+These are usefulness counters; another simulator may use the same names for lookup outcomes instead.
 
 \paragraph{Worked prefetch-counter interpretation}\label{par:auto-027c}
 Suppose a simulator reports 120 prefetched lines, 70 prefetch hits, and 25 prefetched lines evicted before first use.
@@ -176,6 +182,9 @@ In two-level analysis (Eq.~\eqref{eq:auto-050}):
 \begin{equation}\label{eq:auto-052}
     DRAM\_TIME = DRAM\_AT + DRAM\_AT\_PER\_WORD\cdot WORDS\_PER\_BLOCK.
 \end{equation}
+Here $DRAM\_AT$ is startup time before the per-word transfers.
+It differs from $T_1$ in Chapter 3's transfer model, which already includes delivery of the first sub-block.
+That definition explains why one formula multiplies by the full word count and the other uses $N_{sb}-1$ follow-up transfers.
 This form emphasizes that higher-level penalty is the lower-level average access behavior, not a fixed constant.
 
 
@@ -186,12 +195,14 @@ Increasing $B$ can exploit spatial locality but may also increase pollution and 
 More aggressive prefetching can reduce compulsory misses yet increase bandwidth pressure and useless fills.
 
 
-\section{Chapter 5 Summary}\label{sec:auto-055}
-Chapter 5 draws together the earlier performance, pipeline, and memory ideas into one simulation-oriented view.
-Pipeline timing and cache behavior are not separate topics; they are two views of the same broader question of where cycles are spent and why.
-The simulation concepts in this chapter provide a concrete way to observe those tradeoffs in controlled workloads.
-That same simulator-oriented reasoning extends naturally to branch-prediction accuracy, fetched-versus-retired instruction counts, queue pressure, and reorder-buffer pressure, which are developed further in Chapter 6.
-A grouped formula index for the full text is provided in Appendix~\ref{ch:formula-compendium}.
+\section{What to Carry Forward}\label{sec:auto-055}
+A useful simulator report tells a causal story: a demand access misses, a fill or write-back changes the hierarchy, and some part of the resulting delay becomes lost processor progress.
+Check the denominator, the event definition, and the timing assumptions before comparing any two counters.
+A lower miss ratio is evidence about one part of that story, not a complete performance verdict.
+
+This method extends to the queues and reorder buffers in the next chapter.
+The names of the structures change, but the question remains where useful work waits and what prevents it from moving.
+Appendix~\ref{ch:formula-compendium} collects the formulas once those modeling choices are clear.
 
 
 \section{Practice Questions}\label{sec:ch5-practice}

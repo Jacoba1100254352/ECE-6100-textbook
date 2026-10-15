@@ -261,7 +261,7 @@ It is intentionally separate from the main text so it can be distributed or with
 
     \item Fetch overlapping with data-memory access implies separate instruction/data memories or enough memory ports.
     An ALU consumer reaching EX before the producer reaches WB implies forwarding or bypassing.
-    A decode-stage consumer reading a value in the same cycle an older instruction writes it back implies a write-first/read-later same-cycle register-file convention.
+    A decode-stage consumer reading a value in the same cycle an older instruction writes it back needs write-first/read-later register-file timing or an equivalent WB-to-ID bypass.
 
     \item The BTB predicts the target address.
     The RAS predicts return targets by tracking call-return nesting.
@@ -272,7 +272,9 @@ It is intentionally separate from the main text so it can be distributed or with
     The taken conditional branch at \texttt{0x4A00} creates or refreshes a BTB entry for target \texttt{0x4AF0}.
     The return at \texttt{0x4AF8} uses and pops the RAS entry, predicting \texttt{0x4004}.
     After the return, the RAS is empty.
-    Because both \texttt{0x4000} and \texttt{0x4A00} have \(PC[7:4]=\texttt{0}\), a small direct-indexed BTB would need tags or replacement behavior to distinguish them cleanly.
+    Both \texttt{0x4000} and \texttt{0x4A00} select BTB index 0.
+    Under the specified direct-mapped convention, the conditional branch replaces the call's tagged entry; the return does not allocate an entry.
+    The final valid index-0 entry identifies branch \texttt{0x4A00} and target \texttt{0x4AF0}.
 
     \item Using rightmost-bit-newest GHR shifting:
     \[

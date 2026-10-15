@@ -50,6 +50,14 @@ An uncommitted store can wait in a speculative store queue; a committed store ca
 When prediction is added, speculation becomes more selective and usually more efficient.
 The processor estimates likely future behavior, executes along the estimated path, and commits the work only if the estimate is correct.
 
+\paragraph{Scheduling the next crew}
+The first lecture explains the idea through a building project.
+If the framing should finish today, schedule the wallboard crew for tomorrow instead of waiting for confirmation before making the call.\footnote{January 13, 2026 lecture, Notability note \emph{1. Syllabus}, \emph{Recording 2}, approximately 14:41--15:25.}
+When the estimate is right, the next job starts sooner.
+If the framing is delayed, the crew can arrive before there is work for it, and the early decision has a cost.
+The prediction is the estimate about completion; the speculation is acting on it.
+Merely making the estimate would not shorten the schedule.
+
 \paragraph{Example: branch prediction}\label{par:auto-007}
 Branch prediction is the canonical case.
 If the predictor guesses that a branch is taken, instruction fetch and decode proceed down the predicted target path immediately.
@@ -77,6 +85,18 @@ TLP can provide substantial throughput gains, but only if the workload contains 
 Inter-program parallelism is the coarsest common level, where independent processes run simultaneously under an operating system scheduler.
 This is the dominant form in desktop multitasking and cloud services, where many programs share the same physical platform.
 
+
+\section{A Budget of Transistors}\label{sec:transistor-budget}
+The January 15 lecture turns the power wall into a design question: if the next chip can contain more transistors, but running it faster would exceed a practical cooling budget, what should those transistors do?\footnote{January 15, 2026 lecture, Notability note \emph{2. ECE 6100}, \emph{Recording 3}, approximately 06:47--08:05; related slides INTRO-18--19.}
+A larger cache might avoid more memory trips.
+A wider core might execute more independent instructions.
+Additional cores might run more threads.
+These choices spend the same kind of physical resource on different sources of useful overlap.
+
+The industry shift toward energy-efficient multicore designs in the mid-2000s makes that question concrete; Intel's 2006 Core introduction explicitly emphasized performance per watt and multicore operation.
+It did not mean that instruction-level parallelism or single-core improvement had ended.
+It meant that more transistors could no longer be treated as a promise of proportionally faster execution for one unchanged program.
+The available work, the memory system, and the power budget still decide what the extra hardware can accomplish.
 
 \section{Flynn's Taxonomy}\label{sec:auto-006}
 Flynn's taxonomy classifies parallel machines by counting instruction streams and data streams.

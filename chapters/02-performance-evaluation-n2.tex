@@ -17,9 +17,14 @@ Two primary performance metrics appear repeatedly in computer architecture.
 \textit{Throughput} measures how many jobs complete per unit time.
 These metrics are related but not interchangeable.
 
-For a single-user interactive application, runtime is usually the dominant concern: the user wants one operation to finish quickly.
-For servers and shared systems, throughput is often dominant: the owner cares about how many requests the system can process per second.
-The same machine can be better under one metric and worse under the other, so performance claims must always specify which metric is being optimized.
+The January 20 lecture makes the distinction with an airline comparison: would you rather take a fast Concorde or operate a slower aircraft that carries many more passengers?\footnote{January 20, 2026 lecture, Notability note \emph{3. ECE 6100}, \emph{Recording 1}, approximately 02:00--05:15.}
+The passenger cares about time to the destination.
+The operator may care about how many passengers the aircraft can move per hour; extra seats can outweigh a longer trip in that comparison.
+This is a simplified capacity comparison, assuming full flights and ignoring turnaround time, not a complete airline business model.
+
+The same split appears in computing.
+An interactive user wants one request to finish quickly; a service operator also cares about the rate at which the system completes the whole request stream.
+Neither metric can stand in for the other.
 
 This distinction also explains why pipelining can be valuable even when individual operation latency does not fall dramatically.
 A deeper pipeline can increase the number of completed operations per unit time, improving throughput, while leaving single-operation latency unchanged or slightly worse.

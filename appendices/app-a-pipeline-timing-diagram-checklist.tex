@@ -7,8 +7,8 @@ Move cycle by cycle (column by column), then apply the prompts below.
 
 \subsection*{Quick Reading Order}\label{subsec:auto-014}
 \begin{enumerate}
-    \item Mark repeated stage labels (stall behavior).
-    \item Mark killed instructions (squashes, often shown as dashes).
+    \item Use the legend to distinguish repeated stall labels from normal multi-cycle execution.
+    \item Mark killed instructions separately from idle cells; a dash can mean either in different diagram conventions.
     \item Identify the event that caused each stall/squash (dependence, branch, resource conflict, or memory latency).
     \item Compute measured CPI from the traced window.
 \end{enumerate}
@@ -27,14 +27,16 @@ Move cycle by cycle (column by column), then apply the prompts below.
 \begin{itemize}
     \item \textbf{Ask:} Is the machine \textit{single-issue} or \textit{superscalar} (\textit{multi-issue})?
     \item \textbf{Cue:} In simple single-issue diagrams, each stage has at most one instruction per cycle.
-    \item \textbf{Meaning:} Two instructions shown in one stage in one cycle (for example two EX uses) implies multi-issue and/or multiple functional units.
+    \item \textbf{Meaning:} Two instructions starting in the same defined issue stage in one cycle demonstrate multi-issue.
+    Two instructions merely occupying EX at once do not: a single-issue machine can have several operations in flight across pipelined or separate functional units.
 \end{itemize}
 
 \paragraph{1.3 Multi-cycle execute units}\label{par:auto-030}
 \begin{itemize}
     \item \textbf{Ask:} Do some operations occupy EX for multiple cycles?
     \item \textbf{Cue:} One instruction appears in EX across consecutive cycles (EX, EX, EX, \ldots).
-    \item \textbf{Meaning:} That operation is using a multi-cycle execute unit and can back up younger instructions.
+    \item \textbf{Meaning:} First distinguish normal multi-cycle execution from an EX stall.
+    A multi-cycle unit can accept a new operation every cycle if pipelined; latency alone does not determine how often younger operations may start.
 \end{itemize}
 
 \subsection*{2. Data: Dependence and Forwarding}\label{subsec:auto-016}
@@ -43,15 +45,16 @@ Move cycle by cycle (column by column), then apply the prompts below.
 \begin{itemize}
     \item \textbf{Ask:} Where are \textit{RAW} hazards, and how many bubbles do they add?
     \item \textbf{Cue:} Consumer instruction repeats a stage (usually ID, sometimes IF) while waiting for producer timing.
-    \item \textbf{Meaning:} Number of repeated cells is the local dependence penalty.
+    \item \textbf{Meaning:} Extra residence beyond the normal stage duration reveals waiting.
+    Check whether the cause is the dependence itself or backpressure from another blocked instruction.
 \end{itemize}
 
 \paragraph{2.2 Forwarding strength}\label{par:auto-032}
 \begin{itemize}
     \item \textbf{Ask:} Is forwarding present, and from where?
     \item \textbf{Cue:} Back-to-back ALU dependencies proceed without stalling even though producer WB occurs later.
-    \item \textbf{Meaning:} This usually implies EX/MEM$\rightarrow$EX and MEM/WB$\rightarrow$EX forwarding.
-    If simple ALU$\rightarrow$ALU pairs stall, forwarding is limited.
+    \item \textbf{Meaning:} Some result path supplies the consumer before ordinary register-file write-back.
+    Use the producer/consumer separation to identify whether EX/MEM$\rightarrow$EX, MEM/WB$\rightarrow$EX, or another path is needed; one pair does not establish every bypass route.
 \end{itemize}
 
 \paragraph{2.3 Load-use behavior}\label{par:auto-033}
@@ -81,14 +84,16 @@ Move cycle by cycle (column by column), then apply the prompts below.
 \begin{itemize}
     \item \textbf{Ask:} Does the post-branch slot always execute, or can it be killed?
     \item \textbf{Cue:} Slot instruction either always completes (\textit{delay slot}) or is conditionally killed (\textit{squash slot}/branch-likely style).
-    \item \textbf{Meaning:} Always-executed slot indicates delay-slot semantics; conditional kill indicates squash-style semantics.
+    \item \textbf{Meaning:} A slot guaranteed to execute on both outcomes has ordinary delay-slot semantics.
+    A single trace in which it executes cannot by itself exclude conditional-annul semantics; check both outcomes or the ISA definition.
 \end{itemize}
 
 \paragraph{3.3 Taken/not-taken inference (branch-likely style)}\label{par:auto-037}
 \begin{itemize}
     \item \textbf{Ask:} Which branch outcome occurred?
     \item \textbf{Cue:} Whether the slot instruction executes or is squashed.
-    \item \textbf{Meaning:} In this text's branch-likely examples, a squashed slot corresponds to not taken.
+    \item \textbf{Meaning:} If the specified instruction annuls its slot on a not-taken outcome, a squashed slot indicates not taken.
+    Apply the instruction's actual annul rule rather than inferring one from the name ``likely.''
 \end{itemize}
 
 \paragraph{3.4 Prediction vs no prediction}\label{par:auto-038}
@@ -110,9 +115,10 @@ Move cycle by cycle (column by column), then apply the prompts below.
 \paragraph{4.2 Blocking vs non-blocking cache behavior}\label{par:auto-040}
 \begin{itemize}
     \item \textbf{Ask:} Is cache behavior \textit{blocking}, or can it do \textit{hit-under-miss} (\textit{non-blocking})?
-    \item \textbf{Cue:} Either all younger work freezes behind a miss, or independent work continues.
-    \item \textbf{Meaning:} Full freeze implies blocking behavior (common in simple in-order models).
-    Continued independent progress suggests non-blocking support and/or more advanced scheduling.
+    \item \textbf{Cue:} Look for a later cache access serviced while an earlier miss is outstanding.
+    \item \textbf{Meaning:} A later hit completing under that miss establishes hit-under-miss support.
+    Independent ALU progress alone does not prove the cache is non-blocking.
+    Conversely, a frozen core may be limited by in-order scheduling or a dependence even when its cache could accept another access.
 \end{itemize}
 
 \subsection*{5. Performance from the Diagram}\label{subsec:auto-019}
@@ -133,6 +139,8 @@ Assign repeated-stage cells and squashes to causes:
     \item memory-latency extension (repeated MEM).
 \end{itemize}
 This gives a practical CPI breakdown from one timing chart.
+Do not add every repeated cell in every instruction's row: one blocked instruction can make several younger instructions wait during the same cycle.
+Count lost progress once under the stated issue model, separate normal fill/drain from stalls, and state how overlapping causes are attributed.
 
 \subsection*{6. Common Gotchas}\label{subsec:auto-020}
 \begin{itemize}

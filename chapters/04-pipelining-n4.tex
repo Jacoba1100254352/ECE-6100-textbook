@@ -107,7 +107,8 @@ This is the same accounting pattern used for other hazards: identify the frequen
 
 
 \section{Data Hazards}\label{sec:auto-040}
-\textit{Data hazards} occur when the pipeline changes the order of read/write accesses to operands so that the order differs from the order in the original sequential program.
+\textit{Data hazards} arise when overlapping instructions could read or overwrite an operand before the program's dependences permit it.
+The dependence comes from the program; whether it requires a stall depends on where the pipeline produces and consumes the value.
 
 \paragraph{Read After Write (RAW)}\label{par:auto-023}
 A \textit{read-after-write (RAW)} hazard occurs when an instruction refers to a result that has not yet been calculated or stored by a preceding instruction.
@@ -115,7 +116,7 @@ This is the most common hazard in the classic 5-stage pipeline.
 \begin{equation}\label{eq:auto-042}
     \texttt{I1: ADD R1, R2, R3} \qquad \texttt{I2: SUB R4, R1, R5}
 \end{equation}
-In this case, \texttt{I2} needs \texttt{R1} in its ID/EX stage, but \texttt{I1} does not write \texttt{R1} until its WB stage.
+In this case, \texttt{I2} reads register operands in ID and needs the correct value at its EX input, but \texttt{I1} does not write \texttt{R1} to the register file until WB.
 Without intervention, \texttt{I2} would read a stale value.
 
 \paragraph{Write After Read and Write After Write}\label{par:auto-024}
@@ -133,7 +134,7 @@ If a load instruction is followed immediately by an instruction that uses the lo
 \begin{equation}\label{eq:auto-043}
     \texttt{I1: LW R1, 0(R2)} \qquad \texttt{I2: ADD R3, R1, R4}
 \end{equation}
-This case requires a one-cycle load-use stall even with forwarding.
+In this five-stage model, with one-cycle MEM and no earlier load-data path, the pair requires a one-cycle load-use stall even with forwarding.
 Compilers attempt to schedule independent instructions into these ``load-delay'' slots to maintain performance.
 
 \subsection{Same-Cycle Register-File Write Then Read}\label{subsec:auto-006a}
@@ -160,7 +161,7 @@ The compiler tries to fill these slots with useful independent work.
 This can reduce explicit branch stalls when suitable instructions exist, but becomes increasingly difficult as pipelines deepen and dependence constraints tighten.
 
 \paragraph{How software fills delay slots}\label{par:auto-025g}
-Delay-slot instructions execute whether the branch is taken or not.
+Ordinary, non-annulled delay-slot instructions execute whether the branch is taken or not.
 So a compiler may place an instruction into a delay slot only if doing so is safe on \emph{both} outcomes.
 The usual search order is:
 \begin{enumerate}
@@ -185,6 +186,8 @@ So the key distinction is:
     \item \textbf{delay slot:} instruction must be correct regardless of branch outcome,
     \item \textbf{squash slot:} instruction only needs to be correct on the predicted path because hardware may cancel it.
 \end{itemize}
+Cancellation must also prevent wrong-path stores, register updates, and exceptions from becoming architectural effects.
+The exact condition for annulling a slot belongs to the ISA; it need not match the behavior of another branch-likely instruction.
 
 
 \section{Branch Target Buffer (BTB)}\label{sec:auto-042}
@@ -193,7 +196,9 @@ The \textit{branch target buffer (BTB)} predicts where a branch goes (target pre
 \subsection{BTB with Tags}\label{subsec:auto-009}
 A tagged BTB stores branch PC tags and associated targets.
 On fetch, the BTB is indexed and tag-compared; a valid tag hit yields a predicted target.
-Tagging detects when the indexed entry belongs to a different branch, reducing destructive \textit{aliasing} at the cost of more hardware area and lookup work.
+With enough tag bits to identify the branch PC, a tag mismatch rejects an entry belonging to a different branch.
+Partial tags reduce the storage cost but can still produce false matches.
+Tagging therefore controls destructive \textit{aliasing}, with an area and lookup cost that depends on the implementation.
 
 \subsection{BTB without Tags}\label{subsec:auto-010}
 A tagless BTB behaves like a hashed direct lookup table from index to target metadata.
@@ -203,10 +208,13 @@ This can still be acceptable if the table is sized well and collision rate is lo
 \subsection{Hardware Return Address Stack}\label{subsec:auto-011}
 Function returns are indirect branches whose targets are difficult for generic BTB logic.
 A small hardware \textit{return-address stack (RAS)} records call return PCs and pops on return, producing very high return-target accuracy in common call/return patterns.
-This is one of the most cost-effective branch-target optimizations.
+The stack works because ordinary nested calls return in the reverse order from which they were made.
+Finite depth, unusual control flow, or a speculative call later squashed can disturb that pattern; speculative RAS updates need recovery just as other prediction state does.
 
 \paragraph{Worked BTB/RAS trace}\label{par:auto-025j}
-Assume the BTB is indexed by $PC[7:4]$ and the RAS is initially empty.
+Assume a direct-mapped BTB indexed by $PC[7:4]$, with full branch-PC checks, initially invalid entries, and an initially empty RAS.
+Instructions are four bytes long.
+For this exercise, calls and taken conditional branches allocate or update the BTB at resolution; returns use only the RAS and do not allocate a BTB entry.
 Now consider the short control-flow sequence
 \begin{center}
     \begin{tabular}{@{}ll@{}}
@@ -217,6 +225,7 @@ Now consider the short control-flow sequence
 \end{center}
 The call pushes return address \texttt{0x4004} onto the RAS and creates or refreshes a BTB entry for the call target \texttt{0x4A00}.
 The conditional branch updates its BTB entry with the taken target \texttt{0x4AF0}.
+Both PCs select index 0, so this update replaces the call's entry rather than storing a second target in that slot.
 The return then pops the top of the RAS and predicts target \texttt{0x4004}.
 The main bookkeeping distinction is that the BTB remembers branch and jump targets by PC, while the RAS handles the nested call-return discipline explicitly.
 
@@ -233,7 +242,7 @@ A simple static method is software heuristics, especially \textit{backward taken
 Compilers can also use profile-guided statistics to set likely-direction metadata (for example branch-likely annotations).
 
 Dynamic predictors improve further by learning runtime behavior (for example saturating counters and history-based schemes).
-The essential Chapter 4 lesson is that deeper pipelines require higher direction accuracy because misprediction penalty grows with the number of in-flight wrong-path stages.
+Later branch resolution generally increases the cost of a wrong prediction, making direction accuracy more valuable as the recovery distance grows.
 
 A very simple baseline is the \textit{always-taken} predictor.
 It ignores PC and history entirely and predicts that every conditional branch will be taken.
@@ -268,13 +277,14 @@ If the predictor uses $n$ index bits, then a common form is
 \begin{equation}\label{eq:pipe-gshare-index}
     index = PC_{low}[n-1:0]\ \oplus\ GHR[n-1:0].
 \end{equation}
+Here $PC_{low}$ means the selected PC bits, normally after dropping fixed instruction-alignment bits, not necessarily the literal lowest address bits.
 The XOR can reduce some destructive aliasing patterns by spreading correlated PCs across the counter table more evenly than a plain concatenation.
 Conceptually, GShare and GSelect use the same ingredients; they differ mainly in how PC and history are mixed to form the table index.
 
 \subsection{GSelect}\label{subsec:auto-010a}
 \textit{GSelect} is a simple global-history predictor.
 It keeps a \textit{global history register (GHR)} containing the most recent branch outcomes and combines that history with a small hash of the current PC to index a table of saturating counters.
-If the PC hash contributes $p$ bits and the GHR contributes $h$ bits, then the predictor selects one of $2^{p+h}$ counters.
+GSelect concatenates the $p$ selected PC bits with $h$ history bits, selecting one of $2^{p+h}$ counters.
 Prediction comes from the selected counter, usually by treating the upper half of the counter states as taken and the lower half as not taken.
 After the true outcome is known, the predictor updates that same counter and then shifts the actual outcome into the GHR\@.
 The key idea is that one branch can learn differently depending on the recent behavior of other branches.
@@ -312,10 +322,13 @@ The visited counter at $(PC[2],GHR)=(0,\texttt{10})$ has been trained up to \tex
 This is the mechanical rule to remember: read the counter indexed by the \emph{old} GHR, make the prediction, update that same counter with the actual outcome, then shift the actual outcome into the GHR\@.
 
 \subsection{Yeh/Patt}\label{subsec:auto-010b}
-\textit{Yeh/Patt} separates branch history into two levels.
+Yeh and Patt's two-level adaptive prediction is a family of organizations using branch history and a table of learned tendencies.
+The course's \textit{Yeh/Patt} example uses a PC-indexed local-history table and one shared pattern table, a PAg-style organization.\footnote{See Yeh and Patt's \emph{Alternative Implementations of Two-Level Adaptive Branch Prediction}, listed in Appendix~\ref{ch:source-notes}.}
+Other members of the family use global history or separate pattern tables.
 A first table, indexed by the branch PC, stores a short per-branch history pattern.
 That recorded history then indexes a second table of saturating counters.
-In other words, GSelect uses one shared global history for every branch, while Yeh/Patt gives each branch its own history entry before consulting the prediction counters.
+In this organization, GSelect's shared global history is replaced by a local-history lookup before consulting the prediction counters.
+Two branches that collide in the first table can still interfere with each other's local history.
 Prediction therefore proceeds in two steps:
 \begin{enumerate}
     \item Use the branch PC to read the branch's recorded history.
@@ -372,14 +385,20 @@ The predictor forms
     y=w_0+\sum_{i=1}^{n} w_i x_i.
 \end{equation}
 If $y\ge 0$, it predicts taken; otherwise it predicts not taken.
-After the real outcome is known, a common training rule is to update when the prediction was wrong or when the confidence $|y|$ is below a threshold $\theta$.
+After the real outcome is known, a common training rule updates when the prediction was wrong or when $|y|\le\theta$.
 If the target value is $t=+1$ for taken and $t=-1$ for not taken, then the update is
 \begin{equation}\label{eq:pipe-perceptron-update}
     w_0 \leftarrow w_0 + t,
     \qquad
     w_i \leftarrow w_i + t x_i.
 \end{equation}
-The perceptron predictor can learn longer correlations than small counter tables, but it costs more arithmetic and storage per prediction.
+The exercises use $\theta=\lfloor 1.93n+14\rfloor$, where $n$ is history length, following the empirical tuning rule in the original perceptron-prediction study.\footnote{Daniel A. Jiménez and Calvin Lin, \emph{Dynamic Branch Prediction with Perceptrons}; see Appendix~\ref{ch:source-notes}.}
+It is a design choice, not a mathematical requirement.
+Real weights have finite width; the small examples assume no overflow.
+
+A weight vector grows linearly with history length, while a table containing every distinct history pattern grows exponentially.
+That makes longer histories attractive, at the cost of computing a weighted sum.
+A single perceptron still has a limit: one linear decision boundary cannot perfectly represent every pattern, including XOR of two history bits.
 
 \paragraph{Worked perceptron update}\label{par:auto-025k}
 Suppose the active perceptron has weights $[1,2,-1,0,1]$, where the first value is the bias $w_0$, and suppose the current 4-bit global history is \texttt{1010}.
@@ -414,7 +433,9 @@ For example, a tournament design may arbitrate between a Yeh/Patt predictor and 
 
 \paragraph{Predictor-quality metrics}\label{par:auto-025e}
 Two branch-prediction ratios appear repeatedly in simulator output.
-If $N_{inst}$ is total dynamic instruction count, $N_{branch}$ is dynamic branch count, and $N_{correct}$ is the number of correct branch predictions, then
+For one measurement window, let $N_{inst}$ count retired instructions and $N_{branch}$ count the conditional branches receiving a direction prediction.
+Let $N_{correct}$ count their correct direction predictions.
+Then
 \begin{equation}\label{eq:pipe-branch-fraction}
     f_{branch}=\frac{N_{branch}}{N_{inst}}
 \end{equation}
@@ -428,7 +449,11 @@ These metrics answer different questions: branch fraction tells how often contro
 \paragraph{Prediction and update timing}\label{par:auto-025f}
 Prediction happens near fetch, but the true branch outcome becomes known only later when the branch resolves or retires.
 A pipelined predictor therefore cannot always train itself using only its \emph{current} tables, because the history pattern, perceptron sum, or chooser state seen at update time may differ from the state that existed when the prediction was originally made.
-Practical hardware and simulators solve this by preserving a small prediction-time snapshot, such as the selected history entry or chooser index, until the branch is ready to update the predictor.
+Save the prediction-time index, history, and other needed metadata until update.
+Train the selected counter's current value rather than blindly restoring its old value and losing intervening training.
+The serial worked traces predict one branch, resolve it, and update before the next prediction.
+Machines with several unresolved branches may instead shift predicted outcomes into history speculatively and restore or repair that history after a misprediction.
+Those timing rules must be stated before using a trace to model the hardware.
 
 
 \section{Timing-Diagram Interpretation}\label{sec:auto-044}
@@ -437,7 +462,7 @@ They are often enough to infer what forwarding paths, register-file timing rules
 A reliable reading order is:
 \begin{enumerate}
     \item Identify true, anti-, and output dependences from the program text before looking at the diagram.
-    \item Mark every repeated stage occupancy in the diagram as a stall candidate.
+    \item Mark repeated stage occupancy, distinguishing a stalled instruction from a normally multi-cycle operation.
     \item For each stall candidate, decide whether the cause is data, structural, or control.
     \item Infer which hardware feature would be required to remove that stall.
 \end{enumerate}
@@ -454,7 +479,7 @@ If a consumer in ID proceeds only when the producer is in WB, the design may be 
 \paragraph{Register-file timing cue}\label{par:auto-025c}
 Suppose a producer writes back in cycle $k$ and a dependent consumer reads registers in ID in that same cycle $k$.
 If the consumer does not stall further, then the machine must support either same-cycle write-before-read behavior or an equivalent WB-stage bypass into decode.
-If the consumer waits one more cycle, then neither mechanism is present.
+If the consumer waits one more cycle, absence of those mechanisms is one possible explanation; rule out other hazards before inferring the hardware.
 
 \paragraph{Control-hazard cue}\label{par:auto-025d}
 Wrong-path instructions that appear briefly and are then crossed out or squashed indicate speculative fetch.
@@ -464,17 +489,15 @@ Likely-bit or squash-slot behavior is visible when an instruction after the bran
 A fuller checklist remains in Appendix~\ref{ch:timing-diagram-checklist}, but these rules are the minimum set needed to infer pipeline structure from the kinds of timing traces used throughout this text.
 
 
-\section{Chapter 4 Summary}\label{sec:auto-045}
-Chapter 4 frames pipelining as throughput engineering with explicit hazard management.
-The five-stage model clarifies stage roles (IF, ID, EX, MEM, WB), while speedup equations show why ideal gains are reduced by latch overhead and stalls.
-CPI is modeled as $1+\text{stalls}_{avg}$, with stalls explained by the interaction of program behavior and hazard structure.
-Structural hazards are reduced through resource provisioning; control hazards are addressed through delay/squash semantics and prediction structures.
-BTBs predict branch targets, RAS handles returns efficiently, and direction prediction determines whether control transfer occurs, with software heuristics like backward taken/forward not taken and simple baselines like always taken providing reference points.
-Simple dynamic predictors such as one-bit prediction and Smith two-bit counters add robustness with very little hardware, while history-based predictors such as GShare, GSelect, and Yeh/Patt, neural-style schemes such as perceptrons, and hybrid tournament predictors refine that prediction further by learning correlations across prior branch outcomes.
-Operationally, those predictors are best understood as table- or vector-update procedures: identify the prediction-time index or history, read the predictor state, make the prediction, and only later train using the correct saved context.
-Because prediction and training happen at different times in the pipeline, practical predictors must also preserve enough prediction-time context to update correctly later.
-Timing diagrams then tie the whole chapter together by exposing which hazards, forwarding paths, and same-cycle register-file behaviors a concrete pipeline must implement.
-Together, these ideas define practical pipeline performance analysis and design.
+\section{What to Carry Forward}\label{sec:auto-045}
+A pipeline overlaps work without removing the program's dependences.
+Follow a value from its producing stage to its consuming stage before deciding whether forwarding is enough or a bubble is necessary.
+Follow a branch from prediction to resolution before counting the cost of a wrong path.
+The stage names alone do not specify either timing rule.
+
+Prediction keeps the front end supplied with plausible work; saved context lets the predictor learn from that decision later.
+The next scheduling question is what to do when one instruction waits but another is ready.
+After the integrated examples, Chapter~\ref{ch:ilp-superscalar} develops machinery that can choose that ready work without losing precise program behavior.
 
 
 \section{Practice Questions}\label{sec:ch4-practice}
@@ -486,6 +509,7 @@ The following questions reinforce the main ideas of Chapter 4 and are intended f
     Then compute the new CPI if 25\% of instructions suffer a single-cycle stall.
     \item A scalar pipeline has base $CPI=1$.
     Structural hazards add an average of $0.05\times 1$ cycles per instruction, load-use hazards add $0.12\times 1$, and branch mispredictions add $0.15\times 2$.
+    These are additional, non-overlapping contributions per retired instruction.
     Compute the final CPI\@.
     \item For the sequence below, list the RAW, WAR, and WAW dependences.
     Then identify which forwarding path is most important for reducing stalls.
@@ -500,6 +524,7 @@ The following questions reinforce the main ideas of Chapter 4 and are intended f
     \item Explain the distinct roles of the branch target buffer (BTB), return-address stack (RAS), and direction predictor.
     Why does a BTB remain useful even when the branch direction is trivial?
     \item A BTB is indexed by \texttt{PC[7:4]}.
+    Use the direct-mapped, fully tagged BTB convention from the worked trace, with four-byte instructions, initially invalid entries, allocation for calls and taken conditional branches, and RAS-only handling of returns.
     The return-address stack is initially empty.
     Simulate this short instruction stream: \texttt{0x4000: CALL 0x4A00}, \texttt{0x4A00: BREQZ R1,0x4AF0} (taken), \texttt{0x4AF8: RET}, \texttt{0x4004: ADD}.
     State the BTB effect of each control instruction and the final contents of the top of the RAS\@.
