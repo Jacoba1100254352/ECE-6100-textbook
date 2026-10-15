@@ -16,6 +16,13 @@ Completed in the first editorial pass
 - The recursive-factorial RAS example now has a finite-stack diagram and a
   five-return trace; the ROB-bypass explanation connects back to pipeline
   forwarding without confusing a pending producer's tag with a ready value.
+- The predictor lecture's workload-transfer recollection now explains why
+  selecting a design and evaluating it on held-out inputs are different tasks.
+  Online counter training remains allowed during evaluation of a fixed design.
+- A GSelect/GShare diagram holds the counter table at 16 two-bit entries while
+  changing the input construction. It connects the global-history recollection
+  to finite lookup/storage budgets, changed alias classes, and separate costs
+  for the history register and index logic.
 - The lecture's spin-lock joke now introduces a two-waiter trace, separating
   an observed opportunity from ownership granted by the atomic operation.
 - The Cedar contention recollection connects short paths to long queueing waits
@@ -66,7 +73,7 @@ Completed in the first editorial pass
   tighter chapter conclusions and question wording remove their cause without
   dropping questions, changing exercise assumptions, or shrinking the type.
   That pagination-only increment reduced the book to 164 pages. The current
-  recording-expanded book is 169 pages, without isolated spillover question pages.
+  recording-expanded book is 170 pages, without isolated spillover question pages.
 - Corrections distinguish buffering from speculation, equal-work from equal-time
   rate averaging, atomicity from ordering, reservation failure from interference,
   dynamic from guided scheduling, and unitary gates from measurement/reset.
@@ -121,7 +128,7 @@ Detailed reading and audit pass
   versus equal-time averaging, and conditional miss-ratio conventions.
 - Independent checks reproduce the 20 J versus 25 J comparison, energy-delay
   products, and all 65,536 low-byte input pairs for the packed-lane example.
-  The latest 169-page book and 16-page answer sheet pass PDF structural checks
+  The latest 170-page book and 16-page answer sheet pass PDF structural checks
   and build without warnings. New figures, formula spacing, chapter-one questions,
   glossary entries, and source references have received changed-page visual QA.
 - The cache-geometry drawing passes capacity/index checks and 768 address
@@ -134,6 +141,11 @@ Detailed reading and audit pass
   is not a claim of global LRU equivalence for arbitrary victim-cache systems.
   The revised narrative, swap table, chapter-one questions, and source entries
   have received changed-page visual QA after the warning-free build.
+- All 256 four-bit PC/history pairs reproduce the two index constructions and
+  their changed alias classes at a common 32-bit counter-table budget. The
+  predictor narrative, diagram, worked-trace flow, and new source entries have
+  received changed-page visual QA. The current build has no warnings or text
+  boxes extending outside the paper, and both PDFs pass structural validation.
 - All 123 chapter questions and the 10 advanced true/false prompts have matching
   answers, for 133 total pairs. The current book and
   answer sheet build without warnings; revised figures and source pages have
@@ -149,9 +161,9 @@ Remaining before the complete revision can be declared finished
 - Finish the contextual recording-selection pass across the earlier long
   drafts. All 72 segments have completed local automatic transcription. The
   late lectures (notes 26-28), final review, 21 earlier short segments, and
-  longer segments through the first pipeline note have been read in context,
-  totaling 49 of 72 complete automatic drafts. Selected excerpts from other
-  lectures are already used. The remaining 23 long drafts still need contextual
+  longer segments through the first dynamic-ILP notes have been read in context,
+  totaling 58 of 72 complete automatic drafts. Selected excerpts from other
+  lectures are already used. The remaining 14 long drafts still need contextual
   review.
   Automatic text is not authority for exact quotations, names, or numbers.
 - Integrate additional useful lecture stories with source/time references.

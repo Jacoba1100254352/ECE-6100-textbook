@@ -1,0 +1,27 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=1cm,y=1cm]
+    \node[font=\small\bfseries] at (2.9,4.45) {GSelect};
+    \node[font=\small\bfseries] at (9.9,4.45) {GShare};
+    \node[bookbox,minimum width=2.5cm] (selectpc) at (1.4,3.55) {PC: 2 selected bits};
+    \node[bookbox,minimum width=2.5cm] (selecthistory) at (4.4,3.55) {GHR: 2 bits};
+    \node[bookbox,minimum width=2.5cm] (sharepc) at (8.4,3.55) {PC: 4 selected bits};
+    \node[bookbox,minimum width=2.5cm] (sharehistory) at (11.4,3.55) {GHR: 4 bits};
+    \node[bookbox,minimum width=3.1cm] (selectcombine) at (2.9,2.2) {Concatenate: $2+2$ bits};
+    \node[bookbox,minimum width=3.1cm] (sharecombine) at (9.9,2.2) {Bitwise XOR};
+    \draw[bookarrow] (selectpc.south) -- (selectcombine.north west);
+    \draw[bookarrow] (selecthistory.south) -- (selectcombine.north east);
+    \draw[bookarrow] (sharepc.south) -- (sharecombine.north west);
+    \draw[bookarrow] (sharehistory.south) -- (sharecombine.north east);
+    \node[bookbox,minimum width=3.1cm] (selectindex) at (2.9,0.85) {4-bit index};
+    \node[bookbox,minimum width=3.1cm] (shareindex) at (9.9,0.85) {4-bit index};
+    \draw[bookarrow] (selectcombine.south) -- (selectindex.north);
+    \draw[bookarrow] (sharecombine.south) -- (shareindex.north);
+    \node[bookbox,minimum width=4.4cm] (selecttable) at (2.9,-0.5) {16 counters $\times$ 2 bits = 32 bits};
+    \node[bookbox,minimum width=4.4cm] (sharetable) at (9.9,-0.5) {16 counters $\times$ 2 bits = 32 bits};
+    \draw[bookarrow] (selectindex.south) -- (selecttable.north);
+    \draw[bookarrow] (shareindex.south) -- (sharetable.north);
+  \end{tikzpicture}
+  \caption{Two illustrative index constructions at the same counter-table budget. Both select among 16 two-bit counters. GSelect concatenates two PC bits with two history bits; GShare XORs four PC bits with four history bits. PC fields omit fixed alignment bits. The history registers and index logic differ, and neither design is guaranteed to predict better on every workload.}
+  \label{fig:predictor-index-budget}
+\end{figure}

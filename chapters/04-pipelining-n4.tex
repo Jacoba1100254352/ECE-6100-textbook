@@ -256,6 +256,11 @@ Target prediction answers where a branch goes.
 A simple static method is software heuristics, especially \textit{backward taken / forward not taken (BTFNT)}: loop back-edges are often taken, many forward conditionals are often not taken.
 Compilers can also use profile-guided statistics to set likely-direction metadata (for example branch-likely annotations).
 
+Conte recalls a compiler team trying benchmark-derived prediction heuristics on a database workload and finding that the benefit did not carry over.
+The useful lesson is about the workload, not a universal verdict on static prediction.
+Choose heuristics or hardware parameters using training runs, then evaluate the fixed design on separate representative inputs.
+A dynamic predictor can still train its counters during each evaluation run; fixing the design means not repeatedly tuning its parameters to the test results.
+
 Dynamic predictors improve further by learning runtime behavior (for example saturating counters and history-based schemes).
 Later branch resolution generally increases the cost of a wrong prediction, making direction accuracy more valuable as the recovery distance grows.
 
@@ -293,8 +298,13 @@ If the predictor uses $n$ index bits, then a common form is
     index = PC_{low}[n-1:0]\ \oplus\ GHR[n-1:0].
 \end{equation}
 Here $PC_{low}$ means the selected PC bits, normally after dropping fixed instruction-alignment bits, not necessarily the literal lowest address bits.
-The XOR can reduce some destructive aliasing patterns by spreading correlated PCs across the counter table more evenly than a plain concatenation.
+The XOR changes which PC/history contexts share a counter.
+That can reduce destructive interference on a workload, but it also creates collisions between other contexts; it is not a universal accuracy improvement.
 Conceptually, GShare and GSelect use the same ingredients; they differ mainly in how PC and history are mixed to form the table index.
+
+Conte's design recollection starts with a plain Smith-counter table: adding global history and mixing it with the PC improved prediction on the traces his team tried.
+The opportunity was to make the available table more useful, not to assume unlimited storage.
+With a fixed index width, the counter count stays fixed; more input context must share those entries rather than obtaining a separate counter for every possible combination.
 
 \subsection{GSelect}\label{subsec:auto-010a}
 \textit{GSelect} is a simple global-history predictor.
@@ -303,6 +313,12 @@ GSelect concatenates the $p$ selected PC bits with $h$ history bits, selecting o
 Prediction comes from the selected counter, usually by treating the upper half of the counter states as taken and the lower half as not taken.
 After the true outcome is known, the predictor updates that same counter and then shifts the actual outcome into the GHR\@.
 The key idea is that one branch can learn differently depending on the recent behavior of other branches.
+
+Figure~\ref{fig:predictor-index-budget} compares two small designs with the same number of counters.
+GSelect reserves index positions for PC and history separately; GShare mixes them across the same index positions.
+The history-register bits and index logic still have a cost, so equal counter storage does not mean equal total hardware cost.
+
+\input{figures/predictor-index-budget}
 
 \paragraph{Worked GSelect trace}\label{par:pipe-gselect-worked}
 The following trace makes the lookup order explicit.
