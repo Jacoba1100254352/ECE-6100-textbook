@@ -261,14 +261,11 @@ which leads to the same conclusion under the reciprocal metric.
 This example is intentionally simple: the point is to show that cost-aware comparisons are still just ratio comparisons once a common baseline is fixed.
 
 
-\section{Chapter 2 Summary}\label{sec:auto-018}
-Chapter 2 provides the framework for disciplined performance reasoning.
-Runtime and throughput are distinct objectives and must not be mixed casually.
-CPU time decomposes into IC, CPI, and cycle time, which allows precise reasoning about optimization impact.
-RISC and CISC are best evaluated as tradeoff points in Eq.~\eqref{eq:auto-002} rather than as absolute categories.
-Amdahl's Law gives hard limits for fixed-size speedup, while Gustafson's Law explains scaled-workload growth without contradiction.
-Finally, performance summaries require a stated workload mix: arithmetic means combine job times, harmonic means combine rates for equal work, and weights express unequal work or job frequencies.
-These tools form the quantitative core used in later chapters.
+\section{What to Carry Forward}\label{sec:auto-018}
+Start with the useful work, then choose the metric: runtime for one job, throughput for a stream of jobs.
+Track instruction count, CPI, and cycle time together rather than declaring a winner from one factor.
+Keep the fixed-work and scaled-work questions separate, and choose an averaging rule that matches the workload mix.
+Those habits matter even more when the next chapter adds a memory hierarchy: a faster core can still spend its time waiting for data.
 
 
 \section{Practice Questions}\label{sec:ch2-practice}

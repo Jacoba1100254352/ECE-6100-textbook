@@ -8,71 +8,22 @@ It keeps useful data nearby, overlaps independent work, and sometimes starts wor
 Each improvement creates another question: what happens when the guess is wrong, the data is missing, or two processors want to change the same value?
 Those questions connect the chapters that follow.
 
-We begin with the kinds of parallel work a machine can exploit and the measurements that tell us whether an improvement helped.
-Caches and pipelines then show how a single core hides or avoids waiting.
-Dynamic scheduling and compiler scheduling offer two ways to find more overlap.
-The later chapters move beyond one core, where keeping copies consistent, coordinating threads, and carrying messages become part of the computation itself.
-
 This is a course companion, not a replacement for the lectures or the current assignment specification.
-Read the prose for the mechanism, work through the examples for its consequences, and use the end-of-chapter questions to test whether you can reason without the explanation in front of you.
-The separate answer sheet follows the same chapter and question numbering.
-The formula compendium and glossary are reference tools; they are most useful after the underlying ideas are familiar.
-Appendix~\ref{ch:advanced-topics} extends the discussion to quantum and superconducting architectures, and Appendix~\ref{ch:final-review-checklist} supports a final review.
+Read the prose for the mechanism and work through the examples for its consequences.
+The chapter questions and separate answer sheet test that reasoning; the formula reference, glossary, and final-review checklist help you revisit it.
 
 \section*{Stories, Sources, and Simplified Machines}
 Short lecture examples appear where they explain an architectural choice.
 An attributed example is tied to the supplied course material in Appendix~\ref{ch:source-notes}; an uncited everyday analogy is an illustration written for this book.
-New analogies explain mechanisms without being attributed to the instructor.
 Historical machines provide context, while cycle counts and small diagrams describe explicitly simplified models unless identified otherwise.
 Always carry the stated assumptions into a calculation: forwarding timing, queue width, memory policy, and the meaning of a counter can change the answer.
 
 
-\section*{Cross-Chapter Reading Paths}\label{sec:cross-chapter-reading-paths}
+\section*{Choosing a Reading Path}\label{sec:cross-chapter-reading-paths}
 \begin{enumerate}
-    \item Readers who want the performance-and-memory foundation should begin with Chapters 1 through 3 and then read the first part of Chapter 4.
-    \item Readers focused on control hazards, prediction, and data hazards should concentrate on the middle and later sections of Chapter 4.
-    \item Readers focused on instruction-level parallelism should read Chapter 6 for dynamic ILP and Chapter 7 for compiler-scheduled ILP\@.
-    \item Readers focused on simulator-style interpretation and consolidated worked checks should use Chapter 5 alongside the detailed discussions in Chapters 3, 4, and 6.
-    \item Readers focused on thread-level parallelism, coherence, and shared-memory multiprocessors should continue from Chapters 1 and 2 into Chapters 8 through 10.
-    \item Readers reviewing the advanced-topics material should read Appendix~\ref{ch:advanced-topics}.
-    \item Readers doing a last comprehensive review should use Appendix~\ref{ch:final-review-checklist} to identify weak concepts, then return to the relevant chapter sections.
+    \item \textit{Build the foundation.} Chapters 1 and 2 introduce parallelism and performance. Chapters 3 and 4 show how caches, pipelines, and prediction turn those ideas into a working processor.
+    \item \textit{Put the pieces together.} Use Chapter 5 alongside Chapters 3, 4, and 6 when interpreting simulator counters or combining cache and pipeline calculations.
+    \item \textit{Find more overlap.} Chapter 6 lets hardware schedule independent instructions; Chapter 7 gives that job to the compiler. Read them together to compare what each scheduler must know.
+    \item \textit{Move beyond one core.} Chapters 8 through 10 connect shared data, synchronization, and communication. Coherence answers which copy to read; consistency and synchronization constrain how different accesses fit together.
+    \item \textit{Review selectively.} Use Appendix~\ref{ch:final-review-checklist} to locate weak concepts, then return to their explanations. Appendix~\ref{ch:advanced-topics} extends the architectural questions to quantum and superconducting machines.
 \end{enumerate}
-
-
-\section*{Topic Coverage Map}\label{sec:auto-002}
-
-\paragraph{Chapter 1: Introduction}\label{par:auto-001}
-Coverage includes speculation with and without prediction, grain sizes of parallelism (bit, instruction, thread, and inter-program), Flynn taxonomy, single instruction, multiple data (SIMD) versus multiple instruction, multiple data (MIMD), pipelining as temporal parallelism, and the distinction between packed-word SIMD and pipelined vector operations.
-
-\paragraph{Chapter 2: Performance Evaluation}\label{par:auto-002}
-Coverage includes throughput versus runtime, the central processing unit (CPU)-time equation in terms of instruction count (IC), cycles per instruction (CPI), and cycle time, reduced instruction set computer (RISC) versus complex instruction set computer (CISC) tradeoffs, Amdahl's and Gustafson's laws, and correct use of arithmetic versus harmonic means.
-
-\paragraph{Chapter 3: Cache Memories}\label{par:auto-003}
-Coverage includes static random-access memory (SRAM) versus dynamic random-access memory (DRAM) and bit-line delay, locality, hierarchy levels, virtual-memory terminology and its analogy to caching, average access time (AAT), the three C's of misses, cache geometry and construction, replacement and write policies, insertion-policy choices such as MIP and LIP, prefetching strategies including Markov and hybrid schemes, techniques to improve miss rate, miss penalty, and hit time, simulator-style hierarchy statistics, and compiler/data-layout effects.
-
-\paragraph{Chapter 4: Pipelining}\label{par:auto-004}
-Coverage includes instruction fetch / instruction decode / execute / memory / write back (IF/ID/EX/MEM/WB) behavior, speedup equations, cycles per instruction (CPI) stall modeling, the principle that program behavior plus hazards produces stalls, structural and control hazards, delay and squash-slot ideas, branch target buffer (BTB) behavior with and without tags, return-address stack (RAS) behavior, direction-prediction heuristics, and dynamic predictors including one-bit and Smith-counter schemes, GShare, GSelect, Yeh/Patt, perceptrons, hybrid tournament selection, and delayed predictor-update timing.
-
-\paragraph{Chapter 5: Integrated Synthesis and Cache Simulation Concepts}\label{par:auto-005}
-Coverage includes integrated synthesis, worked pipeline calculations, hierarchy semantics, prefetching, and interpretation of simulator-style cache, branch, and average access time (AAT) statistics.
-
-\paragraph{Chapter 6: Dynamic ILP, Superscalar Scheduling, and Out-of-Order Execution}\label{par:scope-ch6}
-Coverage includes cycles per instruction (CPI) versus instructions per cycle (IPC) interpretation, instruction-level parallelism (ILP), historical superscalar context, fire/complete ordering models, scoreboarding and busy-bit scheduling, function-unit latency considerations, Tomasulo-style reservation stations, physical register files, result buses, register renaming intuition, precise versus imprecise exceptions, reorder buffer (ROB) and future-file organization, checkpoint/repair recovery, simulator-style fetched/retired and queue-pressure counter interpretation, and the security consequences of speculative out-of-order execution.
-
-\paragraph{Chapter 7: Compiler-Scheduled ILP and Software Pipelining}\label{par:scope-ch7}
-Coverage includes compiler-scheduled very long instruction word (VLIW) execution, dependence-graph and list-scheduling ideas, zero-no-op multi-op encoding with tail and pause fields, software pipelining and iterative modulo scheduling, and memory disambiguation.
-
-\paragraph{Chapter 8: Multiprocessors, Interconnects, and Cache Coherence}\label{par:scope-ch8}
-Coverage includes shared-memory versus message-passing organization, standalone multiprocessors versus accelerator systems, buses versus point-to-point links, the cache-coherence problem and its formal properties, shared-cache versus directory-based versus snooping solutions, MSI coherence states and transactions, MESI/MOESI/MOESIF refinements including \texttt{E}, \texttt{O}, and \texttt{F}, transient coherence states, directory-entry structure and message flow, limited and distributed directory organizations, sharing patterns and false sharing, and shared-memory programming support through locks, barriers, and atomic synchronization primitives.
-
-\paragraph{Chapter 9: Atomic Synchronization, Transactional Memory, and Memory Consistency}\label{par:scope-ch9}
-Coverage includes the distinction between coherence states and full protocol behavior, abort-versus-intervene transfer policies, load-link / store-conditional, fetch-and-op and fetch-and-add primitives, dynamic work claiming, tree and tournament locks, sense-reversing barriers, hardware barrier intuition, transactional-memory execution and aborts, and the distinction between coherence and memory consistency, including strict consistency, sequential consistency, relaxed consistency, data races, and synchronization ordering through fences and acquire/release style semantics.
-
-\paragraph{Chapter 10: Parallel Interconnection Networks}\label{par:scope-ch10}
-Coverage includes the distinction between direct and indirect topologies, hypercube organization and Gray-code intuition, $k$-ary $n$-dimensional meshes and tori, physical-layout constraints and wire-length balance, bisection bandwidth, crossbars and dance-hall style switching, multi-stage interconnects such as omega networks, perfect-shuffle wiring, deterministic versus adaptive versus oblivious routing, packets versus flits, and the progression from store-and-forward to cut-through, wormhole, and virtual-channel flow control.
-
-\paragraph{Appendix D: Advanced Topics}\label{par:scope-appd}
-Coverage includes quantum computers as accelerators, decoherence, imperfect control, NISQ limits, fault-tolerant logical qubits, reversible phase-oracle intuition, superconducting-circuit constraints, compiler-scheduled dataflow execution, operand queues, barrel processing, and combined single-thread/throughput-oriented superconducting processor organization.
-
-\paragraph{Appendix E: Final Review Checklist}\label{par:scope-appe}
-Coverage includes a comprehensive concept checklist, review clarifications for tiling, iterative modulo scheduling, memory consistency, barriers versus locks, and bisectional bandwidth, plus fast self-check prompts.

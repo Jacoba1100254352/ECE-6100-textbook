@@ -1,0 +1,19 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[savedpc/.style={bookbox,minimum width=2.5cm,minimum height=5mm,inner sep=2pt}]
+    \node[booklabel] at (0,3) {Program's saved return PCs};
+    \node[booklabel] at (5.5,3) {Three-entry predictor};
+    \foreach \height/\target in {0/C,0.55/R,1.1/R,1.65/R,2.2/R} {
+      \node[savedpc] at (0,\height) {$\target$};
+    }
+    \foreach \height in {1.1,1.65,2.2} {
+      \node[savedpc] at (5.5,\height) {$R$};
+    }
+    \node[booklabel,anchor=west] at (1.4,2.2) {next return};
+    \node[booklabel,align=center] at (5.5,0.25) {The oldest two entries\\were displaced.};
+    \node[booklabel,anchor=west] at (-1.25,-0.85) {Needed: $R,R,R,R,C$};
+    \node[booklabel,anchor=west] at (4.25,-0.85) {Predicted: $R,R,R,R,R$};
+  \end{tikzpicture}
+  \caption{Deep recursion need not require a deep predictor to get most returns right. Here overflow drops the oldest entry, and a pop repeats the bottom prediction. Only the final return to the outside caller misses. The program's saved return addresses remain correct.}
+  \label{fig:recursive-ras}
+\end{figure}

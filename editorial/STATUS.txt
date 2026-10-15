@@ -10,9 +10,12 @@ Completed in the first editorial pass
   movement, and communication.
 - Source-supported slide examples restore the jet-simulation, Cray-vector,
   independent-addition, rate-averaging, and register-renaming context.
-- Five recording-based examples have note/recording/time references, including
+- Seven recording-based examples have note/segment/time references, including
   construction scheduling, the power-wall design question, aircraft throughput,
   supercomputer pricing, and a full cache set versus a full cache.
+- The recursive-factorial RAS example now has a finite-stack diagram and a
+  five-return trace; the ROB-bypass explanation connects back to pipeline
+  forwarding without confusing a pending producer's tag with a ready value.
 - New diagrams and timing views explain dependencies, Amdahl's limit, cache lookup,
   pipeline overlap, translation/lookup overlap, false sharing, release/acquire,
   network bisection, register versions, result-bus contention, and loop draining.
@@ -23,6 +26,13 @@ Completed in the first editorial pass
   a one-qubit phase/interference diagram supplies a concrete quantum example.
 - Typography, running heads, front matter, contents depth, chapter openings,
   captions, and PDF metadata have been revised.
+- The front-matter roadmap replaces a repetitive coverage catalog with five
+  reading paths; detailed topic listings remain in the table of contents.
+- A contact-sheet layout pass covered every page of the 166-page intermediate
+  book and the 16-page answer sheet. It found two near-empty spillover pages;
+  tighter chapter conclusions and question wording remove their cause without
+  dropping questions, changing exercise assumptions, or shrinking the type.
+  The rebuilt book is 164 pages, with no isolated spillover question pages.
 - Corrections distinguish buffering from speculation, equal-work from equal-time
   rate averaging, atomicity from ordering, reservation failure from interference,
   dynamic from guided scheduling, and unitary gates from measurement/reset.
@@ -78,16 +88,18 @@ Detailed reading and audit pass
 - All 123 chapter questions and the 10 advanced true/false prompts have matching
   answers, for 133 total pairs. The current book and
   answer sheet build without warnings; revised figures and source pages have
-  been rendered and inspected. Whole-book visual QA is still outstanding.
+  been rendered and inspected. The whole-book layout pass is complete for this
+  draft; changed-page checks must be repeated after remaining lecture additions.
 
 Remaining before the complete revision can be declared finished
 - Review the available lecture recordings, using automatic transcripts as drafts
   rather than as authority for exact quotations, names, numbers, or anecdotes.
 - Integrate additional useful lecture stories with source/time references.
-- Check continuity across the complete book and remove unhelpful duplication
-  from front matter or reference prose while preserving useful study aids.
-- Reconcile each changed exercise or convention with the answer sheet.
-- Inspect the final rendered book across every chapter, appendix, and new figure.
+- Finish checking continuity across the complete book while preserving useful
+  study aids; the front-matter coverage duplication has been removed.
+- Reconcile any further exercise or convention changes with the answer sheet.
+- Repeat changed-page visual checks after the remaining lecture additions;
+  this draft has had an every-page layout pass and enlarged changed-page checks.
 - Commit and push completed work; tag and publish the finished distribution.
 
 Local source handling

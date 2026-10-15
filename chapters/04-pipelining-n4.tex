@@ -211,6 +211,21 @@ A small hardware \textit{return-address stack (RAS)} records call return PCs and
 The stack works because ordinary nested calls return in the reverse order from which they were made.
 Finite depth, unusual control flow, or a speculative call later squashed can disturb that pattern; speculative RAS updates need recovery just as other prediction state does.
 
+\paragraph{A tiny predictor for deep recursion}
+In the lecture, Conte uses recursive factorial to ask what a small RAS should do when many calls share one return address.
+Suppose an outside caller saves address $C$, and four recursive calls at the same instruction each save address $R$.
+The real unwind needs $R,R,R,R,C$, but a three-entry RAS that discards its oldest entry on overflow retains only $R,R,R$.
+For this illustration, each pop shifts the remaining entries upward and repeats the old bottom entry at the bottom.
+It therefore predicts $R$ on all five returns: the recursive returns are right, and the final return to $C$ is wrong.
+Figure~\ref{fig:recursive-ras} separates the lost prediction history from the program's intact call state.
+
+\input{figures/recursive-ras}
+
+This is one illustrative refill policy, not a requirement for every RAS.
+The useful question is not whether a counterexample exists, but whether extra predictor storage avoids enough mispredictions to justify its cost.
+A RAS predicts where to fetch; it does not replace the program's actual saved return addresses.
+When a prediction is wrong, resolution of the return redirects execution to the real target.
+
 \paragraph{Worked BTB/RAS trace}\label{par:auto-025j}
 Assume a direct-mapped BTB indexed by $PC[7:4]$, with full branch-PC checks, initially invalid entries, and an initially empty RAS.
 Instructions are four bytes long.
@@ -519,21 +534,18 @@ The following questions reinforce the main ideas of Chapter 4 and are intended f
         \texttt{SUB R5, R3, R6}\\
         \texttt{SW R5, 0(R7)}
     \end{quote}
-    \item A timing diagram shows that instruction fetch continues in the same cycle that another instruction accesses data memory, that a dependent ALU consumer reaches EX before the producer reaches WB, and that a decode-stage consumer can read a value in the same cycle an older instruction writes it back.
-    What does each of these observations imply about the hardware organization?
+    \item What hardware is implied when (a) instruction fetch overlaps a data-memory access, (b) a dependent ALU consumer reaches EX before its producer reaches WB, and (c) decode reads a value in the cycle an older instruction writes it back?
     \item Explain the distinct roles of the branch target buffer (BTB), return-address stack (RAS), and direction predictor.
     Why does a BTB remain useful even when the branch direction is trivial?
-    \item A BTB is indexed by \texttt{PC[7:4]}.
-    Use the direct-mapped, fully tagged BTB convention from the worked trace, with four-byte instructions, initially invalid entries, allocation for calls and taken conditional branches, and RAS-only handling of returns.
-    The return-address stack is initially empty.
-    Simulate this short instruction stream: \texttt{0x4000: CALL 0x4A00}, \texttt{0x4A00: BREQZ R1,0x4AF0} (taken), \texttt{0x4AF8: RET}, \texttt{0x4004: ADD}.
-    State the BTB effect of each control instruction and the final contents of the top of the RAS\@.
+    \item Use the worked trace's direct-mapped, fully tagged BTB indexed by \texttt{PC[7:4]}: four-byte instructions, initially invalid entries, allocation for calls and taken conditional branches, RAS-only returns, and an initially empty RAS.
+    Simulate \texttt{0x4000: CALL 0x4A00}, \texttt{0x4A00: BREQZ R1,0x4AF0} (taken), \texttt{0x4AF8: RET}, \texttt{0x4004: ADD}.
+    State each control instruction's BTB effect and the final RAS top.
     \item A GSelect predictor uses a 2-bit global history register and indexes the predictor table with \texttt{PC[2]} and the current GHR. The row for \texttt{PC[2]=0} is \texttt{[01,10,11,00]} for GHR \texttt{00,01,10,11}, the row for \texttt{PC[2]=1} is \texttt{[10,01,00,11]}, and the initial GHR is \texttt{01}.
     Simulate the following branch sequence in order: \texttt{(0x2004,T)}, \texttt{(0x2008,N)}, \texttt{(0x2004,T)}, \texttt{(0x200C,T)}.
     For each access, give the selected table entry before update, the prediction, the updated counter, and the new GHR\@.
-    \item A Yeh/Patt predictor uses \texttt{PC[3:2]} to index a history table, and each history register is 2 bits wide.
-    Explain how the history-table lookup and the pattern-table lookup differ from the indexing rule used in GSelect.
-    Then state one situation in which Yeh/Patt can distinguish branches that simple global-history indexing tends to alias together.
+    \item A Yeh/Patt predictor uses \texttt{PC[3:2]} to select a 2-bit local-history register.
+    Explain how its history-table and pattern-table lookups differ from GSelect.
+    Give one case where it distinguishes branches that simple global-history indexing aliases together.
     \item A student claims that if every Yeh/Patt local-history register is initialized to \texttt{00}, then the first prediction for every branch must be not taken.
     Is that claim correct?
     Explain which structure determines the actual first prediction and why the history table alone is not enough.

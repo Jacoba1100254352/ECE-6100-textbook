@@ -479,6 +479,12 @@ If no matching entry exists, the value must already have retired, so dispatch re
 This is often described as a ROB with bypass or forwarding.
 It is effective, but the search itself is associative and can become part of the critical timing path.
 
+Conte connects this search to the forwarding paths in the five-stage pipeline: both find the newest older producer instead of blindly reading an outdated architectural register.
+The difference is what can be forwarded.
+A ready producer supplies a value; an unfinished producer supplies an identity to wait for.
+The ROB search generalizes the earlier pipeline's bypass question from a few known stages to a window of instructions that may finish in a different order.
+It must still select the youngest matching producer \emph{older than the consumer}, not a younger write to the same register.
+
 \paragraph{Worked tag-based ROB-bypass trace}\label{par:ilp-rob-bypass-worked}
 The following tag-based example makes the lookup rule explicit.
 Assume the architected register file initially holds committed ready values for $R1$, $R2$, and $R3$, and that dispatch allocates ROB tags in program order.

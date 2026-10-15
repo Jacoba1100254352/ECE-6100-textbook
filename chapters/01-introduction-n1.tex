@@ -185,12 +185,12 @@ Both process multiple data elements, but packed SIMD exploits lane-level paralle
 Related to this, pipelining primarily improves throughput rather than the latency of a single operation.
 
 
-\section{Chapter 1 Summary}\label{sec:auto-009}
-Chapter 1 introduces computer architecture as disciplined performance engineering under practical constraints.
-The chapter frames nearly all speedup mechanisms as forms of parallelism or speculation, then organizes parallelism by grain size from bits through instructions, threads, and entire programs.
-Flynn's taxonomy provides a clean language for distinguishing SISD, SIMD, MISD, and MIMD machines, especially the practical differences between SIMD efficiency and MIMD flexibility.
-Finally, the chapter distinguishes packed-word SIMD from pipelined vector execution and shows why chaining is valuable in vector data paths.
-Together, these ideas form the conceptual base used throughout the rest of the book.
+\section{What to Carry Forward}\label{sec:auto-009}
+Look for the work that can overlap, the assumptions that permit it, and the cost of being wrong.
+Grain size and Flynn's taxonomy describe different aspects of that overlap.
+Packed SIMD uses lanes; pipelined vectors stream elements through stages.
+Neither extra lanes nor extra cores can remove a true dependence.
+Chapter 2 turns these mechanisms into measurable changes in runtime and throughput.
 
 
 \section{Practice Questions}\label{sec:ch1-practice}
