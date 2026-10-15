@@ -323,7 +323,7 @@ For dependence cycles with positive total iteration distance, using the sum of r
 \begin{equation}\label{eq:ch8-formula-dir-entries}
     N_{entries}=\frac{2^m}{2^v}=2^{m-v},
 \end{equation}
-where memory has $2^m$ bytes and the coherence block size is $2^v$ bytes.
+For a dense directory covering all $2^m$ bytes of memory with $2^v$-byte blocks.
 
 \paragraph{Chapter 8-F3 (Full Bit-Vector Directory Storage Estimate)}\label{par:ch8-formula-3}
 \begin{equation}\label{eq:ch8-formula-full-dir}
@@ -353,6 +353,7 @@ where $N$ is the number of PEs and $n_{ctrl}$ represents the small set of non-sh
 \begin{equation}\label{eq:app-ch9-formula-barrier}
     \text{last arriver if }\text{\texttt{fetch\_and\_add}}(count,1)=N-1.
 \end{equation}
+This identifies the last arrival; a reusable barrier also requires phase tracking and memory-ordering semantics, as in Chapter~\ref{ch:sync-consistency}.
 
 
 \section*{Chapter 10 Formula Set (Parallel Interconnection Networks)}\label{sec:ch10-formulas}

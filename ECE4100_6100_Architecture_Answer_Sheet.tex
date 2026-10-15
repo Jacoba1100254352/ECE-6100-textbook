@@ -559,18 +559,20 @@ It is intentionally separate from the main text so it can be distributed or with
 
     \item Each sharer ID needs \(\lceil\log_2 16\rceil=4\) bits, so limited-directory sharer tracking uses \(4K+1\) bits including the overflow bit.
     Requiring \(4K+1<16\) gives \(K\le3\).
-    This performs poorly for widely shared read-mostly or migratory blocks that exceed the explicit sharer limit often.
+    Widely shared read-mostly blocks can overflow the explicit sharer limit often; migratory data with only one or two current holders need not do so.
 
     \item Case (a), with \(X\) and \(Y\) in the same block, causes more invalidations and cache-to-cache movement because writes to \(Y\) also disturb processors using \(X\).
+    Under the stated traffic model it has three cache-to-cache transfers, at accesses 2, 3, and 6; separate blocks have two, at accesses 2 and 5.
     Case (b), with \(X\) and \(Y\) in different blocks, better avoids false sharing.
+    If clean reads also intervened, the numerical transfer comparison could change, which is why the traffic policy is specified.
 
     \item For \((P0,R)\), the cache misses and memory-read count increases.
-    For \((P0,W)\), an \texttt{E}\(\rightarrow\)\texttt{M} silent-upgrade-style event may increase, with no memory access.
+    For \((P0,W)\), the \texttt{E}\(\rightarrow\)\texttt{M} silent-upgrade-style count increases, with no memory access.
     For \((P1,R)\), \(P0\)'s dirty copy intervenes, so cache-to-cache transfer increases and \(P0\) becomes owner/shared under MOESI-like behavior.
     For \((P0,\text{evict})\), the owned dirty value must be written back, so memory writes increase.
 
-    \item For many coherence questions, state and message behavior determines correctness and performance counters.
-    Actual payload values are unnecessary unless the question asks for program-level computed data results.
+    \item States and messages track permissions, completed invalidations, data sources, and traffic counts.
+    Proving that loads return the correct bytes still needs values or suitable data-correctness invariants.
 
     \item One shared lower-level cache becomes a bandwidth and port-contention bottleneck.
     Even if it is coherent, all cores compete for the same access path and storage banks.
@@ -600,9 +602,9 @@ It is intentionally separate from the main text so it can be distributed or with
     \item Repeated \texttt{test\_and\_set()} performs write-like atomic operations on every spin attempt, repeatedly requesting exclusive ownership and invalidating other copies.
     Test-and-test-and-set spins with ordinary reads while the lock is busy and uses the atomic write only when the lock appears free.
 
-    \item Load-link records a reservation on a memory location.
-    Store-conditional succeeds only if the reservation is still valid.
-    A conflicting write or invalidating coherence event to the reserved block causes the store-conditional to fail.
+    \item Load-link reads a value and records a reservation on an implementation-defined region containing that location.
+    Store-conditional succeeds only if the reservation and the ISA's other conditions permit it.
+    A conflicting write can invalidate the reservation; conservative coherence invalidations can also cause failure, depending on the implementation.
     An ISA can also permit reservation loss or spurious failure for other reasons, so failure alone does not prove that the value changed.
 
     \item Fetch-and-op atomically applies a general operation to a memory location and returns the old value.
@@ -614,6 +616,7 @@ It is intentionally separate from the main text so it can be distributed or with
 
     \item A phase or toggle bit distinguishes the current barrier instance from the next one.
     Without it, a fast thread could observe a stale completion count from the previous barrier and pass through incorrectly.
+    The phase bit does not replace memory ordering: the shown barrier also needs atomic arrivals, an acquire/release arrival chain, and release/acquire publication of the new phase.
 
     \item A software counter barrier uses atomic memory operations and coherence traffic.
     A hardware barrier with one signal per PE assumes a shared observable signaling structure or dedicated wires that can combine arrivals directly.
@@ -648,8 +651,9 @@ It is intentionally separate from the main text so it can be distributed or with
     \item Sequential consistency guarantees that the result is as if all operations executed in one global interleaving that preserves each processor's program order.
     It is usually more expensive than acquire/release models because it restricts reordering and buffering even when synchronization-specific ordering would be enough.
 
-    \item A data race occurs when two threads access the same memory location, at least one access is a write, and there is no synchronization ordering between them.
-    Coherence still allows races because coherence orders writes to a location but does not make a multi-operation program protocol atomic or properly ordered.
+    \item For these C/C++ load/store examples, a data race requires potentially concurrent conflicting accesses, at least one write, at least one non-atomic access, and no happens-before ordering between them.
+    It causes undefined behavior even if the hardware is coherent.
+    A protocol using only relaxed atomic accesses can avoid that language-level race yet still have an ordering bug.
 
     \item Strict consistency ties visibility directly to physical time: a read sees the most recent write in real time.
     Sequential consistency only requires one global order that preserves each processor's program order, not actual physical-time order.
@@ -663,7 +667,7 @@ It is intentionally separate from the main text so it can be distributed or with
     Exact predecessor/successor guarantees depend on the ISA; fence names alone do not establish every cross-type ordering.
     Fences are expensive because they can drain store buffers, block speculation, and stall memory-level parallelism.
 
-    \item Read-only shared data creates no invalidations and no write-write or read-write races after initialization.
+    \item Once initialization has been safely published and no further writes occur, read-only sharing creates no write-induced invalidations or conflicting data accesses.
     Locks and atomics are more delicate because their correctness depends on both visibility and ordering of writes across locations.
 \end{enumerate}
 

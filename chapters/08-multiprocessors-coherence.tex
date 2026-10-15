@@ -7,7 +7,7 @@ Coherence is the machinery that makes those private copies behave like one share
 
 
 \section{From Instruction-Level to Thread-Level Parallelism}\label{sec:mp-intro}
-Once a machine has already exploited as much instruction-level parallelism as is practical, the next major source of speedup is to execute more than one thread of control at the same time.
+Instruction-level and thread-level parallelism are complementary: a machine can run several threads while each core overlaps instructions within its own stream.
 This moves the discussion from single-core scheduling into \textit{multiprocessor} design.
 At this point the most visible form of parallelism is \textit{thread-level parallelism (TLP)}: the programmer or runtime system must decide how to divide work across multiple processing elements.
 Unlike instruction-level parallelism, thread-level parallelism is visible to software and therefore directly affects correctness, synchronization, and programmability.
@@ -39,19 +39,22 @@ At the architecture-classification level, two familiar Flynn terms continue to m
 \textit{Multiple instruction, multiple data (MIMD)} machines allow different PEs to execute different instructions on different data at the same time.
 Modern shared-memory multiprocessors are usually discussed as MIMD machines.
 That does not exclude SIMD units inside each core; it only means that the overall machine permits several independently executing instruction streams.
+Do not confuse SIMD with \textit{single program, multiple data (SPMD)}.
+SPMD workers run the same program on different data, but they can take different branches and advance independently, so an SPMD application can run on MIMD hardware.
 
 
 \section{Memory Organization and System Structure}\label{sec:mp-memory-organization}
 A multiprocessor can be classified along another axis besides SIMD versus MIMD: how the memory system is organized.
-The two clean endpoints are \textit{shared memory} and \textit{message passing}.
+Two useful communication models are \textit{shared memory} and \textit{message passing}; neither alone specifies the physical placement of memory.
 
-In a \textit{shared-memory} machine, all PEs conceptually operate in one common address space.
-A pointer value can identify the same logical object for every PE, and communication occurs when one PE writes data that another PE later reads.
+In a \textit{shared-memory} machine, participating PEs can access common memory locations.
+Threads in one process normally share a virtual address space, but separate processes can map the same physical storage at different virtual addresses.
+Communication occurs when one PE writes data that another PE later reads.
 This model is attractive because it is easy to think about, but it immediately raises the cache-coherence problem once private caches are introduced.
 
-In a \textit{message-passing} machine, each PE has its own private memory, and data movement occurs through explicit communication operations such as \texttt{send()} and \texttt{receive()}.
-This model avoids coherence traffic because data is copied intentionally from one memory to another, but it forces the program to expose that communication directly.
-Between these extremes lies the \textit{partitioned global address space (PGAS)} idea, where a single address space exists but some portions are substantially more expensive to access than others.
+In a \textit{message-passing} program, participants exchange data through explicit operations such as \texttt{send()} and \texttt{receive()}.
+They may run on separate-memory nodes or on one shared-memory machine; the latter can still generate cache-coherence traffic underneath the messaging library.
+The \textit{partitioned global address space (PGAS)} model presents globally addressable data with an explicit affinity to particular participants, making locality part of the programming model.
 
 Figure~\ref{fig:mp-standalone-vs-accelerator} contrasts two common organizations.
 A standalone shared-memory multiprocessor integrates several PEs around a common memory system and runs the operating system and application code directly.
@@ -97,8 +100,20 @@ An accelerator organization instead separates a host processor from a specialize
 Accelerators include graphics processors, machine-learning accelerators, and many other specialized engines.
 Their memories are often kept separate for protection, compatibility, and implementation reasons.
 The cost of that separation is explicit data motion: the host must copy inputs to the accelerator, launch the parallel work, and copy results back.
+This is the separate-memory organization drawn in the figure, not a requirement for every accelerator.
+Other designs expose shared or managed memory; a common address does not by itself guarantee equal access cost or remove synchronization requirements.
 
-\enlargethispage{2\baselineskip}
+\subsection*{One Address Space, Unequal Distances}
+\textit{Uniform memory access (UMA)} means that the underlying main-memory access cost is approximately uniform across processors and locations, apart from effects such as caches and queueing.
+With \textit{non-uniform memory access (NUMA)}, placement matters: a core can reach nearby memory through its local controller, while remote memory requires additional interconnect travel.
+Both can implement shared memory.
+In \textit{cache-coherent NUMA (ccNUMA)}, coherence preserves the shared-location abstraction even though physical access costs differ.\footnote{\texttt{n6\_multiproc v1.1.pdf}, MP-10; see also the Linux NUMA documentation in Appendix~\ref{ch:source-notes}.}
+Figure~\ref{fig:numa-locality} separates those two ideas.
+
+\input{figures/numa-locality}
+
+Placing threads near the pages they use can reduce remote traffic; moving a thread without moving its data can do the opposite.
+NUMA is therefore a reason to care about data placement, not a synonym for message passing or incoherence.
 
 
 \section{Interconnects: Shared Buses and Point-to-Point Links}\label{sec:mp-interconnects}
@@ -109,7 +124,8 @@ That observability is the key property used later by snooping coherence.
 A \textit{point-to-point interconnect} behaves differently.
 A packet is sent from one endpoint to another over a dedicated link, and unrelated agents do not automatically see that traffic.
 Modern peripheral links such as \textit{PCI Express (PCIe)} fit this model even though informal conversation sometimes calls them buses.
-PCIe uses differential pairs rather than one shared bundle of broadcast wires, so it scales better than a traditional shared bus but does not naturally support global observation of every memory transaction.
+Separate links can carry independent traffic instead of contending for one shared wire bundle, but a packet on one link is not automatically visible everywhere.
+Broadcast snooping can still be built over point-to-point links by explicitly distributing requests; it is a fabric service, not an inherent property of the physical link.
 
 This distinction matters because some coherence mechanisms require every cache to observe every relevant request.
 Snooping works naturally on a shared observable medium.
@@ -156,7 +172,7 @@ Table~\ref{tab:mp-incoherent-example} summarizes the failure.
 \end{table}
 
 Simply using write-through caches does not solve the problem.
-Write-through ensures that memory is updated promptly, but it does not inform the other caches that their local copies have become stale.
+Write-through propagates a write to the next level, possibly through a buffer; it neither guarantees an immediate DRAM update nor tells peer caches that their copies are stale.
 The real issue is not whether memory eventually receives the write; it is whether all cached copies remain mutually consistent.
 
 A coherent cache system is normally expected to satisfy three properties:
@@ -174,7 +190,8 @@ Coherence therefore promises eventual agreement and a consistent write story, no
 Architecturally, there are three standard ways to solve the coherence problem.
 
 The first is a \textit{shared-cache} design in which all PEs communicate through one common cache structure.
-This avoids inter-cache inconsistency because there is only one place that holds the shared block state.
+If it is the only cached copy accessible to the PEs, this avoids inconsistency among private copies.
+Sharing only a last-level cache does not remove the need to coordinate any private caches above it.
 The weakness is scalability: once the shared cache becomes the bottleneck, adding more PEs does not produce linear speedup even for embarrassingly parallel workloads.
 
 The second is \textit{directory-based coherence}.
@@ -232,7 +249,7 @@ Table~\ref{tab:mp-msi-bus-actions} summarizes the basic bus-level vocabulary.
         \hline
         \texttt{GetM}         & Read-for-ownership requesting exclusive writable access.                        \\
         \hline
-        \texttt{WriteBack}    & Dirty block is written back to memory on eviction or ownership handoff.         \\
+        \texttt{WriteBack}    & Dirty data is returned to the backing store, for example on eviction or an MSI shared downgrade. \\
         \hline
         abort                 & Requester must wait or retry because another cache is still handling the block. \\
         \hline
@@ -294,7 +311,7 @@ Table~\ref{tab:mp-msi-snooper} summarizes the stable-state snooping behavior.
         \hline
         S             & sees \texttt{GetM}                  & invalidate local copy                  & I          \\
         \hline
-        M             & sees \texttt{GetS}                  & provide or write back data, downgrade  & S          \\
+        M             & sees \texttt{GetS}                  & make backing copy current, downgrade & S          \\
         \hline
         M             & sees \texttt{GetM}                  & provide or write back data, invalidate & I          \\
         \hline
@@ -310,12 +327,13 @@ A common notation concatenates the path of the transition.
 For example, \texttt{IM} means that the cache started in \texttt{I}, issued a request whose destination is \texttt{M}, and is still waiting for that request to complete.
 Likewise, \texttt{SM} means a shared block has requested an upgrade to modified state but has not yet received final ownership.
 
-Table~\ref{tab:mp-msi-trace} walks through a short two-cache scenario that mirrors the classic classroom introduction to MSI:
+Table~\ref{tab:mp-msi-trace} walks through a short two-cache scenario that mirrors the classic classroom introduction to MSI.
+It uses an abort/writeback/retry implementation; direct data handoff is a different valid implementation and need not insert the retry:
 \begin{enumerate}
     \item $P_1$ has a read miss and obtains a shared copy.
     \item $P_2$ then has a read miss and also obtains a shared copy.
     \item $P_1$ writes the block and upgrades from \texttt{S} to \texttt{M}.
-    \item $P_2$ then tries to write the same block, initially receives an abort, enters transient state \texttt{IM}, and retries after $P_1$ writes back or hands off the dirty value.
+    \item $P_2$ then tries to write the same block, initially receives an abort, waits in \texttt{IM}, and retries after $P_1$'s writeback has made the current data available.
 \end{enumerate}
 \begin{table}[t]
     \centering
@@ -331,7 +349,7 @@ Table~\ref{tab:mp-msi-trace} walks through a short two-cache scenario that mirro
         \hline
         3    & $P_1$ write hit on shared block         & \texttt{GetM}        & $S\rightarrow M$                                                               & snoops \texttt{GetM}: $S\rightarrow I$ \\
         \hline
-        4    & $P_2$ write miss while $P_1$ owns block & \texttt{GetM}, abort & snoops \texttt{GetM}: $M\rightarrow I$ with \texttt{WriteBack} or intervention & $I\rightarrow IM$ \\
+        4    & $P_2$ write miss while $P_1$ owns block & \texttt{GetM}, abort & write back before relinquishing ownership; then $M\rightarrow I$ & $I\rightarrow IM$ \\
         \hline
         5    & $P_2$ retries after ownership transfer  & retry \texttt{GetM}  & $I\rightarrow I$                                                               & $IM\rightarrow M$                      \\
         \hline
@@ -341,7 +359,8 @@ Table~\ref{tab:mp-msi-trace} walks through a short two-cache scenario that mirro
 \end{table}
 
 The important insight is that the coherence protocol is maintaining one simple invariant: a writable dirty copy must be unique.
-Whenever one cache acquires \texttt{M}, all competing copies must either become invalid or be updated into a clean shared form before execution continues.
+Before one cache acquires writable \texttt{M} permission, all competing readable copies must be invalidated.
+Allowing another cache to remain in readable \texttt{S} would violate the write-invalidate protocol, even if its current bits happened to match.
 
 
 \section{MESI, MOESI, and MOESIF Refinements}\label{sec:mp-mesi-moesi}
@@ -366,39 +385,44 @@ Suppose a cache holds a dirty block in \texttt{M} and another PE requests \textt
 In MSI, the owner typically writes the block back or otherwise makes memory current before both copies become shared.
 The \texttt{O} state avoids that immediate writeback.
 Instead, the original owner keeps a dirty shared copy, memory remains stale, and that owner becomes the designated responder for later requests.
-The cost is that \texttt{O} does not permit silent local writes: because other sharers exist, a write still requires \texttt{GetM}.
+The cost is that \texttt{O} does not permit silent local writes: other sharers may exist, so the cache must obtain exclusive permission first.
 
 The \texttt{F} state plays an analogous role for clean data.
 Suppose a cache has a block in \texttt{E} and another PE issues \texttt{GetS}.
-The original cache can provide the data directly and become the clean designated responder while memory remains correct.
-That cache is placed in \texttt{F}, and the requester enters \texttt{S}.
+In the illustrative policy used here, the original cache supplies the data and becomes \texttt{F}, while the requester enters \texttt{S}.
+Other protocols can choose the new requester as forwarder instead; the state name alone does not determine that choice.
 On a later shared read miss, the \texttt{F} holder can respond instead of memory, avoiding ambiguity among multiple clean sharers.
 
-Table~\ref{tab:mp-moesif-state-meanings} summarizes the practical meaning of the six commonly discussed states.
+Table~\ref{tab:mp-moesif-state-meanings} summarizes the permissions and responsibilities in this model.
 \begin{table}[t]
     \centering
-    \footnotesize
+    \small
     \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{|c|c|c|c|>{\raggedright\arraybackslash}p{1.65in}|c|}
+    \begin{tabular}{|c|l|c|>{\raggedright\arraybackslash}p{3.0in}|}
         \hline
-        State & Dirty?\  & Shared?\  & Memory correct?\  & Responds to later \texttt{GetS}?                     & Write locally? \\
+        State & Local access & May share? & Backing-store and response responsibility \\
         \hline
-        M     & yes    & no      & no              & yes                                                  & yes            \\
+        M & read/write & no & Backing store may be stale; this cache owns the current value. \\
         \hline
-        O     & yes    & yes     & no              & yes                                                  & no             \\
+        O & read & yes & Backing store may be stale; the owner must preserve and supply the current value. \\
         \hline
-        E     & no     & no      & yes             & yes, if another cache asks                           & yes            \\
+        E & read/write & no & Backing store is current; a local write changes $E$ to $M$. \\
         \hline
-        F     & no     & yes     & yes             & yes                                                  & no             \\
+        F & read & yes & Backing store is current; this is the designated clean responder. \\
         \hline
-        S     & no     & yes     & yes             & usually no; memory or a designated responder answers & no             \\
+        S & read & yes & Current in MSI/MESI; may be stale when an $O$ owner holds responsibility for dirty data. \\
         \hline
-        I     & --     & --      & --              & no                                                   & no             \\
+        I & none & -- & No usable local copy. \\
         \hline
     \end{tabular}
-    \caption{Meaning of the commonly discussed MESI/MOESI/MOESIF states. The key distinctions are whether the copy is dirty, whether memory is already correct, and whether the cache is expected to respond to later shared requests.}
+    \caption{Stable-state permissions and responsibilities. ``May share'' permits other copies; it does not prove they currently exist. In particular, an $S$ copy does not guarantee current backing memory in a protocol with $O$.}
     \label{tab:mp-moesif-state-meanings}
 \end{table}
+
+The subtle case is an $S$ copy beside an $O$ owner.
+Both caches hold the current data, but only the owner owes the eventual dirty writeback; the $S$ holder can discard its copy without writing it back.
+Figure~\ref{fig:owned-shared-data} makes that distinction visible.
+\input{figures/owned-shared-data}
 
 When solving coherence traces, it is useful to track three kinds of information separately after each access:
 \begin{enumerate}
@@ -424,6 +448,8 @@ Different stable-state sets lead to familiar protocol families:
     This family adds silent clean-exclusive upgrades.
     \item \textit{MOESI}: \texttt{M}, \texttt{O}, \texttt{E}, \texttt{S}, \texttt{I}.
     This combines dirty-sharing optimization with silent clean-exclusive upgrades.
+    \item \textit{MESIF}: \texttt{M}, \texttt{E}, \texttt{S}, \texttt{I}, \texttt{F}.
+    This adds a designated clean responder without an owned dirty-sharing state.
     \item \textit{MOESIF}: \texttt{M}, \texttt{O}, \texttt{E}, \texttt{S}, \texttt{I}, \texttt{F}.
     This further designates one clean shared responder.
 \end{itemize}
@@ -462,12 +488,13 @@ Two jobs must still be done even without a snooping bus:
     \item The system must serialize ownership-changing writes so that all PEs observe one consistent write order.
 \end{enumerate}
 In a directory protocol, the directory performs both roles.
-It tracks sharers and also acts as the central ordering point for coherence-changing requests.
-That is why directory protocols preserve the causality requirement: two processors may request writes close together in time, but the directory selects one ordering and makes all invalidations and acknowledgments complete in that order.
+It tracks sharers and acts as the ordering point for conflicting requests to that block.
+Two processors may request writable ownership close together in time, but the controller cannot grant overlapping write permissions.
+Different blocks can have different home controllers and independent transaction orders; this is not one total order across all memory addresses.
 
 \subsection*{Directory Entry Structure}
-At a high level, the directory is organized per memory block.
-Each entry must at least record which caches currently hold the block.
+At a high level, directory metadata is associated with memory blocks.
+It must identify or conservatively cover every possible holder so no needed invalidation is missed; false-positive sharers cost traffic but need not break correctness.
 For an MSI-style protocol, a useful minimal conceptual format is:
 \begin{itemize}
     \item a \textit{presence bit vector} with one bit per cache or PE,
@@ -514,7 +541,8 @@ An invalidated clean sharer can simply discard the block and acknowledge.
 A recalled dirty owner must return data because memory does not yet have the current value.
 
 \subsection*{Agent View versus Directory-Controller View}
-In a controller-oriented implementation, each cache contains an \textit{agent} that handles processor-facing requests and local state transitions, while memory contains the \textit{directory controller} that serializes global permission changes.
+In a controller-oriented implementation, each cache contains an \textit{agent} that handles processor-facing requests and local state transitions, while a home \textit{directory controller} serializes permission changes for its blocks.
+The controller may be associated with a memory node or a cache slice; it need not reside in DRAM itself.
 The agent is responsible for actions such as servicing a local \texttt{LOAD} hit, turning a \texttt{STORE} miss into \texttt{GetM}, and holding transient states while replies are still in flight.
 The directory controller is responsible for sharer tracking, issuing invalidations or recalls, deciding when memory must be accessed, and determining when a requester may finally receive data or permission.
 
@@ -528,19 +556,22 @@ It is common to distinguish:
 
 \texttt{GETX} is especially useful in simulator-oriented MESI-like protocols.
 Architecturally, a clean exclusive copy could often upgrade silently from \texttt{E} to \texttt{M}.
-However, if the directory is the authoritative sharer record, the controller may still need to observe that upgrade explicitly.
+In the teaching model described here, the controller records the clean-to-dirty change explicitly.
 The agent then issues \texttt{GETX} and may wait in a transient such as \texttt{EM}, meaning ``I believe I am the exclusive clean holder, and I am waiting for the directory to confirm my writable upgrade.''
 This is not the only implementation choice, but it is a practical one because it keeps the directory's view synchronized with the cache's permissions.
+Other directory protocols deliberately record an exclusive holder as \emph{possibly dirty}, allowing the $E\rightarrow M$ write to remain truly silent.
 
 \subsection*{Simulation-Oriented Coherence Accounting}
 Many coherence simulators do not model the payload data values themselves.
 They model only state, message flow, and where the up-to-date value logically comes from.
-That is sufficient for the main architectural questions: was memory read, was dirty data written back, did another cache provide the value, and did the requester already have the only clean copy?
+That can answer control and traffic questions: was memory read, was dirty data written back, and did another cache supply the block?
+It does not alone prove that every load receives the correct payload value; data-value or invariant checking is needed for that stronger claim.
 
 For the same reason, some pedagogical directory simulators route a cache-to-cache transfer through the directory controller even though the value logically originated in another cache.
 Architecturally, that still counts as a cache-to-cache transfer because memory was not the source of truth for the requester.
 The most useful counters in that style of analysis are therefore memory reads, memory writes, cache-to-cache transfers, and silent-upgrade-style events.
-In a controller-oriented MESI implementation, an \texttt{E}$\rightarrow$\texttt{M} case may still be counted as a silent upgrade even if the simulator models it with an explicit \texttt{GETX}/\texttt{ACK} exchange, because no peer invalidation was required.
+Some teaching simulators count an $E\rightarrow M$ event in a ``silent-upgrade-style'' category even when they model an explicit \texttt{GETX}/\texttt{ACK} exchange.
+That counter means no peer invalidation or data fetch was needed; it does not mean zero network messages.
 
 \subsection*{Worked MSI-Style Directory Transactions}
 Consider a block whose directory entry currently shows either a clean shared state or one dirty owner.
@@ -549,7 +580,7 @@ Consider a block whose directory entry currently shows either a clean shared sta
 Suppose $P_2$ issues \texttt{GetS}.
 If the directory sees no dirty owner, then memory already has the correct value.
 The directory sets the presence bit for $P_2$ and returns the block so that $P_2$ enters \texttt{S}.
-If the directory sees a dirty owner, then it sends \texttt{Recall} to that owner, waits for the data and acknowledgment, updates memory or otherwise records the returned value, sets the requester's presence bit, and then sends the data to $P_2$.
+If it sees a dirty owner, this MSI example recalls the value, makes the backing store current, downgrades the old owner to $S$, and records both readable holders before completing the transaction.
 The result is that the requester receives a correct shared copy and the directory's state matches reality.
 
 \paragraph{Exclusive write request (\texttt{GetM}).}
@@ -557,8 +588,10 @@ Now suppose $P_2$ instead issues \texttt{GetM}.
 The directory must ensure that all competing copies disappear before granting writable ownership.
 If another cache has the block dirty, the directory sends \texttt{Recall} to that owner and collects the returned data.
 If other caches merely hold clean shared copies, the directory sends \texttt{Invalidate} to each one and waits for all acknowledgments.
-Only after every required acknowledgment has arrived does the directory send the data and permission to $P_2$, clear the other presence bits, set the presence bit for $P_2$, and mark the entry dirty.
-That ordering is what enforces the single-writer invariant and a consistent global order of writes.
+The requester can use writable ownership only after every required invalidation is acknowledged and the current data is available.
+Data and acknowledgments can arrive in either order in a more detailed implementation.
+If $P_2$ already has a current shared copy, it needs permission but not necessarily another data transfer.
+The final entry identifies $P_2$ as the sole writable owner, enforcing the single-writer invariant and a consistent order for this block.
 
 \subsection*{Why Directories Scale Better}
 Directories remove the requirement that every coherence event be globally broadcast.
@@ -572,13 +605,13 @@ The conceptual model, however, remains the same: a directory tracks who has the 
 \section[Directory Scaling and Distributed Organizations]{Directory Scaling, Limited Directories, and Distributed Organizations}\label{sec:mp-directory-scaling}
 The conceptual directory in the previous section is easy to explain because it behaves like one central hardware record of all sharers.
 The immediate drawback is size.
-If memory contains $2^m$ bytes and the coherence block size is $2^v$ bytes, then the number of directory entries is
+For a dense directory covering every block of $2^m$ bytes of memory with $2^v$-byte blocks, the number of entries is
 \[
     \frac{2^m}{2^v}=2^{m-v}.
 \]
 Each entry then needs enough information to identify the sharers and encode control state.
 For a full bit-vector directory with $N$ PEs, that means roughly $N$ sharer bits plus a small number of control bits.
-As $N$ grows, the directory becomes both large and increasingly central to system throughput.
+As $N$ grows, that metadata becomes large; a centralized controller can also become a throughput bottleneck.
 One useful way to reason about review-style metadata questions is therefore:
 \begin{enumerate}
     \item compute the number of directory entries from memory size and block size,
@@ -611,7 +644,8 @@ The next step is to remove the single centralized directory bottleneck.
 One option is a hierarchy of coherence domains.
 For example, a machine may group several L1 caches under a private or local lower-level cache and maintain one local directory for that group.
 A higher-level directory then tracks which lower-level domains hold the block.
-This works most cleanly when the lower-level cache is \textit{inclusive}: if an L1 holds a block, the local L2 is guaranteed to hold it as well.
+An \textit{inclusive} lower-level cache simplifies this tracking: every block held above is represented below.
+The lower-level bytes need not be current when an upper cache owns a modified copy, so inclusion does not remove the need to track dirty responsibility.
 Then the higher directory can reason in terms of the lower-level caches rather than every individual L1.
 
 This style is sometimes described as a \textit{last-level private} organization, because each cluster keeps its own lower-level cache and directory knowledge.
@@ -649,7 +683,7 @@ Table~\ref{tab:mp-llc-organizations} summarizes the major tradeoffs.
 \end{table}
 
 The inclusive / exclusive / non-exclusive distinction also matters here.
-An \textit{inclusive} hierarchy guarantees that upper-level data is also present below, which simplifies tracking.
+An \textit{inclusive} hierarchy guarantees presence of upper-level blocks below, not necessarily identical up-to-date bytes while an upper level holds dirty ownership.
 An \textit{exclusive} hierarchy forbids duplication between adjacent levels and maximizes effective capacity.
 A \textit{non-exclusive} hierarchy allows some overlap without requiring it in all cases.
 Different choices change how much coherence metadata must be stored at each level and how much traffic is required when ownership changes.
@@ -695,7 +729,8 @@ The miss on the next access to $x$ is therefore caused by block placement, not b
 Figure~\ref{fig:false-sharing-block} isolates the placement problem.
 \input{figures/false-sharing-block}
 
-This is why false sharing is often described as a \textit{coherence miss}, or informally as a ``fourth C'' beyond compulsory, capacity, and conflict misses.
+False sharing can cause \textit{coherence misses}, often grouped informally as a ``fourth C'' beyond compulsory, capacity, and conflict misses.
+True sharing can cause coherence misses too; the distinguishing feature of false sharing is that different variables unnecessarily share one coherence block.
 The cure is usually structural rather than algorithmic: avoid placing variables with very different sharing patterns into the same cache block.
 Read-only data, migratory lock-protected data, and heavily read-write shared synchronization variables are best separated when layout control is available.
 In trace-based reasoning, the symptom is usually easy to spot: when two variables share one block, writes to one variable increase invalidations, transfers, and misses for the other even though the source program did not truly share both variables semantically.
@@ -717,6 +752,7 @@ Thread 3: sum X[48:63] locally, then lock(L); globalSum += local3; unlock(L);
 The lock prevents a lost update in the critical section.
 Without it, two threads might read the same old value of \texttt{globalSum}, add their local sums independently, and then overwrite one another.
 That kind of latent synchronization bug is one reason shared memory is powerful but dangerous.
+The lock fixes lost updates, not floating-point reproducibility: a different order of partial sums can still change rounding in the final low bits.
 
 A message-passing version of the same idea avoids shared writable state:
 \begin{verbatim}
@@ -754,14 +790,15 @@ The challenge is acquiring that lock atomically so that two PEs cannot both beli
 A classic atomic primitive is \textit{test-and-set}: set a location to 1 and simultaneously return its old value.
 In pseudocode, a simple spin lock looks like:
 \begin{verbatim}
-while (test_and_set(lock) == 1) { }
+while (test_and_set_acquire(lock) == 1) { }
 \end{verbatim}
-Unlocking then writes 0 back to the lock variable.
+Unlocking uses \texttt{store\_release(lock, 0)}.
+These are abstract atomic operations, not ordinary C loads and stores: acquire/release ordering also protects the critical section's data.
 The operation is \textit{atomic}: no competing PE may observe or interleave a partial update.
 Architecturally, that atomicity may be provided by a cache-coherent read-modify-write sequence or by another equivalent mechanism.
 
 The weakness of this simple loop is coherence traffic.
-Every failed \texttt{test\_and\_set()} still tries to acquire writable ownership of the lock variable.
+In the write-invalidate model used here, every failed \texttt{test\_and\_set()} still requests writable ownership of the lock variable.
 If many PEs spin on the same lock, they repeatedly invalidate one another's copies and keep forcing the block into a writable-owner state.
 The protocol spends a large fraction of its effort moving the lock variable rather than doing useful work.
 
@@ -769,11 +806,12 @@ The protocol spends a large fraction of its effort moving the lock variable rath
 A better spin strategy is \textit{test-and-test-and-set}:
 \begin{verbatim}
 while (1) {
-  while (lock == 1) { }
-  if (test_and_set(lock) == 0) break;
+  while (load_relaxed(lock) == 1) { }
+  if (test_and_set_acquire(lock) == 0) break;
 }
 \end{verbatim}
 The inner read-only loop lets waiting PEs spin on a shared cached copy of the lock.
+The relaxed poll is atomic but does not acquire the lock; only the successful acquire operation admits the thread to the critical section.
 Only when the lock appears free do they attempt the atomic acquisition.
 This changes the coherence pattern substantially:
 \begin{itemize}
@@ -795,7 +833,8 @@ A workload with frequent lock acquisitions, spinning, or barriers may obey all c
 
 \section{Scaling and Architectural Limits}\label{sec:mp-scaling}
 Amdahl's Law still governs the big picture.
-If the parallelizable fraction is 1, then the application is often called \textit{embarrassingly parallel}, and the ideal speedup curve is linear in the PE count.
+If the useful work splits into independent pieces with negligible communication, the workload is often called \textit{embarrassingly parallel}.
+Having no serial work in an Amdahl model gives ideal linear scaling, but does not by itself eliminate communication or resource contention.
 Real machines fall short of that ideal once a shared resource saturates.
 A single shared cache saturates quickly.
 A shared interconnect can also become a bottleneck.
@@ -813,20 +852,14 @@ This is why the interconnect, the memory model, and the programming style cannot
 A coherence protocol is not only a correctness mechanism; it also determines how much communication traffic the machine must generate in order to preserve the illusion of one shared memory.
 
 
-\section{Chapter 8 Summary}\label{sec:chapter8-summary}
-Chapter 8 moves from instruction-level techniques to multiprocessor architecture.
-The central classifications are SIMD versus MIMD, shared memory versus message passing, and shared observable buses versus point-to-point links.
-Accelerator systems introduce another common organization by separating host and accelerator memory and therefore requiring explicit data movement.
-Private caches make shared memory fast enough to be attractive, but they also create the cache-coherence problem.
-Coherence requires local read-after-write correctness, eventual visibility to other processors, and a consistent ordering of writes.
-Shared caches, directory protocols, and snooping protocols are the three standard solution families.
-The MSI snooping protocol demonstrates the core state-machine ideas: blocks move among modified, shared, and invalid states in response to local requests and snooped bus traffic, with transient states used while ownership transfers are still in flight.
-MESI, MOESI, and MOESIF refine that baseline by distinguishing clean exclusivity, dirty shared ownership, and designated clean responders.
-Directory protocols generalize coherence beyond one visible bus by recording sharers explicitly and ordering ownership changes through acknowledgments, recalls, invalidations, and, in controller-oriented implementations, richer agent-to-directory messages such as \texttt{GETX}, \texttt{DATA E}, and recall commands.
-Because directories grow with memory size and sharer count, practical systems use limited pointers, hierarchical domains, and distributed sliced lower-level caches and directories.
-Sharing patterns matter just as much as protocol states: private, read-only, producer-consumer, migratory, and read-write shared data generate very different traffic patterns, and false sharing can create coherence misses even when variables are not truly shared semantically.
-Finally, the programming model seen by software reflects these architectural choices directly: shared memory relies on synchronization such as locks, barriers, and atomic operations, while message passing relies on explicit communication and blocking receives.
-In simulator-style reasoning, the practical outputs are often message traces and traffic counts rather than data values: which controller sent what, whether the latest value came from memory or another cache, and how many reads, writebacks, or silent upgrades the protocol generated.
+\section{What to Carry Forward}\label{sec:chapter8-summary}
+For each block, ask three separate questions: who may read, who may write, and who is responsible for the current value?
+Those questions explain the extra states better than memorizing their letters.
+An $S$ copy can be current even when backing memory is stale, provided an $O$ owner carries the dirty responsibility; an $M$ writer cannot coexist with another readable copy in this write-invalidate model.
+
+Track state and traffic separately, and state the implementation choices before counting messages or memory accesses.
+NUMA placement, directory layout, false sharing, and contention can change cost without changing the program's intended result.
+The next chapter asks what else the program must request: indivisible updates and ordering between different locations.
 
 
 \section{Practice Questions}\label{sec:ch8-practice}
@@ -850,6 +883,8 @@ The following questions reinforce the main ideas of Chapter 8 and are intended f
     \setcounter{enumi}{6}
     \setlength{\itemsep}{0.45em}
     \item Starting from all caches invalid for one block, use MSI to trace the access sequence \texttt{(P1,R)}, \texttt{(P1,W)}, \texttt{(P2,R)}, \texttt{(P3,R)}, \texttt{(P2,W)}, \texttt{(P1,R)}, \texttt{(P3,W)}.
+    Use this traffic model: clean misses fetch from memory; a dirty owner supplies the requester directly and also updates memory on a shared downgrade; a writer that already holds $S$ needs only invalidation permission.
+    Complete each transaction before starting the next, and assume no replacements.
     For each step, record the state of the block in each cache and whether the access causes a main-memory read or a main-memory write.
     \item Repeat the previous exercise for MESI, but focus only on the steps whose outcomes differ from MSI. Which steps use \texttt{E}, and how does that change later behavior?
     \item Starting from both caches in state \texttt{S} for the same block, show the state changes when one cache performs a write hit.
@@ -876,6 +911,7 @@ The following questions reinforce the main ideas of Chapter 8 and are intended f
     Then estimate the metadata cost of a full MSI-style bit-vector directory if each entry stores one sharer bit per PE plus two control bits.
     \item Using the same system, suppose a limited directory stores at most $K$ sharer IDs, each $\lceil \log_2 16\rceil$ bits wide, plus one overflow bit.
     What is the largest $K$ for which this scheme still uses fewer sharer-tracking bits than the full 16-bit sharer vector?
+    Count only the specified ID and overflow bits, ignoring occupancy, validity, and other control fields.
     In what kinds of sharing patterns does this scheme perform poorly?
     \item Consider the trace
     \begin{quote}
@@ -883,18 +919,20 @@ The following questions reinforce the main ideas of Chapter 8 and are intended f
                 (P0,W,Y), (P1,W,Y), (P0,R,X), (P1,R,Y),\\
         (P0,W,Y), (P1,R,X), (P0,W,Y)
     \end{quote}
-    in a write-back, write-invalidate system that intervenes where possible.
+    in a cold MOESI write-back, write-invalidate system with no replacements.
+    A dirty owner supplies another cache directly; clean read misses use memory, and upgrades from a current $S$ or $O$ copy require permission but no new data transfer.
     Compare two cases: (a) $X$ and $Y$ are in the same cache block, and (b) $X$ and $Y$ are in different blocks.
     Which case causes more cache-to-cache transfers and why?
     Which case better avoids false sharing?
     \item A controller-oriented simulator tracks memory reads, memory writes, cache-to-cache transfers, and silent-upgrade-style events.
+    Assume cold caches, a lone clean reader receives $E$, a dirty owner supplies shared reads and retains $O$, and an evicted $O$ owner writes back rather than passing ownership to a remaining sharer.
     For the sequence
     \begin{quote}
                 \ttfamily
                 (P0,R), (P0,W), (P1,R), (P0,evict)
     \end{quote}
     on one block under a MOESI-like protocol with intervention, which of those counters must increase, and at which steps?
-    \item Why is it often sufficient for a coherence simulator to model only states and messages rather than the actual payload data values?
+    \item Which coherence-control and traffic questions can a simulator answer using only states and messages, and what stronger data-correctness claim would still require additional checking?
 \end{enumerate}
 
 \subsection*{Scaling and Synchronization}

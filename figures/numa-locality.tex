@@ -1,0 +1,14 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \node[bookbox,minimum width=4cm] (left) at (0,0) {NUMA node 0\\cores and caches};
+    \node[bookbox,minimum width=4cm] (right) at (7,0) {NUMA node 1\\cores and caches};
+    \node[bookbox,minimum width=4cm] (memleft) at (0,-1.8) {Memory near node 0};
+    \node[bookbox,minimum width=4cm] (memright) at (7,-1.8) {Memory near node 1};
+    \draw[bookarrow,<->] (left) -- node[booklabel,above] {coherent fabric} (right);
+    \draw[bookarrow,<->] (left) -- node[booklabel,right] {local path} (memleft);
+    \draw[bookarrow,<->] (right) -- node[booklabel,right] {local path} (memright);
+  \end{tikzpicture}
+  \caption{Shared does not mean equally near. A core in node 0 can access memory near node 1, but that remote path also crosses the inter-node fabric. Placement affects cost without changing which physical locations are shared.}
+  \label{fig:numa-locality}
+\end{figure}

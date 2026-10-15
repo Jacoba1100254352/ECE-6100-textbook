@@ -1,0 +1,12 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \node[bookbox,minimum width=3.4cm] (owner) at (0,0) {$P_0$: $O$, value 7};
+    \node[bookbox,minimum width=3.4cm] (sharer) at (7,0) {$P_1$: $S$, value 7};
+    \node[bookbox,minimum width=5.2cm,fill=bookwarm!12] (memory) at (3.5,-1.7) {Backing memory: old value 0};
+    \draw[bookarrow] (owner) -- node[booklabel,above] {shared read data} (sharer);
+    \draw[bookarrow,dashed] (owner.south) -- node[booklabel,left] {writeback owed} (memory.north west);
+  \end{tikzpicture}
+  \caption{After $P_0$ writes 7 and supplies a shared read, MOESI can leave the data in $O/S$ while memory still holds 0. The $S$ copy is readable and current; it does not carry the owner's writeback responsibility. The dashed arrow is an obligation, not a transfer occurring now.}
+  \label{fig:owned-shared-data}
+\end{figure}

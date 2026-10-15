@@ -14,9 +14,12 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Digital Signal Processor (DSP)}] Processor class optimized for regular numeric workloads such as filtering, radio, and image-processing kernels.
     \item[\textit{SIMD}] One instruction stream operating on multiple data elements in lockstep.
     \item[\textit{MIMD}] Multiple instruction streams operating on multiple data streams independently.
-    \item[\textit{Shared Memory}] Multiprocessor organization in which all participating processors conceptually operate in one common address space.
-    \item[\textit{Message Passing}] Multiprocessor organization in which processors communicate by explicitly sending data between private memories.
-    \item[\textit{Partitioned Global Address Space (PGAS)}] Memory model with a global address space in which some regions are much more expensive to access than others.
+    \item[\textit{SPMD}] Single program, multiple data: workers run the same program on different data but may branch and advance independently.
+    \item[\textit{Shared Memory}] Organization in which participants can access common memory locations; their virtual addresses need not be identical across separate processes.
+    \item[\textit{Message Passing}] Programming model in which participants communicate explicitly through messages, whether or not the underlying hardware shares memory.
+    \item[\textit{Partitioned Global Address Space (PGAS)}] Programming model with globally addressable data partitioned by affinity to particular participants.
+    \item[\textit{Uniform Memory Access (UMA)}] Organization with approximately uniform underlying main-memory access cost across processors and locations, ignoring cache and queueing effects.
+    \item[\textit{Non-Uniform Memory Access (NUMA)}] Organization in which physical memory placement affects access cost; coherent NUMA can still provide shared memory.
     \item[\textit{Accelerator}] Specialized processing engine, often attached to a host CPU through an external link and using distinct memory.
     \item[\textit{Bus}] Shared observable broadcast medium across which all attached agents can see the same transactions.
     \item[\textit{Point-to-Point Interconnect}] Link organization in which packets move between specific endpoints rather than across one shared observable medium.
@@ -25,13 +28,14 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Directory-Based Coherence}] Coherence method in which a directory tracks which caches currently hold a block and coordinates invalidations or forwarding.
     \item[\textit{MSI}] Coherence protocol whose stable states are modified, shared, and invalid.
     \item[\textit{MESI}] Coherence protocol whose stable states are modified, exclusive, shared, and invalid.
+    \item[\textit{MESIF}] Coherence family adding a designated clean forwarder to the MESI states.
     \item[\textit{MOESI}] Coherence protocol whose stable states are modified, owned, exclusive, shared, and invalid.
     \item[\textit{MOESIF}] Coherence protocol whose stable states are modified, owned, exclusive, shared, invalid, and forward.
     \item[\textit{GetS}] Coherence request for a shared readable copy of a block.
     \item[\textit{GetM}] Coherence request for exclusive writable ownership of a block.
     \item[\textit{WriteBack}] Propagation of a dirty cache block to lower memory.
     \item[\textit{Exclusive (E)}] Clean state in which exactly one cache holds the block and may later write it without first broadcasting an upgrade request.
-    \item[\textit{Owned (O)}] Dirty shared state in which one cache remains responsible for the current value and may respond to later requests even though other caches hold clean shared copies.
+    \item[\textit{Owned (O)}] Read-only ownership state carrying dirty-data responsibility; other current $S$ copies may exist while backing memory remains stale.
     \item[\textit{Forward (F)}] Clean shared state designating one cache as the responder for later shared requests.
     \item[\textit{Hit Line}] Shared indication line used to tell a requester that some other cache already holds the block, thereby distinguishing \texttt{E} from \texttt{S} in a snooping protocol.
     \item[\textit{Intervene}] Snooper action in which a cache supplies data directly in response to another processor's request.
@@ -56,8 +60,8 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Spin Lock}] Lock implementation in which a waiting thread repeatedly polls a shared variable instead of blocking.
     \item[\textit{Atomic Read-Modify-Write}] Indivisible memory operation that reads a location, transforms it, and writes the new value with no visible intermediate state.
     \item[\textit{Test-and-Set}] Atomic read-modify-write primitive that writes a 1 and returns the old value.
-    \item[\textit{Test-and-Test-and-Set}] Spin-lock strategy that first polls with ordinary reads and attempts an atomic acquisition only when the lock appears free.
-    \item[\textit{Load-Link / Store-Conditional (LL/SC)}] Atomic primitive pair in which a load establishes a reservation and a later store succeeds only if no conflicting coherence event invalidated that reservation.
+    \item[\textit{Test-and-Test-and-Set}] Spin-lock strategy that polls with atomic read-only loads and attempts atomic acquisition when the lock appears free.
+    \item[\textit{Load-Link / Store-Conditional (LL/SC)}] Pair in which a load establishes a reservation and a later store attempts an atomic update; invalid reservations force failure, and the ISA may permit additional failure causes.
     \item[\textit{Fetch-and-Op}] Atomic primitive that returns the old value of a location while applying some operation to it.
     \item[\textit{Fetch-and-Add}] Fetch-and-op specialization in which the atomic update is addition.
     \item[\textit{Tree Lock}] Lock organization that reduces contention by arranging locks hierarchically so contenders meet in stages.
@@ -65,7 +69,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Sense-Reversing Barrier}] Barrier that uses a phase bit so one barrier instance is not confused with the next.
     \item[\textit{OpenMP}] Standard shared-memory parallel-programming interface based largely on compiler directives and runtime support.
     \item[\textit{MPI}] Message Passing Interface; standard API for distributed-memory or message-passing parallel programming.
-    \item[\textit{Transactional Memory}] Synchronization model in which a critical section executes optimistically and commits only if no conflicting access occurred.
+    \item[\textit{Transactional Memory}] Model that executes a region optimistically and commits only when its required atomicity and isolation can be validated.
     \item[\textit{Hardware Transactional Memory}] Transactional-memory implementation that uses hardware structures such as caches to track speculative read and write sets.
     \item[\textit{Software Transactional Memory}] Transactional-memory implementation that tracks conflicts and retries through software metadata rather than specialized hardware.
     \item[\textit{Memory Consistency}] Rules governing the visibility and ordering of memory operations to different addresses across multiple processors.
@@ -74,8 +78,8 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Weak Consistency}] Family of relaxed models that provide strong ordering mainly at explicit synchronization operations rather than at every ordinary load and store.
     \item[\textit{Acquire}] Synchronization action that prevents later memory accesses from moving before it.
     \item[\textit{Release}] Synchronization action that prevents earlier memory accesses from moving after it.
-    \item[\textit{Store Fence}] Ordering operation that ensures earlier stores become visible before later memory actions proceed.
-    \item[\textit{Load Fence}] Ordering operation that prevents later loads from bypassing earlier outstanding memory actions.
+    \item[\textit{Store Fence}] ISA-specific ordering operation; the teaching model at least orders earlier stores before later stores, not necessarily every cross-type pair.
+    \item[\textit{Load Fence}] ISA-specific ordering operation; the teaching model at least orders earlier loads before later loads, not necessarily every cross-type pair.
     \item[\textit{Memory Fence}] Explicit ordering operation that constrains permitted memory reordering around a program point.
     \item[\textit{Flit}] Flow-control digit; the unit of transfer controlled by the network's flow-control mechanism.
     \item[\textit{K-ary N-Dimensional Topology}] Direct-network family with $n$ dimensions and $k$ nodes in each dimension, for a total of $k^n$ nodes.
@@ -108,8 +112,8 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Head-of-Line Blocking}] Throughput loss caused when one blocked packet prevents unrelated traffic behind it from advancing.
     \item[\textit{Virtual Channel}] Logical subdivision of one physical link into multiple independently buffered and arbitrated channels.
     \item[\textit{Router}] Interconnect component that examines incoming traffic, chooses outputs, and manages buffering and arbitration.
-    \item[\textit{Data Race}] Incorrect unsynchronized overlap of conflicting accesses to shared state.
-    \item[\textit{Embarrassingly Parallel}] Workload whose useful work is effectively all parallelizable and therefore scales nearly ideally if resources permit.
+    \item[\textit{Data Race}] For the C/C++ load/store examples, potentially concurrent conflicting accesses without happens-before ordering, with at least one write and one non-atomic access; such a race is undefined behavior.
+    \item[\textit{Embarrassingly Parallel}] Workload divisible into independent pieces with negligible communication, allowing near-ideal scaling when resources permit.
     \item[\textit{Pipelining}] Temporal parallelism where different stages process different instructions simultaneously.
     \item[\textit{Superscalar (Multi-Issue)}] Pipeline organization that can issue more than one instruction per cycle.
     \item[\textit{Register Renaming}] Introduction of additional physical register identities so later writes do not falsely block earlier reads or writes.
