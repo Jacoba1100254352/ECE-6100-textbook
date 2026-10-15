@@ -154,6 +154,8 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Speculative Side Channel}] Information leak caused when squashed speculative work still changes microarchitectural state such as caches or predictors.
     \item[\textit{Runtime}] Time to complete one job (response/turnaround time).
     \item[\textit{Throughput}] Completed work per unit time.
+    \item[\textit{Power}] Rate of energy use, measured in watts; one watt is one joule per second.
+    \item[\textit{Energy}] Amount used over time, equal to average power times duration; measured in joules or watt-hours.
     \item[\textit{Amdahl's Law}] Speedup limit for fixed-size workloads when only a fraction is accelerated.
     \item[\textit{Gustafson's Law}] Scaled-speedup model where workload size grows with processor count.
     \item[\textit{Average Access Time (AAT)}] Expected memory-access latency, typically modeled as hit time plus miss rate times miss penalty.
@@ -181,7 +183,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Operand Queue}] Storage structure that holds produced values until compiler-scheduled consumer instructions need them.
     \item[\textit{Barrel Processor}] Multithreaded processor that issues from different resident threads in rotation to keep a deep pipeline occupied.
     \item[\textit{Cryostat}] Cooling system used to maintain cryogenic temperatures for superconducting or quantum hardware.
-    \item[\textit{Energy-Delay Product (EDP)}] Efficiency metric combining energy and runtime; lower EDP indicates a better energy/performance tradeoff.
+    \item[\textit{Energy-Delay Product (EDP)}] Energy multiplied by runtime: $EDP=ET=P_{avg}T^2$. Compare the same job and measurement boundary; power times runtime alone is energy, not EDP.
     \item[\textit{SUP}] Superconducting Unit of Performance; proposed organization combining latency-oriented and throughput-oriented superconducting resources.
     \item[\textit{SYNDRA}] Static Synchronous Dataflow RISC Architecture; proposed compiler-scheduled architecture targeting single-thread performance.
     \item[\textit{STRIDE}] Proposed many-thread superconducting architecture targeting aggregate throughput.

@@ -1,0 +1,16 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tabular}{@{}lcc@{}}
+    \toprule
+    \multicolumn{3}{c}{\texttt{0x00FF} + \texttt{0x0001}} \\
+    \midrule
+    Operation & High byte & Low byte \\
+    \midrule
+    Ordinary 16-bit addition & \texttt{01} & \texttt{00} \\
+    Two wrapping 8-bit lanes & \texttt{00} & \texttt{00} \\
+    Two unsigned saturating 8-bit lanes & \texttt{00} & \texttt{FF} \\
+    \bottomrule
+  \end{tabular}
+  \caption{A carry has different meanings in scalar and packed arithmetic. Independent byte lanes must not let the low byte's overflow alter the high byte. Wrapping and saturation also give different answers, so the instruction's semantics matter. Byte values are hexadecimal.}
+  \label{fig:packed-byte-carry}
+\end{figure}

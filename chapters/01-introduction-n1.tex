@@ -17,6 +17,26 @@ A design that aggressively improves performance may consume more energy or requi
 A design that is elegant on paper may be too costly in area or too difficult to verify at scale.
 For this reason, architecture is best treated as constrained optimization: choose structures and policies that best match the target application while respecting implementation limits.
 
+Conte makes the workload point with cars: a design tuned for a dry racetrack is not automatically a good choice for a rainy commute.
+The computer-design version is the same: choose the machine for the job, not for one impressive specification.
+
+\paragraph{Power is a rate; energy is a budget}
+The first lecture also separates two quantities that are easily confused.
+Power is the rate of energy use, measured in watts, where $1\ \mathrm{W}=1\ \mathrm{J/s}$.
+Energy is the amount used over time.
+For average power $P_{avg}$ over a job lasting $T$,
+\begin{equation}\label{eq:intro-job-energy}
+    E=P_{avg}T.
+\end{equation}
+For the same job, a machine drawing 10 W for 2 s uses 20 J; one drawing 5 W for 5 s uses 25 J.
+The second draws less power while running, but it uses more energy to finish.
+Figure~\ref{fig:power-energy-area} shows the distinction as an area.
+Power matters to power-delivery and thermal limits; energy matters to the battery or energy bill.
+Finishing sooner does not automatically preserve energy, because the implementation's power can change too.
+Compare the same measurement boundary: processor-only and whole-system energy are not interchangeable.
+
+\input{figures/power-energy-area}
+
 
 \section{Core Methods: Parallelism, Speculation, and Prediction}\label{sec:auto-004}
 Most performance techniques in modern processors can be traced to three closely linked ideas: \textit{parallelism}, \textit{speculation}, and \textit{prediction}.
@@ -30,15 +50,17 @@ This distinction is useful because many architectural features combine these ide
 Packed-word SIMD instructions and multicore processors are primarily forms of parallelism.
 The course uses \emph{speculation without prediction} broadly for locality-based choices such as retaining cache blocks in case they are needed again.
 That is a useful teaching category, but a cache hit does not necessarily execute an uncommitted instruction, and ordinary buffering need not involve a guess.
-Branch prediction is speculation with prediction.
+Executing the predicted path before the branch resolves is speculation with prediction.
 Out-of-order superscalar execution combines both parallelism and speculation because the machine overlaps independent work while also allowing some work to proceed before the final architectural outcome is known.
 
 \subsection{Speculation Without Prediction}\label{subsec:auto-001}
-Speculation does not require a learned predictor.
-A processor can use a fixed optimistic rule rather than a learned estimate.
-For example, it may execute a load before the addresses of older stores are known, assuming that the load will not read a location one of those stores changes.
-If the assumption fails, the machine must detect the ordering violation and replay the affected work.
-No history-based predictor is required, though one could make that decision more selective.
+Speculation need not choose a winner in advance.
+In \textit{eager execution}, a machine can start work on both paths of a branch and retain the correct path once the condition is known.
+Irrevocable effects must wait, and exceptions from the untaken path must not be reported.
+This spends execution resources on both possibilities instead of relying on a direction prediction.
+
+A fixed optimistic rule is different: a machine might execute a load before the addresses of older stores are known.
+That still assumes an outcome, even without a learned predictor, and needs checking and replay if the assumption was wrong.
 
 \paragraph{Related idea: a write buffer}\label{par:auto-006}
 A write buffer lets the core continue while a store waits to reach the next memory level.
@@ -139,6 +161,16 @@ Packed-word SIMD divides a fixed-width register into lanes (for example, four 32
 An operation such as \texttt{ADD\_PACKED} performs multiple elementwise additions per instruction, and lane boundaries isolate carries so one lane's overflow does not spill into neighboring lanes.
 This style underlies CPU SIMD extensions such as streaming SIMD extensions (SSE), advanced vector extensions (AVX), and Arm NEON\@.
 
+\paragraph{Keeping carries in their lanes}
+The lecture motivates packed arithmetic with an adder whose byte lanes have independent carry behavior.
+Consider \texttt{0x00FF} and \texttt{0x0001}, each holding two unsigned 8-bit values.
+An ordinary 16-bit addition produces \texttt{0x0100}: the low byte's carry increments the high byte.
+A packed 8-bit wrapping add instead produces \texttt{0x0000}, while an unsigned saturating add clamps the low byte at 255 and produces \texttt{0x00FF}.
+Figure~\ref{fig:packed-byte-carry} compares those three meanings.
+Packing values into a register is therefore not enough; the instruction must define the intended lane behavior.
+
+\input{figures/packed-byte-carry}
+
 Vector pipelines, in contrast, stream long vectors through deep arithmetic pipelines.
 A floating-point multiply can be viewed conceptually as operand preparation, multiply, and result normalization/writeback stages.
 If a pipeline has $k$ stages and processes $n$ elements, a serial implementation needs $nk$ cycles, while a pipelined implementation needs approximately $k+n-1$ cycles after fill effects are accounted for (Eq.~\eqref{eq:auto-001}):
@@ -174,15 +206,14 @@ The useful comparison is to a line of workstations: the second workstation can s
 The six-stage calculation above is a teaching model, not a claim about the Cray-1's exact functional-unit latencies.
 
 
-\section{Common Chapter 1 Pitfalls}\label{sec:auto-008}
-A common mistake is to conflate speculation with prediction.
-The correct view is that prediction is one way to make speculation more effective, not the definition of speculation itself.
-Another recurring error is to assume that additional cores guarantee proportional speedup; real speedup is limited by dependencies, communication, and serial regions of code.
-It is also common to treat SIMD and MIMD as interchangeable, even though they target different workload structures and have different programming implications.
+\section{Common Confusions}\label{sec:auto-008}
+Prediction estimates an outcome; speculation acts before certainty.
+They can work together, but neither word means the other.
+Core count does not determine speedup: dependences, communication, and serial work limit useful overlap.
+SIMD and MIMD describe different control-stream organizations, not interchangeable performance guarantees.
 
-A final source of confusion is the difference between packed-word SIMD and long-vector pipelining.
-Both process multiple data elements, but packed SIMD exploits lane-level parallel arithmetic within instruction-width registers, while vector pipelines exploit staged streaming over long element sequences.
-Related to this, pipelining primarily improves throughput rather than the latency of a single operation.
+In fixed-width packed SIMD, register and lane widths set the lane count; in the classic pipelined vector model, vector length sets how many elements stream through the stages.
+Pipelining primarily improves throughput, not necessarily the latency of one operation.
 
 
 \section{What to Carry Forward}\label{sec:auto-009}

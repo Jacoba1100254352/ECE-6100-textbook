@@ -26,6 +26,16 @@ Completed in the first editorial pass
   one-bit phase-oracle derivation connect the proposals to earlier chapters.
 - The guest lecture's student question about simulating unbuilt hardware now
   closes the appendix with a clear model-versus-measurement distinction.
+- The first two lecture notes now have a full contextual recording pass. Their
+  workload analogy, power/energy distinction, and packed-lane carry discussion
+  add two worked visual comparisons, with matching formula/glossary entries.
+- The introduction now separates eager execution of both branch paths from
+  a fixed optimistic assumption, and identifies execution rather than the
+  prediction alone as the speculative action. Pagination rules keep isolated
+  paragraph lines and hyphenated word fragments off page boundaries.
+- The chapter-one recap is shorter without losing its distinctions, and scoped
+  display spacing makes the formula reference more compact without reducing
+  the type size or dropping modeling assumptions.
 - New diagrams and timing views explain dependencies, Amdahl's limit, cache lookup,
   pipeline overlap, translation/lookup overlap, false sharing, release/acquire,
   network bisection, register versions, result-bus contention, and loop draining.
@@ -43,7 +53,7 @@ Completed in the first editorial pass
   tighter chapter conclusions and question wording remove their cause without
   dropping questions, changing exercise assumptions, or shrinking the type.
   That pagination-only increment reduced the book to 164 pages. The current
-  recording-expanded book is 166 pages, without isolated spillover question pages.
+  recording-expanded book is 167 pages, without isolated spillover question pages.
 - Corrections distinguish buffering from speculation, equal-work from equal-time
   rate averaging, atomicity from ordering, reservation failure from interference,
   dynamic from guided scheduling, and unitary gates from measurement/reset.
@@ -96,6 +106,11 @@ Detailed reading and audit pass
   and state a Carnot cooling bound rather than a universal refrigeration ratio.
 - The formula reference now includes assumptions, variable meanings, equal-work
   versus equal-time averaging, and conditional miss-ratio conventions.
+- Independent checks reproduce the 20 J versus 25 J comparison, energy-delay
+  products, and all 65,536 low-byte input pairs for the packed-lane example.
+  The latest 167-page book and 16-page answer sheet pass PDF structural checks
+  and build without warnings. New figures, formula spacing, chapter-one questions,
+  glossary entries, and source references have received changed-page visual QA.
 - All 123 chapter questions and the 10 advanced true/false prompts have matching
   answers, for 133 total pairs. The current book and
   answer sheet build without warnings; revised figures and source pages have
@@ -110,8 +125,10 @@ Detailed reading and audit pass
 Remaining before the complete revision can be declared finished
 - Finish the contextual recording-selection pass across the earlier long
   drafts. All 72 segments have completed local automatic transcription. The
-  late lectures (notes 26-28), final review, and 21 earlier short segments have
-  been read in context; selected excerpts from other lectures are already used.
+  late lectures (notes 26-28), final review, 21 earlier short segments, and the
+  four longer segments in notes 1-2 have been read in context, totaling 35 of 72
+  complete automatic drafts; selected excerpts from other lectures are already
+  used. The remaining 37 earlier long drafts still need contextual review.
   Automatic text is not authority for exact quotations, names, or numbers.
 - Integrate additional useful lecture stories with source/time references.
 - Finish checking continuity across the complete book while preserving useful

@@ -3,6 +3,12 @@ This appendix gathers the core formulas used across Chapters 1--10.
 Keep the stated model with each equation: symbols are reused across topics, latency units must agree, and overlapping costs must not be added twice.
 
 
+\begingroup
+\setlength{\abovedisplayskip}{0.35\baselineskip}
+\setlength{\belowdisplayskip}{0.45\baselineskip}
+\setlength{\abovedisplayshortskip}{0.35\baselineskip}
+\setlength{\belowdisplayshortskip}{0.45\baselineskip}
+
 \section*{Chapter 1 Formula Set}\label{sec:auto-056}
 
 \paragraph{Chapter 1-F1 (Vector Serial vs Pipelined Cycles)}\label{par:auto-043}
@@ -11,6 +17,12 @@ Keep the stated model with each equation: symbols are reused across topics, late
     \text{pipeline cycles}\approx k+n-1.
 \end{equation}
 Here $n$ is the number of elements and $k$ is the per-element latency in cycles; the pipeline accepts one element per cycle without stalls.
+
+\paragraph{Chapter 1-F2 (Job Energy)}\label{par:formula-job-energy}
+\begin{equation}\label{eq:reference-job-energy}
+    E=P_{avg}T.
+\end{equation}
+Average the power over the same job duration $T$ and use the same measurement boundary in comparisons. Watts times seconds give joules; $1\ \mathrm{Wh}=3600\ \mathrm{J}$.
 
 
 \section*{Chapter 2 Formula Set}\label{sec:auto-057}
@@ -410,3 +422,5 @@ For $N$ a power of two and 2-by-2 switching elements.
 \end{equation}
 $H$ one-cycle links, one flit per link per cycle, $F$ flits per packet, no extra router delay, and no contention; measure from first transmission start to final-flit arrival.
 SF denotes store-and-forward; CT denotes cut-through.
+\par
+\endgroup

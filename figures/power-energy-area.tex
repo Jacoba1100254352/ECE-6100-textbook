@@ -1,0 +1,26 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \foreach \plotOffset/\powerLevel/\duration/\energyAmount/\panelTitle in {0/10/2/20/A,7/5/5/25/B} {
+      \begin{scope}[xshift=\plotOffset cm,x=0.72cm,y=0.16cm]
+        \filldraw[draw=bookaccent,fill=booklight] (0,0) rectangle (\duration,\powerLevel);
+        \draw[bookarrow] (0,0) -- (5.8,0);
+        \draw[bookarrow] (0,0) -- (0,11.5);
+        \node[booklabel,anchor=east] at (-0.3,13) {$P$ (W)};
+        \node[booklabel,anchor=north west] at (5.5,-0.3) {$t$ (s)};
+        \foreach \timeMark in {0,2,5} {
+          \draw (\timeMark,0) -- (\timeMark,-0.25);
+          \node[booklabel,below] at (\timeMark,-0.4) {\timeMark};
+        }
+        \foreach \powerMark in {5,10} {
+          \draw (0,\powerMark) -- (-0.1,\powerMark);
+          \node[booklabel,anchor=east] at (-0.15,\powerMark) {\powerMark};
+        }
+        \node[booklabel] at (2.5,14.3) {$\panelTitle$: \powerLevel\ W for \duration\ s};
+        \node[booklabel] at ({0.5*\duration},{0.5*\powerLevel}) {\energyAmount\ J};
+      \end{scope}
+    }
+  \end{tikzpicture}
+  \caption{Same job, different power and energy. Both panels use the same scales and assume constant power during execution. Energy is the shaded area: $10\times2=20$ J for $A$, versus $5\times5=25$ J for $B$. Lower power alone does not guarantee lower energy.}
+  \label{fig:power-energy-area}
+\end{figure}
