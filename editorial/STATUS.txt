@@ -19,6 +19,8 @@ Completed in the first editorial pass
 - NUMA locality and dirty shared ownership now have separate diagrams, so
   shared addressing is not confused with equal distance and an S holder is not
   assumed to prove that backing memory is current in a protocol with O.
+- A folded-ring placement diagram replaces an incorrect geometric claim, and
+  a one-qubit phase/interference diagram supplies a concrete quantum example.
 - Typography, running heads, front matter, contents depth, chapter openings,
   captions, and PDF metadata have been revised.
 - Corrections distinguish buffering from speculation, equal-work from equal-time
@@ -28,7 +30,7 @@ Completed in the first editorial pass
 - The FICO practice trace now states timing assumptions and has a matching key.
 
 Detailed reading and audit pass
-- Chapters 1-9 and the pipeline timing checklist have had a section-level
+- Chapters 1-10 and Appendices A-F have had a section-level
   reading pass; lecture supplementation and final whole-book QA remain open.
 - Cache corrections distinguish TLB misses, page faults, and storage I/O;
   write-through propagation, coherence, and persistence; physical address width
@@ -62,7 +64,19 @@ Detailed reading and audit pass
   directory sizes, and every SC interleaving in the two worked examples.
   A C++ rendition of the barrier passed 20,000 reusable phases each with 1, 2,
   4, and 8 threads. Stress results supplement, not replace, the ordering argument.
-- All 123 practice questions still have matching answers. The current book and
+- Network explanations separate physical transfers, flits, header latency, and
+  whole-packet latency; define the direction used for cut bandwidth; and avoid
+  treating virtual channels as automatic deadlock or fairness guarantees.
+- All 6,435 distinct balanced partitions confirm the 4x4 mesh/torus cut counts.
+  Per-link schedules reproduce packet-latency formulas; channel-dependency
+  checks distinguish XY routing on the mesh from torus wraparound cycles.
+- Advanced topics now distinguish unitary gates from measurement/reset, correct
+  SYNDRA's name using a public primary source, label illustrative models as such,
+  and state a Carnot cooling bound rather than a universal refrigeration ratio.
+- The formula reference now includes assumptions, variable meanings, equal-work
+  versus equal-time averaging, and conditional miss-ratio conventions.
+- All 123 chapter questions and the 10 advanced true/false prompts have matching
+  answers, for 133 total pairs. The current book and
   answer sheet build without warnings; revised figures and source pages have
   been rendered and inspected. Whole-book visual QA is still outstanding.
 
@@ -70,9 +84,8 @@ Remaining before the complete revision can be declared finished
 - Review the available lecture recordings, using automatic transcripts as drafts
   rather than as authority for exact quotations, names, numbers, or anecdotes.
 - Integrate additional useful lecture stories with source/time references.
-- Complete the section-by-section technical and prose audit of Chapter 10,
-  the reference appendices, and the advanced-topics material, then check
-  continuity across the complete book.
+- Check continuity across the complete book and remove unhelpful duplication
+  from front matter or reference prose while preserving useful study aids.
 - Reconcile each changed exercise or convention with the answer sheet.
 - Inspect the final rendered book across every chapter, appendix, and new figure.
 - Commit and push completed work; tag and publish the finished distribution.

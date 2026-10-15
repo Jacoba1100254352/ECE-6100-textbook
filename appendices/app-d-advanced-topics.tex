@@ -1,41 +1,51 @@
 \chapter[Advanced Topics]{Advanced Topics: Quantum and Superconducting Architectures}\label{ch:advanced-topics}
-This appendix summarizes the advanced-topics guest lecture.
-The material is not a replacement for the core chapters; it is a short final-review reference for two research directions that use architectural ideas outside conventional CMOS processors.
+The core chapters asked how to overlap work, move values, and manage limited resources.
+Those questions remain useful when the physical devices change.
+This appendix connects the advanced lecture topics to two different research directions: quantum accelerators and \emph{classical} superconducting digital processors.
+Both can involve cryogenic equipment, but a superconducting logic bit is not thereby a qubit.
+The named superconducting proposals below are research architectures, not claims of deployed commercial performance.
 
 
 \section{Quantum Computing Architecture}\label{sec:appd-quantum}
 Quantum computers are best viewed as accelerators rather than replacements for classical computers.
 A useful quantum system still needs a classical computer to prepare work, drive the quantum device, interpret measurements, and coordinate repeated trials.
 The expected advantages are problem-specific.
-Two motivating examples from the lecture were simulation of physical and molecular systems, which was the original Feynman-style motivation, and integer factoring, which matters because efficient factoring would threaten RSA-style public-key cryptography.
+Two motivating examples are simulation of physical and molecular systems and integer factoring.
+A sufficiently capable fault-tolerant quantum computer could threaten RSA-style cryptography; this is not a claim that a small noisy device can already factor practical keys.
+
+A qubit has a state of the form
+\begin{equation}\label{eq:qubit-normalization}
+    \lvert\psi\rangle=\alpha\lvert0\rangle+\beta\lvert1\rangle,
+    \qquad |\alpha|^2+|\beta|^2=1.
+\end{equation}
+The symbols $\lvert0\rangle$ and $\lvert1\rangle$ name basis states, and $\alpha,\beta$ are complex amplitudes.
+Measuring in that basis returns 0 or 1 with probabilities $|\alpha|^2$ and $|\beta|^2$.
+It does not print every value present in a superposition; useful algorithms must arrange interference before measurement.
 
 \subsection{Why the Hardware Is Difficult}\label{subsec:appd-quantum-errors}
-A classical transistor contains many atoms and is engineered so that small physical disturbances do not usually change the digital value.
-A qubit is different: in several implementations the useful state is tied to one atom, ion, neutral atom, or artificial atom-like device.
-That makes isolation and precise control central architectural concerns.
+Classical logic restores signals toward separated digital levels.
+Quantum computation also depends on amplitudes and relative phase, so an uncontrolled rotation or environmental interaction can corrupt information without looking like an ordinary classical bit flip.
+Isolation, calibration, and precise control are therefore central architectural concerns.
 
-The lecture grouped quantum errors into two broad classes.
-\textit{Decoherence} means that the qubit stops behaving like the intended closed quantum system because the environment interacts with it.
+A useful first distinction separates unwanted environmental coupling from imperfect operations.
+\textit{Decoherence} is loss of the useful coherence and correlations of the intended quantum state through interaction with the environment.
 A stray photon, thermal effect, vibration, or other coupling can destroy the state that the algorithm depends on.
 \textit{Imperfect control} means that the hardware operation itself is inaccurate: a laser pulse may be mistimed, mis-aimed, too wide, too weak, too strong, or the measurement apparatus may fail to collect the intended signal.
 
-These errors accumulate as a quantum program runs.
-For that reason, a common architectural and compiler heuristic is:
-\begin{quote}
-    fewer quantum instructions is usually better.
-\end{quote}
-Shorter quantum programs reduce the time window for decoherence and reduce the number of imperfect operations that can corrupt the computation.
-This does not eliminate noise, but it is one of the few levers available to a compiler or architecture researcher when the underlying qubits are unreliable.
+Noise exposure depends on both elapsed time and the operations performed.
+Reducing costly gates or circuit depth can help, but instruction count alone is not a reliability metric: different gates have different error rates, and connectivity can require extra movement operations.
+A compiler must consider gate type, duration, parallelism, and mapping together rather than treating every removed instruction as an equal gain.
 
 \subsection{NISQ and Fault Tolerance}\label{subsec:appd-nisq}
-The near-term quantum era is often called the \textit{NISQ} era: noisy intermediate-scale quantum computing.
-The lecture's main conclusion was that useful near-term quantum advantage is hard because current machines have too few reliable qubits, high error rates, and only short usable program windows.
-Many proposed near-term algorithms are simply too long or too qubit-hungry for the machines that exist today.
+\textit{NISQ}, noisy intermediate-scale quantum computing, names the noisy-device regime discussed by John Preskill in 2018.\footnote{See the paper listed in Appendix~\ref{ch:source-notes}; NISQ is a device regime, not a permanent calendar label or a claim about every current platform.}
+Useful computation in that regime is constrained by qubit count, errors, and usable circuit depth.
+Whether an application beats its best classical alternative depends on the problem, implementation, and comparison, not on the presence of superposition alone.
 
-The longer-term path is \textit{fault-tolerant quantum computing}.
+The contrasting goal is \textit{fault-tolerant quantum computing}.
 Instead of treating one noisy physical qubit as one reliable algorithmic qubit, many noisy physical qubits are entangled and managed together to form a more reliable \textit{logical qubit}.
-The lecture used roughly a thousand physical qubits per logical qubit as an order-of-magnitude intuition, not as a universal constant.
+There is no universal physical-to-logical qubit ratio; the code, physical error rates, and target reliability determine the overhead.
 This creates a new architecture problem: the machine must repeatedly extract error information and run a decoder quickly enough to keep the logical qubits usable.
+Syndrome measurements reveal error information without directly measuring the encoded logical value; the classical decoder uses those results to guide recovery.
 Decoder design and topology-aware error correction are therefore architectural topics, not just physics topics.
 
 \subsection{Quantum Programs and Reversibility}\label{subsec:appd-quantum-programs}
@@ -51,23 +61,35 @@ A Boolean function $f(x)\in\{0,1\}$ can instead be represented by a reversible p
 If $f(x)=0$, the state is unchanged.
 If $f(x)=1$, the state receives a negative phase.
 Applying the same operation twice cancels the phase change, so this operation is reversible.
-This is the idea behind the lecture's ``sign'' version of a classical function.
+It does not make a large function free to compute: the oracle still needs an implementation and its cost belongs in the algorithm's resource accounting.
 
 The algorithmic benefit comes from superposition and interference.
 A quantum operation can act on a superposition of possible inputs, and later operations can make the desired answers reinforce while undesired answers cancel.
 This is not generic parallelism: the algorithm must match the mathematical structure of the problem.
 That is why quantum speedups exist for some problems but not for arbitrary computation.
 
+\paragraph{A phase change needs interference to become visible}
+For the one-bit function $f(x)=x$, the phase oracle is the $Z$ gate: it leaves $\lvert0\rangle$ unchanged and negates $\lvert1\rangle$.
+Starting from $\lvert0\rangle$, a Hadamard gate $H$ prepares $\lvert+\rangle=(\lvert0\rangle+\lvert1\rangle)/\sqrt2$.
+The oracle changes this to $\lvert-\rangle=(\lvert0\rangle-\lvert1\rangle)/\sqrt2$, and a second $H$ maps it to $\lvert1\rangle$.
+Figure~\ref{fig:quantum-phase-interference} follows that change.
+
+\input{figures/quantum-phase-interference}
+
+Measuring either $\lvert+\rangle$ or $\lvert-\rangle$ directly in the computational basis gives equal 0/1 probabilities.
+The final $H$ turns their \emph{relative} phase difference into different measurement outcomes.
+A common phase multiplying the entire state, such as replacing every amplitude by its negative, is instead unobservable by itself.
+
 
 \section{Superconducting Processor Architecture}\label{sec:appd-superconducting}
-The second guest lecture asked whether processors can be built in a substantially different way from conventional CMOS designs.
+The superconducting architecture topic asks whether classical processors can be built differently from conventional CMOS designs.
 The motivation is energy.
 Modern data centers and supercomputers consume large amounts of power, and simply scaling familiar CMOS microarchitecture is increasingly expensive.
 Superconducting circuits offer extremely low switching energy, but they impose constraints that break many familiar processor structures.
 
 \subsection{Why Ordinary Processor Designs Do Not Map Cleanly}\label{subsec:appd-sc-constraints}
-A superconductor has near-zero resistance, so the usual voltage-and-current intuition changes.
-Superconducting logic families often represent information using short pulses rather than long-lived voltage levels.
+A superconductor can have zero DC resistance below its operating limits, but that does not make switching, clocking, biasing, or refrigeration free.
+Single-flux-quantum-style logic represents information using short quantized pulses rather than ordinary long-lived CMOS voltage levels.
 That can be very energy efficient, especially on wires, but it creates a practical problem: a tiny pulse cannot be freely fanned out to many destinations.
 Every split or copy of a signal may require explicit hardware.
 
@@ -82,84 +104,88 @@ This makes common high-performance structures expensive:
 These are exactly the structures used heavily in conventional high-IPC CMOS cores.
 The architectural response is to move more work to the compiler and design the hardware around predictable data movement.
 
-\subsection{Syndrome: Compiler-Scheduled Single-Thread Performance}\label{subsec:appd-syndrome}
-The lecture's proposed single-thread core, called Syndrome in the notes, uses a dataflow-like execution model.
-Instead of every instruction reading operands from and writing results back to one centralized register file, an instruction names later destination instructions that should receive its result.
-The produced value is held in an \textit{operand queue} until the scheduled consumer needs it.
+\subsection{SYNDRA: Compiler-Scheduled Single-Thread Performance}\label{subsec:appd-syndrome}
+The research proposal names its single-thread-oriented architecture \textit{SYNDRA}, Static Synchronous Dataflow RISC Architecture.
+Its Statically Assigned DataGraph Execution (SADGE) model moves scheduling work to the compiler.\footnote{Pulkit Gupta's May 5, 2026 Georgia Tech proposal abstract identifies SYNDRA, STRIDE, and SUP; see Appendix~\ref{ch:source-notes}.}
+The important connection to the core chapters is static dataflow: make producer-consumer relationships explicit instead of rediscovering them with a large dynamic scheduler.
+
+An illustrative implementation can route a result toward its scheduled consumer and hold it in an \textit{operand queue} until needed, rather than returning every value through a centralized multi-ported register file.
+This describes the architectural idea, not a complete specification of the proposed core's pipeline or ISA.
 
 This resembles VLIW and software scheduling from Chapter~\ref{ch:compiler-scheduled-ilp}, but with a different hardware motivation.
-The compiler knows the timing distance between producers and consumers, so it can encode relative delivery times and set up bypass or crossbar controls before the value arrives.
+When timing is predictable, the compiler can arrange delivery distances and interconnect controls ahead of time.
 The goal is to keep useful instruction-level parallelism while avoiding the most expensive fanout-heavy structures of out-of-order execution.
 
-Control flow is also exposed earlier to the machine.
-The lecture described a three-part pattern:
+Control flow can likewise be separated into three conceptual jobs:
 \begin{itemize}
     \item \textit{prepare} supplies a possible branch target early,
     \item \textit{compare} computes the condition early,
-    \item \textit{when} commits the control-flow choice when the condition is known.
+    \item \textit{decide} selects control flow when the condition is known.
 \end{itemize}
 This separates where the program might go from whether it will go there.
-For loops, where the exit condition is often available near the top of the loop body, this gives the processor time to prefetch and configure control paths without relying on a large conventional branch predictor.
+This can create time to prefetch or configure a path, but a static plan still needs a correct response to variable memory latency and unresolved conditions.
 
-The cache design follows the same theme.
-Instead of building a fully multi-ported cache, the design banks the cache by address.
+Banking illustrates the same resource tradeoff without depending on a particular prototype.
+Instead of one fully multi-ported cache, divide storage into independently accessed banks.
 For example, odd and even indices can map to different half-sized banks.
 This gives multiple accesses per cycle when the accesses land in different banks, while avoiding the area cost of a monolithic multi-ported cache.
+Two accesses to the same single-ported bank still conflict.
 
-\subsection{Stride: Thread-Level Parallelism Through Barrel Processing}\label{subsec:appd-stride}
-The proposed Stride core attacks the problem from the other direction: thread-level parallelism instead of instruction-level parallelism.
+\subsection{STRIDE: Thread-Level Parallelism Through Barrel Processing}\label{subsec:appd-stride}
+The proposed STRIDE core attacks the problem from the other direction: many-thread throughput rather than only single-thread ILP.
 It is a barrel processor.
-On each cycle, the pipeline issues an instruction from a different thread, rotating through many hardware threads.
+Issue opportunities rotate among resident hardware threads rather than always advancing one thread.
 If the pipeline is very deep, the core needs many resident threads so that a thread's long-latency operation can make progress before that thread is scheduled again.
 
 The tradeoff is clear.
-One thread has very low individual IPC because it issues only once every many cycles.
+For a simple one-wide barrel model with $N_{threads}$ runnable threads and no lost slots, aggregate IPC can be 1 while each thread averages only $1/N_{threads}$.
+That is an illustrative model, not the proposed STRIDE core's numerical performance specification.
 The whole core can still sustain high system throughput because many threads are in flight at once.
-This style is attractive for workloads with abundant independent or embarrassingly parallel work, but it is a poor fit for code that needs high single-thread latency.
+This style is attractive for abundant independent work, but can be a poor fit when the priority is low single-thread completion time.
 
 \subsection{SUP: Combining the Two Modes}\label{subsec:appd-sup}
-The proposed larger unit combines the Syndrome-style core and the Stride-style core into a \textit{superconducting unit of performance (SUP)}.
+The proposed larger unit combines SYNDRA and STRIDE into a \textit{superconducting unit of performance (SUP)}.
 The reason is that high-performance computing programs often alternate between phases:
 \begin{itemize}
     \item single-threaded or latency-sensitive setup,
     \item coarse-grained parallel work with some synchronization,
     \item and massively parallel phases such as matrix or signal-processing kernels.
 \end{itemize}
-Syndrome is intended for the single-thread and coarse-grained phases.
-Stride is intended for the highly threaded phases.
-A RISC-V-style register interface provides a software-visible boundary between the two modes: state can be saved into registers when leaving one side and restored when execution returns.
-A Cilk-like programming model is a natural fit because it already expresses spawn and join structure.
-
-The design also reuses tiles where possible.
-Data tiles and memory tiles can serve both modes, while execution tiles can share storage structures with different controllers.
-That matters because superconducting fabrication area is expensive, and every avoided duplicate structure helps.
+SYNDRA targets single-thread-oriented phases, while STRIDE targets highly threaded work.
+Any hybrid also needs a software interface for choosing execution resources, transferring state, and accounting for transition overhead.
+Sharing data or memory resources could reduce duplication, but the benefit must be weighed against contention and control cost rather than assumed from the word ``hybrid.''
 
 \subsection{Cryogenic System Organization}\label{subsec:appd-cryo}
 Cooling cost cannot be ignored.
-The lecture used a rough rule of thumb that removing one watt from the 4 K environment may require hundreds of watts outside the cryostat.
-Even with that overhead, superconducting logic can still be attractive because the in-cryostat operation energy is extremely low.
-The relevant metric is not just peak frequency; it is energy-delay product and system throughput per watt.
+For an ideal refrigerator moving heat from $T_{cold}$ to $T_{hot}$, the minimum input work per unit of removed heat is
+\begin{equation}\label{eq:cryogenic-carnot-bound}
+    \frac{W_{input,min}}{Q_{cold}}=\frac{T_{hot}}{T_{cold}}-1.
+\end{equation}
+Temperatures are absolute, in kelvin.
+Between 4 K and 300 K, removing 1 W at the cold stage requires at least 74 W of input work even in this ideal limit; a real refrigerator requires more.
+The actual multiplier depends on the equipment, load, and staging, not one universal ``watts per cold watt'' constant.
+Compare end-to-end energy or throughput per wall-plug watt, including cooling and support electronics, rather than quoting only the logic's switching energy.
 
 A full system can use temperature staging.
 Superconducting logic sits near liquid-helium temperatures.
-Some CMOS support logic and cache structures may sit at a warmer cryogenic level, such as liquid-nitrogen temperature, where CMOS can still operate efficiently.
-Multiple cryostats can then be connected using conventional high-performance interconnects such as InfiniBand, Omni-Path, or optical networks.
+Some support electronics may sit at a warmer stage, but their device behavior and interface cost must be characterized at that temperature.
+Links to other modules or warm network equipment also add interface power and heat load.
 
 
 \section{Final Review Checkpoints}\label{sec:appd-review}
 For final-review purposes, focus on the following claims.
 \begin{enumerate}
-    \item Quantum computers are accelerators coordinated by classical computers, not universal replacements for classical processors.
+    \item In the hybrid model discussed here, a quantum accelerator is coordinated by a classical host.
     \item Quantum speedups are problem-specific; physics simulation and integer factoring are canonical examples.
-    \item Decoherence and imperfect control are the two broad error sources emphasized in the lecture.
-    \item Fewer quantum instructions are preferred because errors accumulate with time and with each imperfect operation.
+    \item Decoherence and imperfect control are the two broad error categories used here.
+    \item Quantum resource cost includes gate type, error rate, duration, depth, and mapping, not instruction count alone.
     \item NISQ machines are limited by noise, qubit count, and short useful program lengths.
     \item Fault-tolerant quantum computing uses many physical qubits plus decoding to create more reliable logical qubits.
-    \item Quantum operations must be reversible; phase-oracle forms such as Equation~\ref{eq:appd-phase-oracle} are one way to embed classical functions.
+    \item Closed-system quantum gates are unitary; measurement and reset need not be reversible. A phase oracle changes relative phases, which interference can convert into measurement information.
     \item Superconducting logic can be much more energy efficient than CMOS, but cooling overhead and architecture constraints still matter.
     \item Near-zero resistance does not make conventional fanout, register files, bypass networks, and branch predictors free.
-    \item The Syndrome-style core uses compiler-scheduled dataflow and operand queues to avoid centralized multi-ported register-file pressure.
-    \item The Stride-style core uses barrel processing to trade single-thread latency for high aggregate throughput across many threads.
+    \item SYNDRA proposes compiler-scheduled dataflow; operand queues illustrate an alternative to routing every value through a centralized multi-ported register file.
+    \item STRIDE targets many-thread throughput; barrel processing explains the trade between aggregate progress and individual-thread issue rate.
     \item A combined SUP-style design uses the single-thread core for latency-sensitive phases and the threaded core for highly parallel phases.
 \end{enumerate}
 
@@ -171,7 +197,7 @@ Mark each statement true or false, then correct the false statements.
     \item Reducing quantum instruction count can improve reliability because both decoherence and gate/control errors accumulate during execution.
     \item NISQ machines are already assumed to be good enough for long, reliable, general-purpose quantum programs.
     \item Fault tolerance in quantum computing usually means encoding one logical qubit across many unreliable physical qubits.
-    \item A quantum implementation of a classical function must respect reversibility.
+    \item A classical function embedded as a closed-system quantum gate must be implemented reversibly.
     \item Superconducting processors can use all conventional out-of-order CPU structures cheaply because wire resistance is near zero.
     \item Compiler scheduling becomes more important when hardware fanout, multi-ported storage, and associative wakeup are expensive.
     \item A barrel processor improves the latency of one thread by issuing that same thread every cycle.

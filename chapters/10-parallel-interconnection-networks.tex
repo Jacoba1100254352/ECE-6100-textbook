@@ -11,10 +11,11 @@ Shared-memory multiprocessors ultimately depend on an interconnection fabric tha
 That fabric is not a minor implementation detail.
 Its structure determines whether the machine can scale, how quickly requests reach their destinations, and how badly latency grows when many transfers contend for the same resources.
 
-Parallel interconnection networks differ from wide-area communication networks in several ways.
-First, they usually move more than one bit per transfer step.
-A link therefore has a width measured in bits per cycle, and a common transfer unit is the \textit{flit} (flow-control digit), which is the amount of data the network forwards as one flow-control object.
-Second, the machine is engineered as one tightly integrated system, so the design emphasis shifts away from end-to-end repair of arbitrary external faults and toward topology, routing, buffering, and router behavior.
+Parallel interconnects and wide-area networks share many ideas, including packets, routing, congestion control, and error handling.
+The emphasis here is tightly coupled processor and memory traffic, where a few router cycles or blocked buffers can directly stall computation.
+A \textit{flit} (flow-control digit) is the unit for which the network manages buffering and forwarding permission.
+In the course's simple on-chip model, one link transfers one flit per cycle.
+That is a modeling choice, not a definition: a physical link can serialize a flit over several transfers, and off-chip interconnects can use serial lanes too.
 Table~\ref{tab:pin-vs-comm} summarizes the contrast.
 \begin{table}[!b]
     \centering
@@ -24,9 +25,9 @@ Table~\ref{tab:pin-vs-comm} summarizes the contrast.
         \hline
         Design aspect            & Parallel interconnection network                                          & Conventional communication network                                  \\
         \hline
-        Transfer granularity     & Usually many bits in parallel; flit width matters directly                & Bit-serial or packet-serial transmission over long links is common  \\
+        Transfer granularity & Flits and physical transfer width are modeled explicitly & Packet and frame formats are prominent; physical links may also use serial lanes \\
         \hline
-        Reliability focus        & Built as one integrated machine; low-latency movement is the main concern & End-to-end recovery and fault tolerance dominate \\
+        Reliability focus & Low latency matters, but link errors and retries still need handling & Heterogeneous paths and failures make end-to-end recovery important \\
         \hline
         Central design questions & Topology, routing, flow control, buffering, router design & Addressing, congestion management, reliability, heterogeneous paths \\
         \hline
@@ -64,8 +65,9 @@ The standard counting facts are
 Thus a 3-dimensional hypercube has 8 nodes, each with degree 3.
 A 10-dimensional hypercube would have 1024 nodes, each with degree 10.
 
-One useful numbering intuition is \textit{Gray code}, a binary ordering in which consecutive labels differ in only one bit.
-Gray code is not the only possible node labeling, but it is a convenient way to trace a path through a cube because moving from one label to the next changes only one coordinate.
+Binary coordinates define the cube's adjacency: labels at Hamming distance one are neighbors.
+\textit{Gray code} gives one traversal in which consecutive labels differ in one bit.
+It is a path through the cube, not a replacement for the adjacency rule; the cube also has edges not used by that traversal.
 Table~\ref{tab:pin-gray-code} shows one 3-bit Gray-code sequence.
 \begin{table}[t]
     \centering
@@ -105,7 +107,8 @@ The two most common members of this family are the \textit{mesh} and the \textit
 A mesh connects each node to its neighbors along each dimension but does not wrap at the edges.
 A torus adds wraparound links so that each dimension becomes a ring.
 Thus a \textit{$k$-ary $n$-torus} is the direct generalization of a 1-dimensional ring to multiple dimensions.
-In a torus, each node typically has degree $2n$ because it has two neighbors per dimension.
+For $k\ge3$, an ordinary $k$-ary $n$-torus has degree $2n$, with two distinct neighbors per dimension.
+At $k=2$, those two directions reach the same neighbor; distinguish simple-graph neighbor count from a design with parallel physical links.
 
 A 4-ary 2-torus can be visualized as a 4-by-4 grid in which the left and right edges wrap together and the top and bottom edges wrap together.
 That wraparound is what gives the torus its name: the graph can be drawn on the surface of a donut without edge crossings.
@@ -116,7 +119,8 @@ Before moving to richer meshes and tori, many teaching simulators start with a s
 A ring is just the 1-dimensional torus case, so it is still a direct network.
 Its value is clarity: message latency is easy to interpret as hop count times link latency, and congestion is easy to see because all traffic shares one simple path structure.
 
-For example, in a unidirectional ring with 1-cycle links, a message that must traverse 5 hops has a zero-load network latency of 5 cycles before router or queueing delays are added.
+For example, a single-flit message traversing five 1-cycle links takes five cycles if routing, injection, and ejection add no delay.
+A longer packet also pays serialization delay, and a real router can add processing and queueing time.
 If each node can consume at most one message per cycle, then additional delay appears as queueing rather than as route ambiguity.
 Many teaching models intentionally use this simplified structure, sometimes together with very deep input queues, so that the main architectural questions are message ordering, hop count, and contention rather than finite-buffer loss.
 
@@ -130,10 +134,16 @@ A simple ring illustrates the problem.
 If an 8-node 1-dimensional torus is drawn naively as a straight row with one long wraparound connection from the last node back to the first, that one link becomes much longer than the others.
 The result is an \textit{unbalanced} layout: one path suffers distinctly higher delay than the rest.
 
-A better approach is a \textit{jump-length} style layout that distributes wraparound connectivity more evenly.
-The idea is not that all wires become identical; that is impossible in a strict planar embedding of a ring.
-The idea is that the layout avoids a single pathological wraparound and instead spreads wire lengths so the network is more balanced overall.
-That balance matters because the system clock must ultimately respect the longest critical wire delay.
+A folded placement avoids that long return span without changing the ring's logical neighbors.
+For eight equally spaced physical slots, place successive logical nodes in slots $0,2,4,6,7,5,3,1$.
+Every connection then spans at most two slot spacings rather than seven.
+Figure~\ref{fig:folded-ring-placement} makes the layout change explicit.\footnote{The April 21, 2026 class notes, \emph{Day 27}, p.\ 1, contrast an unbalanced ring with a folded placement.}
+
+\input{figures/folded-ring-placement}
+
+This example uses horizontal span as a simple wire-cost proxy; bends, metal layers, repeaters, and physical routing still matter.
+Equal wire lengths are not mathematically impossible for a planar ring: a regular polygon already provides a counterexample.
+The engineering question is which placement fits the available floorplan and timing budget.
 
 \subsection{Bisectional Bandwidth}\label{subsec:pin-bisection}
 A standard figure of merit for direct networks is \textit{bisectional bandwidth}.
@@ -144,8 +154,10 @@ If every link has the same bandwidth $W_{link}$, then the value reduces to
     B_{bisect}=N_{cut}\times W_{link},
 \end{equation}
 where $N_{cut}$ is the number of links crossing the minimum bisection.
+Here each undirected edge represents a full-duplex connection with bandwidth $W_{link}$ \emph{per direction}, and the quoted cut capacity is one-way.
+Counting simultaneous traffic in both directions would double that number.
 
-Bisection bandwidth is useful because it compresses a network's best-case communication potential into one number.
+Bisection bandwidth bounds the aggregate traffic that must cross a bottleneck balanced cut.
 It does not predict the exact runtime of a real workload, because real traffic creates conflicts and hot spots, but it does reveal a hard structural limit on how much data can move between large halves of the machine.
 The minimum is over \emph{all} equal-halves partitions, not just visually straight cuts.
 For the regular square mesh and torus considered here, a dimension-aligned cut attains the minimum and makes the count easy to see.
@@ -153,7 +165,7 @@ A diagonal or zig-zag partition is still a candidate if it divides the nodes equ
 
 A 4-ary 2-mesh with 1-unit links has a bisection bandwidth of 4 link-units because the natural equal cut crosses four links.
 The corresponding 4-ary 2-torus has a bisection bandwidth of 8 link-units because the wraparound links create a second independent set of crossings.
-For this reason, an equally sized torus has twice the bisection bandwidth of the corresponding mesh.
+In this $4\times4$ comparison, the torus therefore has twice the mesh's one-way bisection bandwidth.
 That does not make a torus automatically superior in every design, but it does explain why wraparound links are architecturally attractive.
 \input{figures/mesh-torus-bisection}
 
@@ -167,7 +179,7 @@ By composing many of these elements across multiple stages, the network can conn
 
 One of the classic examples is the \textit{omega network}.
 Between successive switch stages, the wires are connected in a \textit{perfect shuffle} pattern.
-For an $N$-input omega network, the number of stages is
+For an $N=2^s$-input omega network built from 2-by-2 switches, the number of stages is
 \begin{equation}\label{eq:ch10-formula-omega-stages}
     stages=\log_2 N.
 \end{equation}
@@ -192,7 +204,7 @@ Table~\ref{tab:pin-omega-route} shows a simple route example for destination \te
     \label{tab:pin-omega-route}
 \end{table}
 
-The weakness of a multi-stage network is \textit{blocking}.
+The weakness of this omega network is internal \textit{blocking}.
 Two transfers may need the same internal link or the same switch output at the same time.
 Unlike a nonblocking crossbar, the omega network does not generally offer an independent path for every pair of simultaneous requests.
 Thus the network may be fast when contention is low and much slower when several requests collide in the same internal region.
@@ -207,7 +219,8 @@ The chosen algorithm affects congestion balance, hardware complexity, deadlock r
 A \textit{deterministic} algorithm always chooses the same path for a given source-destination pair.
 The standard example is \textit{dimension-order routing} (also called dimensional routing).
 In a 2-dimensional mesh or torus, the message may always traverse the $x$ direction first and then the $y$ direction.
-The method is simple, cheap, and easy to verify.
+The method is simple, but deadlock freedom still depends on the channel dependencies.
+XY routing in an ordinary mesh can avoid cyclic channel dependencies; wrapping a dimension into a torus introduces cycles and requires additional precautions.
 
 The weakness is load concentration.
 If many source-destination pairs are forced to use similar middle links, those links become hot spots even when alternate paths exist elsewhere in the network.
@@ -224,20 +237,22 @@ That is \textit{livelock}.
 Adaptive routing therefore needs carefully designed restrictions or escape paths to guarantee forward progress.
 
 \subsection{Oblivious Routing and Valiant's Idea}\label{subsec:pin-oblivious-routing}
-A third option is \textit{oblivious} routing, which does not respond to current congestion but also does not force all traffic onto one canonical path.
-The classic example is \textit{Valiant's algorithm}.
+\textit{Oblivious} routing chooses paths without consulting current congestion.
+It includes deterministic traffic-independent routing as well as randomized choices; these labels are not three mutually exclusive categories.
+The classic randomized example is \textit{Valiant's algorithm}.
 To route from source $X$ to destination $Y$:
 \begin{enumerate}
-    \item choose an intermediate node $Z$ such that $Z\neq X$ and $Z\neq Y$,
+    \item choose a random intermediate node $Z$, commonly uniformly over the nodes,
     \item route from $X$ to $Z$ using a simple deterministic method such as dimension-order routing,
     \item then route from $Z$ to $Y$ the same way.
 \end{enumerate}
+If the selection permits $Z=X$ or $Z=Y$, one leg simply has zero length.
 
 The point is load balancing.
 Deterministic routing tends to punish the same central links repeatedly, while Valiant-style oblivious routing spreads traffic more evenly across the network.
 The cost is that many messages travel farther than the geometric shortest path.
 That is often a good trade: equalizing congestion can improve overall throughput even when some individual routes become longer.
-In practical implementations, obvious shortcuts are still worthwhile; if the destination already lies directly along the chosen legal path, there is no reason to force an unnecessary detour.
+Shortcutting a route changes the policy and can change its load balance and deadlock argument; it is not automatically a free optimization.
 
 
 \section{Flow Control and Congestion Management}\label{sec:pin-flow-control}
@@ -265,8 +280,8 @@ The packet may therefore be broken into a header flit, one or more body flits, a
 The header carries the routing information; the body flits carry most of the data; the tail marks the end of the packet.
 
 This distinction matters because flits do not behave like fully independent packets.
-A packet's flits must remain in order.
-The network therefore needs routing information only in the header, not repeated redundantly in every flit.
+In the wormhole model used here, a packet's flits retain their order within a virtual channel.
+The full route need not be repeated in every body flit, although local control information such as a virtual-channel ID is still needed.
 That saves bandwidth, but it also means the network cannot freely reorder flits belonging to the same packet.
 
 \subsection{What Happens at Congestion?}\label{subsec:pin-congestion-options}
@@ -279,13 +294,12 @@ That is workable in some best-effort systems but poor for real-time streams, whe
 A second option is \textit{misrouting}: take some alternate path instead of waiting.
 This can preserve motion, but unless the routing rules are designed carefully it can also create livelock.
 
-A third option is \textit{wait and store-and-forward}.
+A third option is \textit{wait with back pressure}.
 The router buffers the packet locally, retries later, and uses \textit{back pressure} to prevent upstream senders from overflowing the waiting space.
 Back pressure can be implemented with a simple on-off scheme (stop when full, resume when space opens) or with a \textit{credit-based} scheme in which the sender tracks how many downstream buffer slots are currently available.
-
-
-\enlargethispage{2\baselineskip}
-
+An on-off stop signal needs enough spare space for flits already in flight while the signal travels upstream.
+With credits, the sender spends a credit when it sends a flit and regains it only when a returned credit reports a freed downstream slot.
+For example, four initial credits and three sends leave one available credit until returns arrive, even if the link is momentarily idle.
 
 \section{From Store-and-Forward to Virtual Channels}\label{sec:pin-vc-evolution}
 
@@ -294,12 +308,12 @@ In pure \textit{store-and-forward} switching, a router waits until it has receiv
 The method is simple but expensive in latency because each hop adds a full-packet reception delay.
 Large packets therefore move slowly across long paths.
 
-\subsection{Cut-Through Routing}\label{subsec:pin-cut-through}
-\textit{Cut-through} routing reduces that latency.
+\subsection{Virtual Cut-Through}\label{subsec:pin-cut-through}
+The packet-buffered \textit{virtual cut-through} model reduces that latency.
 As soon as the header arrives and the next hop is known to be available, the router begins forwarding the packet before the entire packet has arrived locally.
 This pipelines transmission across links and can reduce end-to-end delay substantially.
 
-The tradeoff is resource reservation.
+Its tradeoff is whole-packet buffer reservation, which distinguishes this model from wormhole's flit-level buffering.
 If the packet is allowed to begin moving through the router, the downstream side must be able to absorb the entire packet without losing ordering.
 That often means buffering or reserving enough space for the whole packet, which can be wasteful.
 
@@ -313,6 +327,17 @@ If the header flit is blocked waiting for a resource, the rest of the packet is 
 Those occupied resources may then prevent unrelated traffic from advancing even though the conflict originated only at the blocked head.
 Wormhole is therefore fast and storage-efficient but vulnerable to interference between unrelated flows.
 
+\paragraph{Head arrival is not packet arrival}
+Assume a path of $H$ links, each moving one flit per cycle with one-cycle traversal, no extra router delay, and no contention.
+Measure from the first flit's transmission start to the last flit's arrival.
+For a packet of $F$ flits, store-and-forward (SF) and cut-through (CT) give
+\begin{equation}\label{eq:network-packet-latency}
+    T_{\mathrm{SF}}=HF,\qquad T_{\mathrm{CT}}=H+F-1.
+\end{equation}
+Unblocked wormhole forwarding has the same pipelined timing in this model.
+With four links and six flits, the whole packet takes 24 cycles with store-and-forward and 9 with cut-through, even though the cut-through header arrives after only 4 cycles.
+Different link rates, pipeline stages, or stalls require a different timing calculation.
+
 \subsection{Virtual Channels}\label{subsec:pin-virtual-channels}
 The standard modern response is the \textit{virtual channel}.
 A physical link is divided logically into several independent channels, each with its own buffering and state.
@@ -322,10 +347,22 @@ Conceptually, each virtual channel has states such as \textit{idle}, \textit{wai
 If one packet is blocked because its next-hop destination is unavailable, another packet using a different virtual channel on the same physical link can still move.
 This breaks much of the head-of-line blocking that would occur in a single-channel wormhole design.
 
-Virtual channels therefore make two important improvements at once.
-First, they allow flits from different packets to interleave safely on one physical link.
-Second, they preserve forward progress for traffic that is unrelated to the current blockage.
+Virtual channels let flits from different packets interleave on a physical link and can reduce head-of-line blocking when the packets need different downstream resources.
+They do not multiply that link's bandwidth: a one-flit-per-cycle link still sends only one flit per cycle in total.
+Nor does adding queues by itself guarantee progress or prevent deadlock.
 The price is complexity: the router must manage multiple buffers, virtual-channel allocation, and additional arbitration logic.
+
+\subsection{Deadlock, Livelock, and Starvation}\label{subsec:network-progress}
+These are different failure modes.
+In \textit{deadlock}, packets hold resources while waiting in a cycle, so none of them can advance.
+For example, four packets can each hold one channel and wait for the next channel around a ring.
+In \textit{livelock}, a packet keeps moving or being redirected but never reaches its destination.
+In \textit{starvation}, other traffic keeps winning arbitration while one packet is postponed indefinitely.
+
+A sufficient deadlock-avoidance strategy in the usual channel-dependency model is to impose an acyclic resource order.
+Virtual-channel classes or an escape routing subnetwork can help implement such an order, but their allocation rules matter.
+Fair arbitration addresses starvation, while bounded detours or another progress argument address livelock.
+Request/response protocols can introduce additional dependencies at endpoints, so deadlock-free routing alone does not prove a deadlock-free coherent memory system.
 
 
 \section{Switch Architecture}\label{sec:pin-switch-architecture}
@@ -343,25 +380,25 @@ A typical design includes:
 This structure is analogous in spirit to a processor pipeline: several flits can be in different internal stages of the router at the same time.
 That pipelining is essential for throughput.
 At the same time, the arbitration policy matters.
-A useful intuition is the traffic-circle rule: when deciding whether to admit new traffic or let already-moving traffic continue, it is often wise to prioritize traffic that is already transiting through the switch over traffic that is merely trying to enter.
-That policy is not universal, but it captures a recurring design instinct in congestion management.
+The lecture handout asks the reader to compare ring injection with traffic on a road.\footnote{\texttt{n8\_interconn.pdf}, slide 28, ``Packet Insertion: Ring Stop.''}
+A useful interpretation is a roundabout: transit flits are already circulating, while locally injected flits wait to merge.
+Prioritizing transit traffic can keep the ring moving, but unlimited priority could starve a core trying to inject.
+The analogy therefore motivates both congestion control and a fairness rule, not one universal arbitration policy.
 
 The large lesson is that topology alone does not determine performance.
 Real performance emerges from the interaction of topology, routing, buffering, virtual-channel structure, and router arbitration.
 A network with an impressive theoretical bisection bandwidth can still perform poorly if its switches create avoidable blocking or if its routing policy concentrates load onto a few hot links.
 
 
-\section{Chapter 10 Summary}\label{sec:chapter10-summary}
-Chapter 10 develops the communication fabric that ties a multiprocessor together.
-Parallel interconnection networks differ from general communication networks because they move wide transfers within one tightly engineered machine and therefore focus on topology, routing, flow control, and router behavior rather than on arbitrary end-to-end recovery.
-Direct topologies connect processors through explicit neighbor links, while indirect topologies place a switching fabric between processors.
-Among direct networks, the hypercube is the classic logarithmic-diameter example, while the broader $k$-ary $n$-dimensional family captures rings, meshes, and tori; a torus gains wraparound links and therefore higher bisection bandwidth than the corresponding mesh.
-Physical realizations must respect planar wire layout, so logical beauty alone is not enough.
-Among indirect networks, the crossbar is flexible but expensive, while multi-stage designs such as the omega network reduce cost by composing many small switches with perfect-shuffle wiring and destination-bit routing, at the price of blocking.
-Routing policies may be deterministic, adaptive, or oblivious, each with different tradeoffs in simplicity, load balance, and correctness.
-Flow control then decides what happens when the desired next hop is unavailable.
-Store-and-forward, cut-through, wormhole, and virtual-channel designs form a progression from simplicity to high throughput, with virtual channels providing the modern answer to much of wormhole's head-of-line blocking.
-A practical network is therefore a combined design problem involving topology, routing, buffering, and switch microarchitecture.
+\section{What to Carry Forward}\label{sec:chapter10-summary}
+A topology gives possible paths, not a complete performance or correctness story.
+Count hops, distinguish the first flit from the whole packet, and state the bandwidth direction before using a bisection number.
+Then ask what happens when a buffer fills: who waits, which resources remain held, and whether the routing and arbitration rules guarantee progress.
+
+The same reasoning connects the whole book.
+A core overlaps work, a cache shortens data travel, coherence coordinates copies, and the network carries the resulting communication.
+Each optimization moves a limit rather than making all waiting disappear.
+Appendix~\ref{ch:advanced-topics} carries those tradeoffs into devices whose physical rules differ from conventional CMOS.
 
 
 \section{Practice Questions}\label{sec:ch10-practice}
@@ -378,6 +415,7 @@ The following questions reinforce the main ideas of Chapter 10.
     \item What is the difference between a mesh and a torus?
     Why does the torus usually have higher bisection bandwidth?
     \item An 8-node unidirectional ring has 1-cycle links and no contention.
+    Treat each message as one flit and ignore router, injection, and ejection delays.
     How many cycles does it take a message to travel from node 0 to node 5?
     If node 5 can consume at most one message per cycle and already has one older message queued on arrival, what extra service delay is introduced?
     \item Why can a logically simple ring become physically problematic when laid out on a planar chip or board?
@@ -394,8 +432,10 @@ The following questions reinforce the main ideas of Chapter 10.
     \item Compare deterministic, adaptive, and oblivious routing.
     What problem is Valiant-style routing trying to solve?
     \item What is the difference between a packet and a flit?
+    For a six-flit packet crossing four one-flit-per-cycle, one-cycle links with no other delays, compute whole-packet latency with store-and-forward and with cut-through.
     \item What are three possible responses when the desired downstream buffer or output is full?
     \item Compare store-and-forward, cut-through, wormhole, and virtual-channel flow control.
     Which one most directly addresses head-of-line blocking?
     \item Why does virtual-channel flow control make the router more complicated?
+    Does adding virtual channels alone prove deadlock freedom or increase physical link bandwidth?
 \end{enumerate}

@@ -41,7 +41,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Intervene}] Snooper action in which a cache supplies data directly in response to another processor's request.
     \item[\textit{Abort}] Snooper response instructing a requester to wait or retry because ownership transfer is not yet complete.
     \item[\textit{Transient State}] Intermediate coherence state used while a block is waiting for a request or ownership transfer to complete.
-    \item[\textit{Presence Bit Vector}] Directory field that records which caches or processors currently hold a copy of one block.
+    \item[\textit{Presence Bit Vector}] Directory field identifying caches or processors that may hold a block; conservative extra bits can cause unnecessary probes without missing a real holder.
     \item[\textit{Limited Directory}] Directory organization that records only a bounded number of sharers explicitly and uses an overflow policy when that bound is exceeded.
     \item[\textit{Recall}] Directory command requiring a cache to return the current block value and surrender ownership.
     \item[\textit{Invalidate}] Directory command requiring a cache to discard its current copy of a block.
@@ -72,7 +72,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Transactional Memory}] Model that executes a region optimistically and commits only when its required atomicity and isolation can be validated.
     \item[\textit{Hardware Transactional Memory}] Transactional-memory implementation that uses hardware structures such as caches to track speculative read and write sets.
     \item[\textit{Software Transactional Memory}] Transactional-memory implementation that tracks conflicts and retries through software metadata rather than specialized hardware.
-    \item[\textit{Memory Consistency}] Rules governing the visibility and ordering of memory operations to different addresses across multiple processors.
+    \item[\textit{Memory Consistency}] Rules defining allowed cross-thread memory outcomes, including ordering across different addresses.
     \item[\textit{Strict Consistency}] Memory model in which all processors observe memory operations in one global order that matches actual time.
     \item[\textit{Sequential Consistency}] Strong memory model in which execution appears as one total interleaving that preserves each processor's program order.
     \item[\textit{Weak Consistency}] Family of relaxed models that provide strong ordering mainly at explicit synchronization operations rather than at every ordinary load and store.
@@ -108,15 +108,19 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Credit-Based Flow Control}] Back-pressure scheme in which a sender tracks how many downstream buffer slots remain available.
     \item[\textit{Store-and-Forward}] Flow-control method that buffers the entire packet at each hop before transmitting it onward.
     \item[\textit{Cut-Through Routing}] Packet-forwarding method that begins sending to the next hop as soon as enough of the header has arrived to determine the route.
+    \item[\textit{Virtual Cut-Through}] Packet-buffered cut-through model that reserves enough downstream space for an entire packet, unlike wormhole's flit-level buffering.
     \item[\textit{Wormhole Flow Control}] Flit-level forwarding method in which one packet may stretch across several routers and links at once.
     \item[\textit{Head-of-Line Blocking}] Throughput loss caused when one blocked packet prevents unrelated traffic behind it from advancing.
     \item[\textit{Virtual Channel}] Logical subdivision of one physical link into multiple independently buffered and arbitrated channels.
+    \item[\textit{Deadlock}] Cyclic resource waiting that prevents the involved packets from advancing.
+    \item[\textit{Livelock}] Continued movement or redirection without eventual delivery.
+    \item[\textit{Starvation}] Indefinite postponement of one contender while others continue to receive service.
     \item[\textit{Router}] Interconnect component that examines incoming traffic, chooses outputs, and manages buffering and arbitration.
     \item[\textit{Data Race}] For the C/C++ load/store examples, potentially concurrent conflicting accesses without happens-before ordering, with at least one write and one non-atomic access; such a race is undefined behavior.
     \item[\textit{Embarrassingly Parallel}] Workload divisible into independent pieces with negligible communication, allowing near-ideal scaling when resources permit.
     \item[\textit{Pipelining}] Temporal parallelism where different stages process different instructions simultaneously.
     \item[\textit{Superscalar (Multi-Issue)}] Pipeline organization that can issue more than one instruction per cycle.
-    \item[\textit{Register Renaming}] Introduction of additional physical register identities so later writes do not falsely block earlier reads or writes.
+    \item[\textit{Register Renaming}] Mapping reused architectural names to distinct producer identities, such as physical registers or ROB tags, to remove WAR/WAW name conflicts without removing RAW dependences.
     \item[\textit{Op}] One encoded operation within a VLIW instruction stream.
     \item[\textit{Multi-Op}] Group of ops intended to execute in the same cycle in a VLIW design.
     \item[\textit{Tail Bit}] Per-op field marking whether the current op ends the current multi-op.
@@ -124,7 +128,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Iterative Modulo Scheduling (IMS)}] Practical software-pipelining algorithm that searches for a legal modulo schedule by trying increasing initiation intervals.
     \item[\textit{Initiation Interval (II)}] Number of cycles between the start of successive loop iterations in a software-pipelined schedule.
     \item[\textit{Minimum Initiation Interval (MII)}] Lower bound on II, equal to $\max(ResII,RecII)$.
-    \item[\textit{Resource-Constrained Initiation Interval (ResII)}] Lower bound on II imposed by the number of available functional units of each type.
+    \item[\textit{Resource-Constrained Initiation Interval (ResII)}] Lower bound on II imposed by recurring resource demand and capacity; counting units alone assumes one-cycle initiation and disjoint resource classes.
     \item[\textit{Recurrence-Constrained Initiation Interval (RecII)}] Lower bound on II imposed by loop-carried dependence cycles.
     \item[\textit{Prologue}] Non-repeating prefix of a software-pipelined loop that fills the pipeline before steady state.
     \item[\textit{Kernel}] Repeating steady-state portion of a software-pipelined loop.
@@ -137,7 +141,7 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Architected Register}] Register name defined by the ISA and visible to software.
     \item[\textit{Architected Register File}] Register file containing the committed architectural state visible to software.
     \item[\textit{Physical Register}] Internal hardware register used to hold renamed values beyond the architected register set.
-    \item[\textit{Register Alias Table (RAT)}] Mapping table from architected register names to the current physical register locations.
+    \item[\textit{Register Alias Table (RAT)}] Speculative mapping from architectural names to their latest renamed physical producers, whether their values are ready or not.
     \item[\textit{Ready Bit}] Status bit indicating that a register or operand value has already been produced and may be consumed.
     \item[\textit{Reorder Buffer (ROB)}] Structure that tracks in-flight instructions for in-order retirement and precise exceptions; result values may live in the ROB or in a separate physical register file.
     \item[\textit{Future File}] Register organization that holds the most recent speculative values while a separate architected register file holds committed state.
@@ -145,8 +149,8 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Precise Exception}] Exception model with a defined sequential architectural boundary. For a restartable fault, all older instructions are committed and neither the faulting instruction nor younger instructions have committed effects.
     \item[\textit{Imprecise Exception}] Exception model that reports an error without guaranteeing an exact sequential recovery point.
     \item[\textit{Checkpoint/Repair}] Recovery method that periodically captures coherent register state and restores it when an exception or mis-speculation occurs.
-    \item[\textit{Instruction Boundary}] Dynamic marker used to denote a coherence point or recovery boundary in checkpoint-based schemes.
-    \item[\textit{Hyperthreading (SMT)}] Simultaneous multithreading in which multiple threads share one core's execution resources.
+    \item[\textit{Instruction Boundary}] Program-order prefix boundary used to define the state a checkpoint must represent for recovery.
+    \item[\textit{Simultaneous Multithreading (SMT)}] Execution organization in which multiple hardware threads share one core's issue and execution resources.
     \item[\textit{Speculative Side Channel}] Information leak caused when squashed speculative work still changes microarchitectural state such as caches or predictors.
     \item[\textit{Runtime}] Time to complete one job (response/turnaround time).
     \item[\textit{Throughput}] Completed work per unit time.
@@ -158,20 +162,20 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Hit Time (HT)}] Latency to serve an access from the current cache level.
     \item[\textit{Miss Ratio (MR)}] Fraction of accesses at a level that miss.
     \item[\textit{Miss Penalty (MP)}] Extra latency to service a miss from lower levels.
-    \item[\textit{Compulsory Miss}] First-reference miss for data not previously loaded.
-    \item[\textit{Capacity Miss}] Miss caused by working set exceeding effective cache capacity.
-    \item[\textit{Conflict Miss}] Miss caused by mapping/placement constraints despite sufficient total capacity.
+    \item[\textit{Compulsory Miss}] In a cold demand-only trace, the first reference to a block.
+    \item[\textit{Capacity Miss}] Non-first miss that also occurs in the stated fully associative reference cache of the same capacity and block size.
+    \item[\textit{Conflict Miss}] Non-first miss avoided by that fully associative reference cache under the stated replacement policy, revealing a placement restriction.
     \item[\textit{Write-Back}] Write policy that defers propagation of modified data until eviction, an explicit write-back, or a coherence transaction requires it.
     \item[\textit{Write-Through}] Write policy that also sends each write hit to the next level, possibly through a buffer.
     \item[\textit{Write-Allocate}] Write-miss policy that fetches and installs the block before write.
     \item[\textit{Write-No-Allocate}] Write-miss policy that bypasses install and writes lower level directly.
-    \item[\textit{Qubit}] Quantum bit whose useful state must be isolated and controlled well enough to preserve quantum behavior during computation.
-    \item[\textit{Decoherence}] Loss of intended quantum behavior when a qubit interacts with the surrounding environment.
-    \item[\textit{NISQ}] Noisy intermediate-scale quantum computing; near-term machines with limited qubits, noise, and short usable programs.
+    \item[\textit{Qubit}] Two-level quantum system described by normalized complex amplitudes; measurement in a basis returns one basis outcome rather than all amplitudes.
+    \item[\textit{Decoherence}] Loss of useful quantum coherence through uncontrolled interaction with the environment.
+    \item[\textit{NISQ}] Noisy intermediate-scale quantum computing; a noisy-device regime with limited usable circuit depth, not a permanent calendar label.
     \item[\textit{Logical Qubit}] Error-corrected qubit represented by many physical qubits and maintained through repeated decoding.
     \item[\textit{Phase Oracle}] Reversible quantum operation that encodes a classical function by changing the phase of selected basis states.
     \item[\textit{Fault-Tolerant Quantum Computing}] Quantum-computing approach that uses encoded logical qubits and error correction to run longer computations reliably.
-    \item[\textit{Superconducting Logic}] Logic family that uses superconducting devices and very low-resistance wires, often representing information with pulses.
+    \item[\textit{Superconducting Logic}] Classical digital logic using superconducting devices, often with pulse signaling; it is not automatically quantum computation.
     \item[\textit{Rapid Single Flux Quantum (RSFQ)}] Superconducting pulse-logic family that represents bits using quantized magnetic-flux pulses.
     \item[\textit{Reciprocal Quantum Logic (RQL)}] AC-powered superconducting logic family related to RSFQ and used as one candidate technology for energy-efficient processors.
     \item[\textit{Operand Queue}] Storage structure that holds produced values until compiler-scheduled consumer instructions need them.
@@ -179,6 +183,8 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Cryostat}] Cooling system used to maintain cryogenic temperatures for superconducting or quantum hardware.
     \item[\textit{Energy-Delay Product (EDP)}] Efficiency metric combining energy and runtime; lower EDP indicates a better energy/performance tradeoff.
     \item[\textit{SUP}] Superconducting Unit of Performance; proposed organization combining latency-oriented and throughput-oriented superconducting resources.
+    \item[\textit{SYNDRA}] Static Synchronous Dataflow RISC Architecture; proposed compiler-scheduled architecture targeting single-thread performance.
+    \item[\textit{STRIDE}] Proposed many-thread superconducting architecture targeting aggregate throughput.
     \item[\textit{PIPT}] Physically indexed, physically tagged cache organization whose set index and tag are defined by the physical address.
     \item[\textit{VIPT}] Virtually indexed, physically tagged cache organization that overlaps indexing with translation.
     \item[\textit{TLB}] Translation lookaside buffer caching virtual-to-physical translations and associated access-permission information.
@@ -194,12 +200,12 @@ This appendix collects first-pass definitions used throughout Chapters 1--10 and
     \item[\textit{Memory Disambiguation}] Compile-time or runtime reasoning used to determine whether two memory references may access the same location.
     \item[\textit{Forwarding (Bypassing)}] Sending a produced value directly to a consumer before register write-back.
     \item[\textit{Branch Target Buffer (BTB)}] Predictor structure that supplies likely branch targets early in fetch.
-    \item[\textit{Aliasing}] Predictor or cache entry interference from unrelated addresses mapping to the same slot.
+    \item[\textit{Aliasing}] Multiple names or addresses referring to the same storage; in predictor tables, the term also describes unrelated branches sharing an entry.
     \item[\textit{Return-Address Stack (RAS)}] Small stack predictor for call/return target addresses.
     \item[\textit{Direction Prediction}] Branch predictor decision for taken versus not taken.
     \item[\textit{One-Bit Predictor}] Dynamic branch predictor that records only the last observed branch outcome.
     \item[\textit{Smith Predictor}] Saturating-counter branch predictor, commonly implemented with a two-bit counter per entry.
-    \item[\textit{GShare}] Global-history predictor that uses an exclusive-or of low PC bits and global history to index the prediction table.
+    \item[\textit{GShare}] Predictor indexing by XOR of selected PC bits and global history; the model specifies whether address-alignment bits are discarded.
     \item[\textit{GSelect}] Global-history predictor that forms its index by concatenating selected PC bits and global-history bits.
     \item[\textit{Yeh/Patt Predictor}] Two-level branch predictor that uses recorded branch history to index a table of direction counters.
     \item[\textit{Perceptron Predictor}] Branch predictor that computes a weighted sum over branch-history bits and predicts from the sign of that sum.

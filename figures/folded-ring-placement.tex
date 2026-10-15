@@ -1,0 +1,27 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[ringnode/.style={draw=bookaccent,fill=booklight,circle,minimum size=6mm,font=\small}]
+    \node[anchor=east,font=\small] at (-0.7,0) {Naive};
+    \foreach \position in {0,...,7} {
+      \node[ringnode] (naive\position) at (\position,0) {\position};
+    }
+    \foreach \position [evaluate=\position as \following using int(\position+1)] in {0,...,6} {
+      \draw[bookaccent] (naive\position) -- (naive\following);
+    }
+    \draw[bookaccent] (naive7.south) .. controls (7,-1.1) and (0,-1.1) .. node[booklabel,below] {return span: seven slots} (naive0.south);
+    \node[anchor=east,font=\small] at (-0.7,-2.5) {Folded};
+    \foreach \identity/\position in {0/0,1/2,2/4,3/6,4/7,5/5,6/3,7/1} {
+      \node[ringnode] (fold\identity) at (\position,-2.5) {\identity};
+    }
+    \foreach \identity/\following in {0/1,1/2,2/3} {
+      \draw[bookaccent] (fold\identity) to[bend left=35] (fold\following);
+    }
+    \draw[bookaccent] (fold3) -- (fold4);
+    \foreach \identity/\following in {4/5,5/6,6/7} {
+      \draw[bookaccent] (fold\identity) to[bend left=35] (fold\following);
+    }
+    \draw[bookaccent] (fold7) -- (fold0);
+  \end{tikzpicture}
+  \caption{The same ring, placed differently. Labels are logical node IDs; horizontal positions are equally spaced physical slots. Both connect $0$ through $7$ and back to $0$, but the folded placement's maximum horizontal link span is two slots.}
+  \label{fig:folded-ring-placement}
+\end{figure}

@@ -11,7 +11,7 @@ It is not a substitute for the chapter practice questions; it is a last-pass che
     \item Distinguish SIMD, MIMD, packed-word SIMD, and pipelined vector execution.
     \item Use the CPU-time equation $\text{time}=IC\times CPI\times CT$ and know which term an optimization changes.
     \item Apply Amdahl's law for fixed-size speedup and Gustafson's law for scaled workloads.
-    \item Use arithmetic means for times and harmonic means for rates.
+    \item Choose rate averages from the workload: harmonic for equal-work segments, arithmetic for equal-time segments, with appropriate weights otherwise.
 \end{itemize}
 
 \subsection*{Caches and Memory Hierarchy}
@@ -37,7 +37,7 @@ It is not a substitute for the chapter practice questions; it is a last-pass che
 \begin{itemize}
     \item Distinguish FICI, FICO, and FOCO execution models.
     \item Explain how Tomasulo-style scheduling uses reservation stations, tags, result broadcast, and register renaming.
-    \item Explain why precise exceptions require in-order architectural state update, often through a reorder buffer or checkpoint/repair.
+    \item Explain precise recovery at a program-order boundary, including no committed effects from a restartable faulting instruction; compare reorder-buffer and checkpoint/repair mechanisms.
     \item Draw data dependence graphs and classify pure, anti-, and output dependences.
     \item Use dependence height as a list-scheduling priority.
     \item Explain VLIW as a trade: simpler dynamic hardware in exchange for stronger compiler scheduling responsibility.
@@ -47,6 +47,7 @@ It is not a substitute for the chapter practice questions; it is a last-pass che
 \subsection*{Multiprocessors, Synchronization, and Consistency}
 \begin{itemize}
     \item Distinguish shared-memory and message-passing systems.
+    \item Separate the communication model from UMA/NUMA physical placement and from whether accelerators share memory.
     \item Explain coherence as ordering and propagation for one memory location, not as full synchronization correctness.
     \item Trace MSI/MESI/MOESI-style state transitions and know what \texttt{E}, \texttt{O}, and \texttt{F} add.
     \item Distinguish abort/retry from intervene behavior when dirty data is requested by another cache.
@@ -55,6 +56,7 @@ It is not a substitute for the chapter practice questions; it is a last-pass che
     \item Explain why test-and-test-and-set reduces coherence traffic compared with repeated test-and-set.
     \item Use locks for mutual exclusion around critical sections and barriers for regrouping a set of threads at a phase boundary.
     \item Define a data race and explain why coherence alone does not remove data races.
+    \item Distinguish C/C++ data-race undefined behavior from an ordering bug using relaxed atomic operations.
     \item Compare strict, sequential, and weak/relaxed consistency models.
     \item Know what store fences, load fences, full fences, acquire operations, and release operations prevent.
 \end{itemize}
@@ -65,10 +67,11 @@ It is not a substitute for the chapter practice questions; it is a last-pass che
     \item For $k$-ary $n$-dimensional networks, compute node count as $k^n$.
     \item Define bisectional bandwidth as the aggregate bandwidth crossing the minimum equal-halves cut.
     \item Explain why a torus has more bisectional bandwidth than the corresponding mesh.
-    \item Compare deterministic, adaptive, and oblivious routing.
+    \item Compare routing choices without treating all labels as exclusive: traffic-independent deterministic routing is also oblivious.
     \item Explain Valiant's algorithm as randomized load balancing through an intermediate node.
     \item Distinguish packet-level and flit-level flow control.
     \item Compare store-and-forward, cut-through, wormhole, and virtual-channel flow control.
+    \item Distinguish header latency from whole-packet latency, and deadlock from livelock and starvation; virtual channels do not automatically prove progress or add physical bandwidth.
 \end{itemize}
 
 
@@ -100,6 +103,7 @@ The fix is not merely better coherence; the fix is an ordering rule around synch
 Strict consistency ties the visible memory order to actual time.
 Sequential consistency allows a single legal interleaving that preserves each thread's program order, even if that interleaving is not the real-time order.
 Weak or relaxed models allow ordinary accesses to move more freely but require synchronization accesses to carry stronger ordering guarantees.
+In C/C++, use the language's atomic operations or synchronization library; undefined behavior from ordinary racing accesses is not repaired merely by a coherent cache or an invented fence call.
 
 \subsection*{Barriers and Locks}
 A lock protects a critical section: only one thread should execute that protected code at a time.
@@ -127,5 +131,5 @@ This value is a potential maximum, not a guarantee: routing, buffering, and traf
     \item Given two threads accessing two variables, can you decide which outcomes are legal under strict consistency, sequential consistency, and relaxed ordering?
     \item Given a network topology, can you compute bisectional bandwidth and explain why routing may still perform worse than that theoretical limit?
     \item Given a packet/flit scenario, can you explain whether store-and-forward, cut-through, wormhole, or virtual channels best describes the behavior?
-    \item Given the advanced-topics appendix, can you state why quantum machines and superconducting processors are architectural accelerators rather than simple CMOS replacements?
+    \item Given the advanced-topics appendix, can you explain why quantum accelerators need classical control and why classical superconducting cores impose different architectural tradeoffs from CMOS?
 \end{enumerate}

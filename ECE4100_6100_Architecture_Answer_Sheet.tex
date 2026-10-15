@@ -9,7 +9,7 @@
 \geometry{letterpaper, margin=1in}
 \raggedbottom
 
-\title{High-Performance Computer Architecture\\Chapter Practice Question Answer Sheet}
+\title{High-Performance Computer Architecture\\Practice Question Answer Sheet}
 \author{ECE 4100/6100}
 \date{Spring 2026}
 
@@ -20,13 +20,14 @@
 
 \section*{Scope}
 \addcontentsline{toc}{section}{Scope}
-This document answers the numbered practice questions at the end of Chapters 1--10 of the review textbook.
+This document answers the numbered practice questions in Chapters 1--10 and the true/false prompts in Appendix D of the course companion.
 It is intentionally separate from the main text so it can be distributed or withheld independently.
 
 \section{Chapter 1: Introduction}
 \begin{enumerate}
     \item Packed-word SIMD primarily exploits parallelism.
-    A cache primarily exploits speculation without prediction by keeping nearby or recently used data before proving it will be needed.
+    The course classifies locality-based caching as speculation without prediction: it keeps nearby or recently used data before proving it will be needed again.
+    This broad categorization does not mean a cache hit itself executes instructions speculatively.
     A branch predictor supports speculation with prediction.
     Out-of-order execution with branch prediction combines instruction-level parallelism with speculation directed by prediction.
 
@@ -674,7 +675,8 @@ It is intentionally separate from the main text so it can be distributed or with
 \section{Chapter 10: Parallel Interconnection Networks}
 \begin{enumerate}
     \item A parallel interconnection network is part of the machine's internal communication fabric, so its latency, bandwidth, routing, and flow control directly shape processor and memory-system behavior.
-    Flit width matters because it determines how much of a packet can move per link cycle and affects serialization latency, buffer sizing, and switch datapath width.
+    Flit size affects buffering and flow-control granularity; physical link width and transfer rate determine how many cycles are needed to transmit that flit.
+    One flit per cycle is the course's simple link model, not a universal definition of a flit.
 
     \item In a direct topology, processors or routers attached to processors are the vertices of the graph.
     In an indirect topology, communication passes through separate switch stages, so the processors are endpoints rather than the internal switch vertices.
@@ -721,11 +723,12 @@ It is intentionally separate from the main text so it can be distributed or with
 
     \item Deterministic routing always chooses the same path for a given source and destination.
     Adaptive routing responds to congestion or faults.
-    Oblivious routing uses randomized or traffic-independent choices without observing current congestion.
+    Oblivious routing ignores current congestion and can be deterministic or randomized, so the categories overlap.
     Valiant-style routing tries to spread traffic and avoid hot spots by routing through an intermediate destination.
 
     \item A packet is the full logical message unit handled by the network.
     A flit is a smaller flow-control unit of that packet that moves through links and buffers.
+    Under the stated unit-link timing model, store-and-forward takes $HF=4\cdot6=24$ cycles, while cut-through takes $H+F-1=4+6-1=9$ cycles to deliver the final flit.
 
     \item If the desired downstream buffer or output is full, the router can block/stall the packet, buffer it locally, or route it through another legal path if adaptive routing is available.
     Some systems may also drop/retry, but lossless on-chip networks usually avoid dropping.
@@ -737,6 +740,21 @@ It is intentionally separate from the main text so it can be distributed or with
 
     \item Virtual channels require extra per-channel buffers, allocation logic, flow-control state, and arbitration.
     The router must choose among multiple logical queues while preserving correctness and avoiding deadlock.
+    Extra virtual channels do not increase physical link bandwidth or by themselves prove deadlock freedom; routing/resource rules and endpoint dependencies still matter.
+\end{enumerate}
+
+\section{Appendix D: Advanced Topics}
+\begin{enumerate}
+    \item \textbf{False.} The hybrid model uses a classical host for preparation, control, and interpreting measurements; quantum speedups are problem-specific, not a replacement for every classical workload.
+    \item \textbf{True, with a qualification.} Reducing noisy operations or elapsed circuit time can improve reliability, but gate type, error rate, depth, and mapping matter more than raw count alone.
+    \item \textbf{False.} NISQ describes noisy devices with limited useful circuit depth, not an assumption of long, reliable general-purpose computation.
+    \item \textbf{True.} Fault tolerance encodes logical information across physical qubits and uses error extraction, decoding, and recovery; the overhead is code- and reliability-dependent.
+    \item \textbf{True.} A closed-system gate must be unitary; an irreversible classical function needs a reversible embedding. Measurement and reset are different operations and need not be reversible on the measured system.
+    \item \textbf{False.} Low DC wire resistance does not remove fanout, multi-port storage, switching, clocking, interface, or cooling costs.
+    \item \textbf{True.} Static scheduling can move expensive discovery and distribution work toward the compiler, although runtime variability still needs correct handling.
+    \item \textbf{False.} A barrel core rotates issue opportunities among threads. In a one-wide model, aggregate IPC can approach 1 while each of $N_{threads}$ active threads averages $1/N_{threads}$.
+    \item \textbf{True.} Independent banks can serve different-bank accesses concurrently; two accesses to one single-ported bank still conflict.
+    \item \textbf{True.} SUP combines single-thread-oriented SYNDRA with throughput-oriented STRIDE as a research proposal. Benefits depend on phase behavior, implementation, and transition costs.
 \end{enumerate}
 
 \end{document}

@@ -1,0 +1,17 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[phasegate/.style={draw=bookaccent,fill=booklight,minimum width=8mm,minimum height=8mm}]
+    \node[anchor=east] (input) at (0,0) {$\lvert0\rangle$};
+    \node[phasegate] (first) at (1,0) {$H$};
+    \node[phasegate] (oracle) at (4,0) {$Z$};
+    \node[phasegate] (last) at (7,0) {$H$};
+    \node[anchor=west] (output) at (8,0) {$\lvert1\rangle$};
+    \draw[bookarrow] (input) -- (first);
+    \draw[bookarrow] (first) -- node[booklabel,below] {$\lvert+\rangle$} (oracle);
+    \draw[bookarrow] (oracle) -- node[booklabel,below] {$\lvert-\rangle$} (last);
+    \draw[bookarrow] (last) -- (output);
+    \node[booklabel,above=2mm of oracle] {$U_f$, with $f(x)=x$};
+  \end{tikzpicture}
+  \caption{A relative phase becomes a readable outcome through interference. Direct computational-basis measurement before the final $H$ would still give 0 or 1 equally often. This small example explains phase processing, not a general quantum speedup.}
+  \label{fig:quantum-phase-interference}
+\end{figure}

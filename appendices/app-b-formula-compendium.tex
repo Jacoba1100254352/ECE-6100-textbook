@@ -1,5 +1,6 @@
-\chapter{Formula Compendium (Grouped and Labeled)}\label{ch:formula-compendium}
+\chapter{Formula Reference}\label{ch:formula-compendium}
 This appendix gathers the core formulas used across Chapters 1--10.
+Keep the stated model with each equation: symbols are reused across topics, latency units must agree, and overlapping costs must not be added twice.
 
 
 \section*{Chapter 1 Formula Set}\label{sec:auto-056}
@@ -9,6 +10,7 @@ This appendix gathers the core formulas used across Chapters 1--10.
     \text{serial cycles}=nk,\qquad
     \text{pipeline cycles}\approx k+n-1.
 \end{equation}
+Here $n$ is the number of elements and $k$ is the per-element latency in cycles; the pipeline accepts one element per cycle without stalls.
 
 
 \section*{Chapter 2 Formula Set}\label{sec:auto-057}
@@ -22,6 +24,7 @@ This appendix gathers the core formulas used across Chapters 1--10.
 \begin{equation}\label{eq:auto-056}
     \text{CPU time}=\frac{\text{IC}\times\text{CPI}}{f}.
 \end{equation}
+Here $f$ is clock frequency; it is not the accelerated time fraction used in Amdahl's law below.
 
 \paragraph{Chapter 2-F3 (Instruction-Mix Total Cycles)}\label{par:auto-046}
 \begin{equation}\label{eq:auto-057}
@@ -42,26 +45,30 @@ This appendix gathers the core formulas used across Chapters 1--10.
 \begin{equation}\label{eq:auto-060}
     S_{Amdahl}=\frac{1}{(1-f)+\frac{f}{s}}.
 \end{equation}
+$f$ is the fraction of \emph{baseline execution time} accelerated by factor $s$; the fixed-work model ignores new overhead and overlap changes.
 
 \paragraph{Chapter 2-F7 (Amdahl Upper Bound)}\label{par:auto-050}
 \begin{equation}\label{eq:auto-061}
     S_{\text{upper}}=\frac{1}{1-f}.
 \end{equation}
+For $f<1$ as $s\rightarrow\infty$.
 
 \paragraph{Chapter 2-F8 (Gustafson's Law)}\label{par:auto-051}
 \begin{equation}\label{eq:auto-062}
     S_{Gustafson}=\alpha+(1-\alpha)N.
 \end{equation}
+$\alpha$ is the serial fraction measured in the scaled $N$-processor run, not the baseline fraction from Amdahl's law.
 
-\paragraph{Chapter 2-F9 (Arithmetic Mean for Time)}\label{par:auto-052}
+\paragraph{Chapter 2-F9 (Equal-Weight Mean of Times)}\label{par:auto-052}
 \begin{equation}\label{eq:auto-063}
     \bar{T}_{arith}=\frac{1}{n}\sum_{i=1}^{n}T_i.
 \end{equation}
 
-\paragraph{Chapter 2-F10 (Harmonic Mean for Rate)}\label{par:auto-053}
+\paragraph{Chapter 2-F10 (Combined Rate for Equal-Work Segments)}\label{par:auto-053}
 \begin{equation}\label{eq:auto-064}
     \bar{R}_{harm}=\frac{n}{\sum_{i=1}^{n}\frac{1}{R_i}}.
 \end{equation}
+For positive rates on consecutive equal-work segments. Equal-time segments instead use an arithmetic rate mean; in general, divide total work by total time.
 
 
 \section*{Chapter 3 Formula Set}\label{sec:auto-058}
@@ -72,6 +79,7 @@ This appendix gathers the core formulas used across Chapters 1--10.
     \text{block size}=2^B\ \text{bytes},\qquad
     \text{associativity}=2^S\ \text{ways}.
 \end{equation}
+Capacity here means data bytes, excluding tags and control metadata. The simple byte-addressed geometry requires $C\ge B+S$.
 
 \paragraph{Chapter 3-F2 (Total Blocks and Sets)}\label{par:auto-055}
 \begin{equation}\label{eq:auto-066}
@@ -93,6 +101,7 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
 \begin{equation}\label{eq:auto-068}
     \text{Address}=[\text{Tag}\mid\text{Index}\mid\text{Offset}].
 \end{equation}
+$AW$ is the address width used by the modeled lookup, not automatically the ISA register width or the logarithm of installed RAM size.
 
 \paragraph{Chapter 3-F4 (Address-Field Widths, 32-bit Address)}\label{par:auto-057}
 \begin{equation}\label{eq:auto-069}
@@ -111,35 +120,42 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
 \begin{equation}\label{eq:auto-071}
     AAT=HT+MR\cdot MP.
 \end{equation}
+$MP$ is the additional service time after the current level's hit lookup in this additive model.
 
 \paragraph{Chapter 3-F7 (Bit Overhead from Valid/Dirty)}\label{par:auto-060}
 \begin{equation}\label{eq:auto-072}
     \text{overhead fraction}=\frac{n_v+n_d}{2^{B+3}},\qquad
     n_v=1,\quad n_d\in\{0,1\}.
 \end{equation}
+Valid/dirty bits per block divided by data bits per block; this does not include tag or replacement-state overhead.
 
 \paragraph{Chapter 3-F8 (Full-Block Miss Penalty Model)}\label{par:auto-061}
 \begin{equation}\label{eq:auto-073}
     MP_{full}=T_1+(N_{sb}-1)T_f,\qquad N_{sb}=\left\lceil 2^B/W\right\rceil.
 \end{equation}
+$W$ is bytes per transfer, $T_1$ is time to the first completed sub-block, and $T_f$ is the interval between later sub-blocks.
 
 \paragraph{Chapter 3-F9 (Early-Restart Approximation)}\label{par:auto-062}
 \begin{equation}\label{eq:auto-074}
     MP_{ER}\approx T_1+\frac{N_{sb}-1}{2}T_f.
 \end{equation}
+Assumes an in-order fill and a uniform distribution over requested sub-block positions.
 
 \paragraph{Chapter 3-F10 (Recursive Two-Level Form)}\label{par:auto-063}
 \begin{equation}\label{eq:auto-075}
     AAT_{L1}=HT_{L1}+MR_{L1}\cdot AAT_{L2}.
 \end{equation}
+The L2 term is complete service time per L1 miss; L2 miss ratios are conditional on accesses reaching L2 in this serial-lookup model.
 
 \paragraph{Chapter 3-F11 (VIPT Constraint)}\label{par:auto-064}
 \begin{equation}\label{eq:auto-076}
     C-S\le P.
 \end{equation}
+$2^P$ bytes per page; this is the conventional VIPT index-within-page-offset constraint without extra synonym-handling machinery.
 
 
 \section*{Chapter 4 Formula Set}\label{sec:auto-059}
+For the pipeline timing formulas, $N$ is the number of balanced stages, $M$ is the instruction count, $T_s$ is stage logic delay, and $T_{reg}$ is register overhead; assume one new instruction per cycle and no stalls unless stated.
 
 \paragraph{Chapter 4-F1 (Pipelined Clock Approximation)}\label{par:auto-065}
 \begin{equation}\label{eq:auto-077}
@@ -165,6 +181,7 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
 \begin{equation}\label{eq:auto-081}
     CPI=1+\text{stalls}_{avg}.
 \end{equation}
+For the single-issue model with ideal CPI 1, counting non-overlapping added stall cycles per retired instruction.
 
 \paragraph{Chapter 4-F6 (Branch-Stall CPI Contribution)}\label{par:auto-070}
 \begin{equation}\label{eq:auto-082}
@@ -177,6 +194,7 @@ Set-associative corollary: if $S>0$, then $\text{lines}>\text{sets}$.
     index_{GSelect}&=\operatorname{concat}(PC_p,GHR_h),\qquad N_{counters}=2^{p+h}.\label{eq:app-b-gselect}
 \end{align}
 For GShare, the selected PC and history fields have equal width.
+Exclude alignment bits when the predictor's indexing convention requires it.
 
 \paragraph{Chapter 4-F8 (Perceptron Prediction and Training)}
 \begin{equation}\label{eq:app-b-perceptron}
@@ -213,6 +231,7 @@ Here $DRAM\_AT$ excludes the per-word transfer time; Chapter 3's $T_1$ includes 
 \begin{equation}\label{eq:app-ch6-formula-ipc-cpi}
     IPC=\frac{1}{CPI}.
 \end{equation}
+Use the same instruction count and cycle interval for both quantities, normally retired instructions for architectural IPC.
 
 \paragraph{Chapter 6-F2 (CPI/IPC Threshold Equivalence)}\label{par:ch6-formula-2}
 \begin{equation}\label{eq:app-ch6-formula-threshold}
@@ -223,11 +242,13 @@ Here $DRAM\_AT$ excludes the per-word transfer time; Chapter 3's $T_1$ includes 
 \begin{equation}\label{eq:app-ch6-formula-throughput}
     IPC_{retire}\le \min\!\left(IPC_{fetch},\ IPC_{dispatch},\ IPC_{execute},\ IPC_{state\ update}\right).
 \end{equation}
+A sustained-rate bound, not a claim that every short window has matching fetch and retirement counts.
 
 \paragraph{Chapter 6-F4 (Simplified Scoreboard Fire Condition)}\label{par:ch6-formula-4}
 \begin{equation}\label{eq:app-ch6-formula-fire}
     \text{Fire if } \neg busy(src_1)\wedge \neg busy(src_2)\wedge \neg busy(dest)\wedge \neg busy(FU_{needed}).
 \end{equation}
+The simple FICO model captures sources before younger writers pass. A busy FU means unable to accept another operation, not merely occupied by an older pipelined operation.
 
 \paragraph{Chapter 6-F5 (Result-Bus Completion Bound)}\label{par:ch6-formula-5}
 \begin{equation}\label{eq:app-ch6-formula-result-bus}
@@ -287,6 +308,7 @@ Polling two ready bits for every scheduling entry instead costs up to $2N_{sched
         lat(i)+\max\limits_{j\in succ(i)} height(j), & \text{otherwise}
     \end{cases}
 \end{equation}
+For the acyclic graph and latency convention used in Chapter 7; compact cyclic loop graphs instead need recurrence analysis.
 
 \paragraph{Chapter 7-F2 (Earliest Legal List-Scheduling Cycle)}\label{par:ch7-formula-2}
 \begin{equation}\label{eq:app-ch7-formula-list-legal}
@@ -310,14 +332,16 @@ For dependence cycles with positive total iteration distance, using the sum of r
 \begin{equation}\label{eq:app-ch7-formula-min-ii}
     MII=\max(ResII,RecII),\qquad II\ge MII.
 \end{equation}
+The lower bound need not be achievable by a legal schedule or by a bounded heuristic search.
 
 
 \section*{Chapter 8 Formula Set (Multiprocessors and Coherence)}\label{sec:ch8-formulas}
 
 \paragraph{Chapter 8-F1 (Ideal Embarrassingly Parallel Scaling)}\label{par:ch8-formula-1}
 \begin{equation}\label{eq:ch8-formula-ideal-scaling}
-    S(N)=N \qquad \text{when } f=1 \text{ and no shared resource becomes the bottleneck.}
+    S(N)=N \qquad \text{for ideally balanced, independent work with no added overhead.}
 \end{equation}
+This idealization excludes communication, synchronization, serial work, and capacity or bandwidth bottlenecks.
 
 \paragraph{Chapter 8-F2 (Directory Entry Count)}\label{par:ch8-formula-2}
 \begin{equation}\label{eq:ch8-formula-dir-entries}
@@ -372,8 +396,17 @@ This identifies the last arrival; a reusable barrier also requires phase trackin
 \begin{equation}\label{eq:app-ch10-formula-bisection}
     B_{bisect}=N_{cut}\times W_{link}.
 \end{equation}
+Uses the minimum equal-halves cut. Chapter 10 reports one-way capacity with $W_{link}$ specified per direction of each full-duplex edge.
 
 \paragraph{Chapter 10-F4 (Omega Network Stage Count)}\label{par:ch10-formula-4}
 \begin{equation}\label{eq:app-ch10-formula-omega}
     stages=\log_2 N.
 \end{equation}
+For $N$ a power of two and 2-by-2 switching elements.
+
+\paragraph{Chapter 10-F5 (Whole-Packet Latency in the Unit-Link Model)}\label{par:ch10-formula-5}
+\begin{equation}\label{eq:app-network-packet-latency}
+    T_{\mathrm{SF}}=HF,\qquad T_{\mathrm{CT}}=H+F-1.
+\end{equation}
+$H$ one-cycle links, one flit per link per cycle, $F$ flits per packet, no extra router delay, and no contention; measure from first transmission start to final-flit arrival.
+SF denotes store-and-forward; CT denotes cut-through.
