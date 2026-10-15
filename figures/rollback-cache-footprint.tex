@@ -1,0 +1,15 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=1cm,y=1cm]
+    \node[font=\small\bfseries] at (3,3.25) {Architectural state};
+    \node[font=\small\bfseries] at (10,3.25) {Microarchitectural state};
+    \node[bookbox,text width=4.7cm] (pendingresult) at (3,2.25) {Transient work produces\\an uncommitted result};
+    \node[bookbox,text width=4.7cm] (cacheeffect) at (10,2.25) {The work may also\\fetch a cache line};
+    \node[bookbox,text width=4.7cm] (recoverystate) at (3,0.55) {Recovery discards the result;\\committed state is preserved};
+    \node[bookbox,text width=4.7cm] (remainingeffect) at (10,0.55) {The cache line may remain;\\a later access can be faster};
+    \draw[bookarrow] (pendingresult.south) -- node[right,font=\scriptsize] {squash or fault recovery} (recoverystate.north);
+    \draw[bookarrow] (cacheeffect.south) -- node[right,font=\scriptsize] {not necessarily undone} (remainingeffect.north);
+  \end{tikzpicture}
+  \caption{Rollback is not a universal eraser. In this conceptual example, an uncommitted result is discarded while a cache fill can survive and affect later timing. It illustrates a possible footprint, not a guarantee that every speculative access fills a line or that every later probe hits.}
+  \label{fig:rollback-cache-footprint}
+\end{figure}

@@ -73,7 +73,7 @@ Completed in the first editorial pass
   tighter chapter conclusions and question wording remove their cause without
   dropping questions, changing exercise assumptions, or shrinking the type.
   That pagination-only increment reduced the book to 164 pages. The current
-  recording-expanded book is 170 pages, without isolated spillover question pages.
+  recording-expanded book is 171 pages, without isolated spillover question pages.
 - Corrections distinguish buffering from speculation, equal-work from equal-time
   rate averaging, atomicity from ordering, reservation failure from interference,
   dynamic from guided scheduling, and unitary gates from measurement/reset.
@@ -81,8 +81,10 @@ Completed in the first editorial pass
 - The FICO practice trace now states timing assumptions and has a matching key.
 
 Detailed reading and audit pass
-- Chapters 1-10 and Appendices A-F have had a section-level
-  reading pass; lecture supplementation and final whole-book QA remain open.
+- Chapters 1-10 and Appendices A-F have had a section-level reading pass.
+  The final continuity check confirms that chapter openings and conclusions
+  connect overlap, waiting, data movement, and communication without replacing
+  the worked examples or study aids.
 - Cache corrections distinguish TLB misses, page faults, and storage I/O;
   write-through propagation, coherence, and persistence; physical address width
   and installed RAM size; and full-block traffic versus early-use latency.
@@ -128,7 +130,7 @@ Detailed reading and audit pass
   versus equal-time averaging, and conditional miss-ratio conventions.
 - Independent checks reproduce the 20 J versus 25 J comparison, energy-delay
   products, and all 65,536 low-byte input pairs for the packed-lane example.
-  The latest 170-page book and 16-page answer sheet pass PDF structural checks
+  The latest 171-page book and 16-page answer sheet pass PDF structural checks
   and build without warnings. New figures, formula spacing, chapter-one questions,
   glossary entries, and source references have received changed-page visual QA.
 - The cache-geometry drawing passes capacity/index checks and 768 address
@@ -149,30 +151,38 @@ Detailed reading and audit pass
 - All 123 chapter questions and the 10 advanced true/false prompts have matching
   answers, for 133 total pairs. The current book and
   answer sheet build without warnings; revised figures and source pages have
-  been rendered and inspected. The whole-book layout pass is complete for this
-  draft; changed-page checks must be repeated after remaining lecture additions.
+  been rendered and inspected. Final whole-book layout verification covers
+  all 171 textbook pages and all 16 answer-sheet pages.
 - All four one-bit Boolean functions reproduce the expanded quantum derivation;
   a one-query exact classical decision is ambiguous for either queried input.
   Ordered two-waiter traces reproduce the lock example, including every case
   in which both preliminary loads see zero. New diagrams and source pages have
   been enlarged and inspected after the latest warning-free build.
 
-Remaining before the complete revision can be declared finished
-- Finish the contextual recording-selection pass across the earlier long
-  drafts. All 72 segments have completed local automatic transcription. The
-  late lectures (notes 26-28), final review, 21 earlier short segments, and
-  longer segments through the first dynamic-ILP notes have been read in context,
-  totaling 58 of 72 complete automatic drafts. Selected excerpts from other
-  lectures are already used. The remaining 14 long drafts still need contextual
-  review.
-  Automatic text is not authority for exact quotations, names, or numbers.
-- Integrate additional useful lecture stories with source/time references.
-- Finish checking continuity across the complete book while preserving useful
-  study aids; the front-matter coverage duplication has been removed.
-- Reconcile any further exercise or convention changes with the answer sheet.
-- Repeat changed-page visual checks after the remaining lecture additions;
-  this draft has had an every-page layout pass and enlarged changed-page checks.
-- Commit and push completed work; tag and publish the finished distribution.
+Final recording-selection and layout pass
+- All 72 complete automatic transcript drafts have been read contextually.
+  Coverage entries match all 72 source segments and completion markers.
+  This is not word-perfect audio verification; automatic text is not authority
+  for exact quotations, names, or numbers. Useful teaching examples have
+  source/time references, while private anecdotes and uncertain claims are
+  excluded rather than turned into narrative filler.
+- The recovery lecture now supports a two-column cache-footprint diagram.
+  The original Meltdown and Spectre papers establish the distinction between
+  their triggers without making a present-day universal vulnerability claim.
+- Contact sheets cover every page of the completed book and answer sheet.
+  The security diagram was also inspected at enlarged size. A final heading
+  correction removes stretched justification and mid-word chapter-title breaks.
+  Pixel comparisons isolate that correction to six chapter-opening pages;
+  each was re-inspected, and the other 165 book pages are visually unchanged.
+- Both PDFs pass structural and paper-boundary checks. The final build has no
+  LaTeX warnings or overfull/underfull boxes. Independent model checks and all
+  133 exercise/answer pairs pass after the final source changes.
+
+Distribution benchmark
+The paired 171-page book and 16-page answer sheet are ready for the
+textbook-v1.0.0 milestone. Release assets include both PDFs and SHA256SUMS.
+Remote commit/tag alignment and downloaded asset hashes are separate
+publication checks, not consequences inferred from a successful local build.
 
 Local source handling
 Lecture audio, draft transcripts, recognition logs, and their local source

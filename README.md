@@ -10,6 +10,11 @@ assignment specifications.
 - [Textbook PDF](ECE4100_6100_Architecture_Textbook.pdf)
 - [Separate practice answer sheet](ECE4100_6100_Architecture_Answer_Sheet.pdf)
 
+For a fixed, paired edition, use the
+[textbook-v1.0.0 release](https://github.com/Jacoba1100254352/ECE-6100-textbook/releases/tag/textbook-v1.0.0).
+It includes both PDFs and `SHA256SUMS`. In the download directory, verify them
+with `shasum -a 256 -c SHA256SUMS`.
+
 The ten chapters cover architecture fundamentals, performance, caches,
 pipelines and prediction, integrated simulation examples, dynamic and
 compiler-scheduled instruction-level parallelism, multiprocessors, coherence,

@@ -739,14 +739,17 @@ Precise exceptions solve the architectural recovery problem, but they do not aut
 An instruction that is later squashed may still have changed caches, predictors, or other timing-visible structures before the machine discovered that the instruction should not retire.
 That is the core issue behind speculative side channels.
 
-The best-known examples are Spectre- and Meltdown-style attacks.
-At a high level, the attacker causes the processor to execute work that will later be squashed or faulted.
-Even though the architectural state rolls back correctly, the speculative work may still have fetched a cache line or trained a predictor.
-The attacker then measures timing differences to infer information that should never have become visible through the ISA\@.
+Conte makes the distinction concrete with a faulting access that leaves a cache footprint even though its result never retires.
+The original Meltdown attack exploits a faulting privileged load on affected processors; the original Spectre attacks induce incorrect speculative control flow.\footnote{The lecture example and the original Meltdown and Spectre papers are identified in Appendix~\ref{ch:source-notes}.}
+Their triggering conditions differ, but both illustrate why rejecting an architectural result need not erase every timing-visible effect.
+Figure~\ref{fig:rollback-cache-footprint} separates the two kinds of state.
+
+\input{figures/rollback-cache-footprint}
 
 Shared-core execution can make this worse.
 With \textit{hyperthreading}, or more generally simultaneous multithreading, two threads share parts of one physical core.
 That increases the opportunity for one thread to observe side effects caused by another thread's speculative activity.
+SMT is not a prerequisite for all such attacks.
 The security lesson is broader than any single named vulnerability: architectural rollback is not a complete isolation mechanism.
 Mitigations may need to prevent unsafe speculative accesses or isolate their observable effects, not merely try to clean up afterward.
 
