@@ -1,0 +1,38 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=1cm,y=1cm]
+    \node[font=\small] at (1.8,4.05) {Direct-mapped};
+    \node[font=\small] at (5.6,4.05) {Two-way};
+    \node[font=\small] at (10.7,4.05) {Fully associative};
+    \node[font=\scriptsize] at (1.8,3.62) {1 way};
+    \node[font=\scriptsize] at (5.6,3.62) {2 ways};
+    \node[font=\scriptsize] at (10.7,3.62) {8 ways};
+    \foreach \setindex in {0,...,7} {
+      \draw[fill=booklight,draw=bookaccent]
+        (1.51,{3.35-0.38*\setindex}) rectangle
+        (2.09,{2.97-0.38*\setindex});
+      \node[anchor=east,font=\scriptsize] at (1.35,{3.16-0.38*\setindex}) {set \setindex};
+    }
+    \foreach \setindex in {0,...,3} {
+      \foreach \wayindex in {0,1} {
+        \draw[fill=booklight,draw=bookaccent]
+          ({5.02+0.58*\wayindex},{3.35-0.38*\setindex}) rectangle
+          ({5.60+0.58*\wayindex},{2.97-0.38*\setindex});
+      }
+      \node[anchor=east,font=\scriptsize] at (4.86,{3.16-0.38*\setindex}) {set \setindex};
+    }
+    \foreach \wayindex in {0,...,7} {
+      \draw[fill=booklight,draw=bookaccent]
+        ({8.38+0.58*\wayindex},2.97) rectangle
+        ({8.96+0.58*\wayindex},3.35);
+    }
+    \node[anchor=east,font=\scriptsize] at (8.22,3.16) {set 0};
+    \node[align=center,font=\small] at (5.6,1.2) {Index selects a row.\\Compare its valid tags.};
+    \node[align=center,font=\small] at (10.7,2.15) {No index bits:\\all eight lines are candidates.};
+    \node[align=center,font=\small] at (1.8,-0.2) {8 sets $\times$ 1 way\\$S=0$, index: 3 bits};
+    \node[align=center,font=\small] at (5.6,-0.2) {4 sets $\times$ 2 ways\\$S=1$, index: 2 bits};
+    \node[align=center,font=\small] at (10.7,-0.2) {1 set $\times$ 8 ways\\$S=3$, index: 0 bits};
+  \end{tikzpicture}
+  \caption{The same 64 data bytes arranged as eight 8-byte blocks: $C=6$ and $B=3$ throughout. Each box is one block, not one byte or transistor. Rows are sets; columns are ways. All three organizations have 3 offset bits. Tags and replacement metadata are not drawn, and the rectangles describe logical organization rather than a physical chip layout.}
+  \label{fig:cache-geometry-rectangle}
+\end{figure}

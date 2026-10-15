@@ -39,10 +39,17 @@ Using clock frequency $f = 1/\text{CT}$, the same equation is (Eq.~\eqref{eq:aut
 \begin{equation}\label{eq:auto-003}
     \text{CPU time} = \frac{\text{IC} \times \text{CPI}}{f}.
 \end{equation}
-This decomposition is useful because each factor is controlled by different mechanisms.
+Conte jokes that this equation is worth getting as a tattoo.\footnote{January 20, 2026 lecture, Notability note \emph{3. ECE 6100}, \emph{Recording 1}, approximately 08:06--09:31.}
+The useful habit is less permanent: whenever an optimization improves one factor, check what it does to the other two.
+Each factor responds to different mechanisms.
 \textit{Instruction count} is influenced by algorithm choice, compiler quality, and instruction set architecture (ISA) expressiveness.
 \textit{Cycles per instruction (CPI)} is influenced by microarchitecture, hazard behavior, memory hierarchy behavior, and available parallelism.
 \textit{Cycle time} is influenced by circuit and pipeline timing constraints.
+
+CPI is an average over the completed instruction stream, not the latency of one instruction.
+As the lecture's factory comparison emphasizes, several operations can be in progress together.
+An ideal pipeline can take five cycles to finish each instruction yet complete one per cycle after filling, giving a steady-state CPI of 1 rather than 5.
+Chapter~\ref{ch:auto-005} develops that overlap explicitly.
 
 For instruction mixes, total cycles are computed directly (Eq.~\eqref{eq:auto-004}):
 \begin{equation}\label{eq:auto-004}
@@ -51,7 +58,7 @@ For instruction mixes, total cycles are computed directly (Eq.~\eqref{eq:auto-00
 \end{equation}
 
 \paragraph{Worked example}\label{par:auto-009}
-Consider a workload that executes 76 loads at 6 cycles each, 30 stores at 4 cycles each, 300 adds at 1 cycle each, and 58 multiplies at 5 cycles each.
+For a serialized accounting model with no overlap, consider 76 loads at 6 cycles each, 30 stores at 4 cycles each, 300 adds at 1 cycle each, and 58 multiplies at 5 cycles each.
 Then total cycles are
 \begin{equation}\label{eq:auto-005}
     76\cdot6 + 30\cdot4 + 300\cdot1 + 58\cdot5 = 1166.
@@ -60,7 +67,7 @@ At 2.2\,MHz, runtime is
 \begin{equation}\label{eq:auto-006}
     \frac{1166}{2.2\times 10^6} \approx 5.30\times 10^{-4}\text{s} = 0.53\text{ms}.
 \end{equation}
-If multiply latency is reduced from 5 cycles to 3 cycles, new total cycles become
+If each multiply's contribution falls from 5 cycles to 3 cycles, new total cycles become
 \begin{equation}\label{eq:auto-007}
     76\cdot6 + 30\cdot4 + 300\cdot1 + 58\cdot3 = 1050,
 \end{equation}

@@ -58,6 +58,13 @@ To reason cleanly about cache structure, use the triplet $(C,B,S)$ (Eq.~\eqref{e
     \text{associativity}=2^S\ \text{ways}.
 \end{equation}
 
+Here capacity counts data bytes, not tags or other metadata; the notation assumes byte addresses and power-of-two organizations.
+The guest-led cache lecture pictures this storage as a rectangle: rows are sets, columns are ways, and each cell holds one block.\footnote{January 27, 2026 lecture, Notability note \emph{5. ECE 6100}, geometry recording segment, approximately 00:47--03:39.}
+Figure~\ref{fig:cache-geometry-rectangle} rearranges the same eight blocks three ways.
+Increasing associativity makes each row wider but leaves fewer rows when data capacity and block size stay fixed.
+
+\input{figures/cache-geometry-rectangle}
+
 \paragraph{Address fields in $(C,B,S)$ notation}\label{par:auto-012}
 In this notation, $S$ is \textbf{not} an extra address field beyond tag/index/offset.
 Instead, $S$ changes the number of sets and therefore the index width.
@@ -98,7 +105,9 @@ That is why $S$ appears in index/tag equations but is not carried as an address 
 \paragraph{What selects the way?}\label{par:auto-014}
 The address tells the cache where to look, but it does not name a way.
 Figure~\ref{fig:cache-set-lookup} follows one access from the address fields to the matching line.
+
 \input{figures/cache-set-lookup}
+
 The way is selected by hardware after tag comparison, not by an explicit address field:
 \begin{enumerate}
     \item Index selects one set.
