@@ -365,7 +365,7 @@ For example, four packets can each hold one channel and wait for the next channe
 In \textit{livelock}, a packet keeps moving or being redirected but never reaches its destination.
 In \textit{starvation}, other traffic keeps winning arbitration while one packet is postponed indefinitely.
 
-A sufficient deadlock-avoidance strategy in the usual channel-dependency model is to impose an acyclic resource order.
+A sufficient deadlock-avoidance strategy in the usual channel-dependency model is to impose an acyclic resource order.\footnote{Further reading: William J. Dally and Charles L. Seitz, \href{https://authors.library.caltech.edu/records/vqrey-g1h07}{\emph{Deadlock Free Message Routing in Multiprocessor Interconnection Networks}}. The Caltech record includes the report on channel-dependency graphs and virtual-channel constructions.}
 Virtual-channel classes or an escape routing subnetwork can help implement such an order, but their allocation rules matter.
 Fair arbitration addresses starvation, while bounded detours or another progress argument address livelock.
 Request/response protocols can introduce additional dependencies at endpoints, so deadlock-free routing alone does not prove a deadlock-free coherent memory system.

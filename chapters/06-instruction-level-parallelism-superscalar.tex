@@ -321,7 +321,7 @@ Figure~\ref{fig:register-versions} follows two versions of one name.
 
 \section{Tomasulo's Algorithm}\label{sec:ilp-tomasulo}
 \textit{Tomasulo's algorithm} is a classic out-of-order execution method that implements \textit{FOCO} by allowing instructions to fire when their operands are ready rather than strictly in program order.
-Its central idea is to combine renaming with \textit{reservation stations}, which are scheduling entries that hold an instruction until the required operands and execution resources are available.
+Its central idea is to combine renaming with \textit{reservation stations}, which are scheduling entries that hold an instruction until the required operands and execution resources are available.\footnote{Optional video: BitLemon, \href{https://youtu.be/EzEKGlO9w4Y?t=633}{\emph{Out-of-Order Execution (Tomasulo's Algorithm)}} (10:33, reservation stations; 12:20, ROB; 14:29, full process). The book distinguishes the classic algorithm from later mechanisms for precise retirement.}
 Historically, this approach is associated with Bob Tomasulo's work on the IBM System/360 Model 91, and it remains the conceptual foundation behind many modern out-of-order schedulers.
 
 \paragraph{Main structures}\label{par:ilp-tomasulo-structures}

@@ -303,7 +303,7 @@ That saves encoding space, but it also gives up some of the compiler's direct co
 
 \section{Software Pipelining and Cyclic Scheduling}\label{sec:ilp-software-pipelining}
 Loops create another opportunity for compiler-scheduled parallelism.
-Instead of scheduling only one copy of a loop body, the compiler can overlap operations from different iterations so that a later iteration begins before an earlier one has fully finished.
+Instead of scheduling only one copy of a loop body, the compiler can overlap operations from different iterations so that a later iteration begins before an earlier one has fully finished.\footnote{Further reading: Texas Instruments, \href{https://software-dl.ti.com/codegen/docs/c7000/optimization_guide/5_understand_opt/compopt_under_pipelining.html}{\emph{C7000 Optimization Guide}, Section 5.1, ``Software Pipelining''}. Figures 5.3--5.4 illustrate overlap and initiation interval; the following sections explain startup, draining, and compiler scheduling bounds.}
 The older name for this idea is \textit{polycyclic scheduling}; the more common modern name is \textit{software pipelining}.
 
 Conceptually, the compiler behaves as if it had unrolled the loop many times, compacted the overlapping schedule, and then retained only the repeating pattern.

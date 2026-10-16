@@ -117,7 +117,7 @@ The practical conclusion is that ISA style should be evaluated by end-to-end per
 
 
 \section{Amdahl's Law}\label{sec:auto-014}
-\textit{Amdahl's Law} quantifies the speedup limit when only part of a workload is accelerated.
+\textit{Amdahl's Law} quantifies the speedup limit when only part of a workload is accelerated.\footnote{Further reading: Lawrence Livermore National Laboratory, \href{https://hpc.llnl.gov/documentation/tutorials/introduction-parallel-computing-tutorial}{\emph{Introduction to Parallel Computing Tutorial}}, ``Limits and Costs of Parallel Programming.'' The tutorial connects Amdahl's law, scaling, communication, and synchronization overhead.}
 If fraction $f$ of execution time benefits from a speedup factor $s$, total speedup is
 \begin{equation}\label{eq:auto-010}
     S_{Amdahl}=\frac{1}{(1-f)+\frac{f}{s}}.

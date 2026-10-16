@@ -10,7 +10,7 @@ Its success rests on a practical observation: programs tend to return to the sam
 Modern cache design begins with a technology reality: fast memory is expensive and dense memory is slower.
 \textit{Static random-access memory (SRAM)} cells use more transistors per bit, provide lower access latency, and do not require refresh, so SRAM is the natural choice for on-chip caches.
 \textit{Dynamic random-access memory (DRAM)} cells are denser and cheaper per bit but slower and refresh-driven, so DRAM is the natural choice for main memory capacity.
-This is why systems are built as hierarchies rather than as one uniform memory.
+This is why systems are built as hierarchies rather than as one uniform memory.\footnote{Optional video: BitLemon, \href{https://youtu.be/ammQYLcyebA?t=41}{\emph{SRAM vs DRAM}} (00:41, SRAM; 01:31, DRAM).}
 
 A useful mental model is that each level trades speed for size as distance from the core increases.
 L1 and L2 caches are normally SRAM-based, with L1 optimized most aggressively for low hit latency.
@@ -25,7 +25,7 @@ This is one reason very large single-level caches become slow: making arrays tal
 \section{Typical Hierarchy Levels}\label{sec:auto-020}
 In mainstream systems, the first level is a small L1 cache optimized for minimum hit time.
 A larger L2 cache is usually next, trading some latency for much lower miss ratio.
-Many processors add a larger last-level cache, often shared by several cores, before main memory (DRAM).
+Many processors add a larger last-level cache, often shared by several cores, before main memory (DRAM).\footnote{Optional video: BitLemon, \href{https://youtu.be/7yrK_9PderQ?t=23}{\emph{Cache Hierarchy: How Modern CPU Caches Are Organized}} (00:23, levels and their properties; 03:02, inclusion policies).}
 The operating system may also move pages between DRAM and backing storage, such as an SSD.
 That transfer is managed through virtual memory rather than as another ordinary hardware-cache lookup.
 
@@ -59,7 +59,7 @@ To reason cleanly about cache structure, use the triplet $(C,B,S)$ (Eq.~\eqref{e
 \end{equation}
 
 Here capacity counts data bytes, not tags or other metadata; the notation assumes byte addresses and power-of-two organizations.
-The guest-led cache lecture pictures this storage as a rectangle: rows are sets, columns are ways, and each cell holds one block.\footnote{January 27, 2026 lecture, Notability note \emph{5. ECE 6100}, geometry recording segment, approximately 00:47--03:39.}
+The guest-led cache lecture pictures this storage as a rectangle: rows are sets, columns are ways, and each cell holds one block.\footnote{January 27, 2026 lecture, Notability note \emph{5. ECE 6100}, geometry recording segment, approximately 00:47--03:39. Optional video: BitLemon, \href{https://youtu.be/zF4VMombo7U?t=307}{\emph{How Cache Works Inside a CPU}} (05:07, cache structure; 07:51, mapping organizations).}
 Figure~\ref{fig:cache-geometry-rectangle} rearranges the same eight blocks three ways.
 Increasing associativity makes each row wider but leaves fewer rows when data capacity and block size stay fixed.
 
@@ -233,7 +233,7 @@ Use this classification as a starting point, then check which delays the particu
 
 
 \section{The Three C's of Misses}\label{sec:auto-025}
-Misses are classed as \textit{compulsory}, \textit{capacity}, or \textit{conflict}.
+Misses are classed as \textit{compulsory}, \textit{capacity}, or \textit{conflict}.\footnote{Optional video: BitLemon, \href{https://youtu.be/YXkfmyb0_eA?t=88}{\emph{Cache Miss Types Explained (The 4 C's)}} (01:28--04:18, the three categories here). Its coherence-miss discussion belongs with Chapter~\ref{ch:multiprocessors}.}
 Compulsory misses are first-touch misses and are unavoidable unless data is brought in before first demand access.
 Capacity misses happen because the working set exceeds what the cache can hold over the reuse interval.
 Conflict misses happen when mapping restrictions force evictions even though total capacity would have been enough under freer placement.
@@ -279,7 +279,7 @@ If $A$ through $D$ were inserted in that order, FIFO would evict $A$ despite its
 \textit{Least frequently used (LFU)} tracks frequency but can lag phase changes.
 
 For high associativity, exact LRU state grows costly.
-Practical designs use approximations, tree-based encodings, or hybrid insertion policies.
+Practical designs use approximations, tree-based encodings, or hybrid insertion policies.\footnote{Optional video: BitLemon, \href{https://youtu.be/P_UYI23DddU?t=246}{\emph{Cache Replacement Policies}} (04:06, full LRU; 05:56, tree-based pseudo-LRU).}
 A notable policy distinction is insertion behavior: a line can be installed as \textit{most recently used (MRU)} (default in many demand-miss paths) or near LRU (useful for speculative prefetch lines to reduce pollution).
 Related insertion-policy abbreviations are \textit{most recently used insertion policy (MIP)} and \textit{least recently used insertion policy (LIP)}.
 
@@ -349,7 +349,7 @@ That row is the one that every other way claims to be newer than.
 \section{Write Policies}\label{sec:auto-027}
 Write behavior has two independent decisions.
 On a write hit, either update the cached copy and defer propagation (\textit{write-back}), or also send the write to the next level (\textit{write-through}).
-On a write miss, either install the block (\textit{write-allocate}), normally fetching its contents before a partial write, or forward the write without installing it (\textit{write-no-allocate}).
+On a write miss, either install the block (\textit{write-allocate}), normally fetching its contents before a partial write, or forward the write without installing it (\textit{write-no-allocate}).\footnote{Optional video: BitLemon, \href{https://youtu.be/wfVy85Dqiyc?t=55}{\emph{CPU Cache Write Policies}} (00:55, the two decisions; 06:03, common combinations).}
 
 Write-back reduces memory traffic when repeated writes target the same line, but requires a dirty bit and careful eviction handling.
 Write-through avoids dirty state at that cache level but increases downstream write traffic; a write buffer can absorb some of the immediate delay.
@@ -555,7 +555,7 @@ In general, small caches and direct-mapped organizations are fast on the hit pat
 
 Address translation complicates this tradeoff.
 A naive \textit{physically indexed, physically tagged} path can serialize translation lookaside buffer (TLB) lookup before cache access, increasing L1 hit latency.
-\textit{Virtually indexed, physically tagged (VIPT)} caches overlap TLB translation with set indexing and preserve physical-tag correctness.
+\textit{Virtually indexed, physically tagged (VIPT)} caches overlap TLB translation with set indexing and preserve physical-tag correctness.\footnote{Optional video: BitLemon, \href{https://youtu.be/YnXb3p57XnE?t=196}{\emph{Are Caches Accessed with a Virtual or Physical Address?}} (03:16, PIPT; 06:39, VIPT; 07:57, VIPT limitations).}
 
 \paragraph{PIPT vs. VIPT timing view}\label{par:auto-074}
 With virtual memory, the CPU generates a virtual address split into virtual page number (VPN) and page offset.
@@ -603,14 +603,14 @@ Forwarding can let a load read a preceding buffered store's value without waitin
 
 
 \section{Virtual Memory Technology, Terminology, and Analogy to Caching}\label{sec:auto-031}
-Virtual-memory terminology mirrors cache terminology closely.
+Virtual-memory terminology mirrors cache terminology closely.\footnote{Optional video: BitLemon, \href{https://youtu.be/fGP6VHxqkIM?t=245}{\emph{Virtual Memory Explained (including Paging)}} (04:05, address-space idea; 06:26, paging).}
 A virtual address is typically split into a \textit{virtual page number (VPN)} and page offset.
 Translation maps VPN to a \textit{physical frame number (PFN)} through a page table.
 A \textit{translation lookaside buffer (TLB)} is a cache of recent translations.
 A TLB miss means the translation is not cached, not that the data page is absent from DRAM.
-A hardware walker or a software-managed miss handler looks up the page-table entry and checks its permissions.
+A hardware walker or a software-managed miss handler looks up the page-table entry and checks its permissions.\footnote{Optional videos: BitLemon, \href{https://youtu.be/B6tJxvYBNrU?t=365}{\emph{Page Tables and MMU}} (06:05, TLB; 08:06, access flow), and \href{https://youtu.be/zNPVmTGt7Ds?t=100}{\emph{MultiLevel Page Tables}} (01:40, hierarchical organization).}
 An absent or disallowed mapping can cause a page fault for the operating system to handle.
-That handling might load a page from storage, allocate a zero-filled page, arrange copy-on-write, or reject an invalid access; it does not always involve disk I/O.
+That handling might load a page from storage, allocate a zero-filled page, arrange copy-on-write, or reject an invalid access; it does not always involve disk I/O.\footnote{Optional video: BitLemon, \href{https://youtu.be/eoFcFqPiPjk?t=51}{\emph{What is a Page Fault}} (00:51, minor faults; 01:37, major faults; 02:04, invalid accesses).}
 
 The analogy to caching is direct.
 VPN behaves like a tag, page offset behaves like block offset, and the TLB behaves like a small associative cache of mapping metadata.

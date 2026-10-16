@@ -9,7 +9,7 @@ This small contrast, used in the introductory lecture, is the starting point for
 \section{What Computer Architecture Is}\label{sec:auto-003}
 Computer architecture asks how a processor and memory system should be organized to finish useful work efficiently.
 ``Efficiently'' might mean a shorter wait for one result, more completed jobs per second, or less energy per calculation.
-Circuits, fabrication, software, and algorithms set the possibilities; the architect chooses how to arrange the machine within them.
+Circuits, fabrication, software, and algorithms set the possibilities; the architect chooses how to arrange the machine within them.\footnote{Optional video: BitLemon, \href{https://youtu.be/GtVDTp826DE?t=76}{\emph{CPU Architecture Explained}} (01:16, internal components).}
 
 Every architectural decision is a tradeoff among competing goals.
 A design that minimizes latency for one task may reduce throughput for a server-style workload.
@@ -118,7 +118,7 @@ These choices spend the same kind of physical resource on different sources of u
 The industry shift toward energy-efficient multicore designs in the mid-2000s makes that question concrete; Intel's 2006 Core introduction explicitly emphasized performance per watt and multicore operation.
 It did not mean that instruction-level parallelism or single-core improvement had ended.
 It meant that more transistors could no longer be treated as a promise of proportionally faster execution for one unchanged program.
-The available work, the memory system, and the power budget still decide what the extra hardware can accomplish.
+The available work, the memory system, and the power budget still decide what the extra hardware can accomplish.\footnote{Optional video: BitLemon, \href{https://youtu.be/5JWcI_xutuI?t=60}{\emph{Why 10GHz Silicon CPUs Are Impossible (Probably)}} (01:00, scaling tradeoffs; 03:58, multicore).}
 
 \section{Flynn's Taxonomy}\label{sec:auto-006}
 Flynn's taxonomy classifies parallel machines by counting instruction streams and data streams.
@@ -224,6 +224,7 @@ Neither extra lanes nor extra cores can remove a true dependence.
 Chapter 2 turns these mechanisms into measurable changes in runtime and throughput.
 
 
+\begin{samepage}
 \section{Practice Questions}\label{sec:ch1-practice}
 The following questions reinforce the main ideas of Chapter 1 and are intended for self-checking after the summary.
 \begin{enumerate}
@@ -237,3 +238,4 @@ The following questions reinforce the main ideas of Chapter 1 and are intended f
     \item Distinguish packed-word SIMD from classic pipelined vector execution.
     In particular, explain what is fixed by register width in packed SIMD and what is streamed through the pipeline in classic vector execution.
 \end{enumerate}
+\end{samepage}

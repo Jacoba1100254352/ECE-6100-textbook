@@ -46,7 +46,7 @@ The implementation still decides whether ownership changes happen through retry,
 \section{Atomic Primitives for Shared-Memory Synchronization}\label{sec:sync-atomic-primitives}
 Once multiple threads share writable state, the machine needs atomic operations that let software coordinate safely.
 Chapter~\ref{ch:multiprocessors} already introduced simple spin locks based on \textit{test-and-set} and \textit{test-and-test-and-set}.
-Those remain important because they reveal a core architectural truth: a synchronization primitive is not just a correctness device, but also a traffic pattern imposed on the coherence system.
+Those remain important because they reveal a core architectural truth: a synchronization primitive is not just a correctness device, but also a traffic pattern imposed on the coherence system.\footnote{Further reading: Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau, \href{https://pages.cs.wisc.edu/~remzi/OSTEP/threads-locks.pdf}{\emph{Operating Systems: Three Easy Pieces}, Chapter 28, ``Locks''}. Sections 28.7--28.10 develop atomic acquisition operations; the later sections examine spinning and scheduler interaction.}
 
 A naive repeated \texttt{test\_and\_set()} forces the lock variable into a writable-owner state over and over again.
 That makes the modified copy bounce from PE to PE and fills the interconnect with invalidation traffic.
@@ -229,7 +229,7 @@ It adds software instrumentation and metadata costs while retaining the optimist
 Coherence and consistency are related, but they are not the same guarantee.
 \textit{Cache coherence} constrains the order in which all processors observe writes to \emph{one memory location}.
 \textit{Memory consistency} defines the allowed outcomes and ordering of memory operations across threads, including operations to \emph{different locations}.
-A machine can therefore be perfectly coherent and still violate a programmer's intended synchronization if it allows aggressive reordering across different addresses.
+A machine can therefore be perfectly coherent and still violate a programmer's intended synchronization if it allows aggressive reordering across different addresses.\footnote{Further reading: Nagarajan et al., \href{https://pages.cs.wisc.edu/~markhill/papers/primer2020_2nd_edition.pdf}{\emph{A Primer on Memory Consistency and Cache Coherence}}, second edition, the chapters on sequential consistency and relaxed consistency. Read the allowed outcomes separately from the coherence protocols introduced later in that book.}
 
 \subsection*{Data Races}
 For the C/C++ load/store examples here, a \textit{data race} involves potentially concurrent accesses to the same memory location, at least one write, at least one non-atomic access, and no happens-before order between them.

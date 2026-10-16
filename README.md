@@ -11,7 +11,7 @@ assignment specifications.
 - [Separate practice answer sheet](ECE4100_6100_Architecture_Answer_Sheet.pdf)
 
 For a fixed, paired edition, use the
-[textbook-v1.0.0 release](https://github.com/Jacoba1100254352/ECE-6100-textbook/releases/tag/textbook-v1.0.0).
+[textbook-v1.1.0 release](https://github.com/Jacoba1100254352/ECE-6100-textbook/releases/tag/textbook-v1.1.0).
 It includes both PDFs and `SHA256SUMS`. In the download directory, verify them
 with `shasum -a 256 -c SHA256SUMS`.
 
@@ -24,6 +24,12 @@ Appendices provide a timing-diagram checklist, formula reference, glossary,
 quantum and superconducting architecture topics, final-review checklist, and
 source notes. The answer sheet matches the 123 chapter questions and ten
 advanced true/false prompts. Try the questions before consulting it.
+
+Optional footnotes connect relevant explanations to 17 BitLemon videos, using
+timestamps for the matching concepts. Selected author and institutional
+readings provide deeper treatments of scaling, compiler scheduling, coherence,
+synchronization, network deadlock, and quantum query algorithms. Link titles
+are clickable in the PDF.
 
 ## Build the PDFs
 

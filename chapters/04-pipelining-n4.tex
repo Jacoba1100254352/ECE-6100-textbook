@@ -21,7 +21,7 @@ Instruction Fetch (IF) reads the instruction from the instruction memory hierarc
 Instruction Decode (ID) decodes opcode and operands and reads source registers.
 Execute (EX) performs ALU work and effective-address calculation.
 Memory (MEM) performs data-memory access for loads and stores.
-Write Back (WB) writes results to the architected register file.
+Write Back (WB) writes results to the architected register file.\footnote{Optional video: BitLemon, \href{https://youtu.be/EzEKGlO9w4Y?t=30}{\emph{Out-of-Order Execution (Tomasulo's Algorithm)}} (00:30, stage-based pipelining; 01:36, superscalar design).}
 
 Even instructions that do not logically need memory often still occupy the MEM stage in a basic in-order five-stage design so that all instructions remain aligned in a uniform stage progression.
 This simplifies control and preserves in-order retirement semantics.
@@ -191,7 +191,7 @@ The exact condition for annulling a slot belongs to the ISA; it need not match t
 
 
 \section{Branch Target Buffer (BTB)}\label{sec:auto-042}
-The \textit{branch target buffer (BTB)} predicts where a branch goes (target prediction) early enough to guide fetch.
+The \textit{branch target buffer (BTB)} predicts where a branch goes (target prediction) early enough to guide fetch.\footnote{Optional video: BitLemon, \href{https://youtu.be/UbDIoNY9E0w?t=582}{\emph{How CPU Branch Prediction Works}} (09:42, BTB). Direction and target prediction remain separate questions.}
 
 \subsection{BTB with Tags}\label{subsec:auto-009}
 A tagged BTB stores branch PC tags and associated targets.
@@ -253,7 +253,7 @@ Without a BTB or some equivalent early-target mechanism, the pipeline may need t
 \section{Whether-To Branch: Direction Prediction}\label{sec:auto-043}
 Target prediction answers where a branch goes.
 \textit{Direction prediction} answers whether it is taken.
-A simple static method is software heuristics, especially \textit{backward taken / forward not taken (BTFNT)}: loop back-edges are often taken, many forward conditionals are often not taken.
+A simple static method is software heuristics, especially \textit{backward taken / forward not taken (BTFNT)}: loop back-edges are often taken, many forward conditionals are often not taken.\footnote{Optional video: BitLemon, \href{https://youtu.be/UbDIoNY9E0w?t=246}{\emph{How CPU Branch Prediction Works}} (04:06, fall-through; 04:42, backward/forward rule).}
 Compilers can also use profile-guided statistics to set likely-direction metadata (for example branch-likely annotations).
 
 Conte recalls a compiler team trying benchmark-derived prediction heuristics on a database workload and finding that the benefit did not carry over.
@@ -281,7 +281,7 @@ This adapts quickly, but it also flips too easily.
 For example, a loop-closing branch that is taken many times and then falls through once on loop exit will usually be mispredicted again on the next loop entry because the last outcome was not taken.
 
 \subsection{Smith Two-Bit Saturating Counters}\label{subsec:auto-0100a}
-A \textit{Smith predictor} replaces the single bit with a small saturating counter, most commonly two bits.
+A \textit{Smith predictor} replaces the single bit with a small saturating counter, most commonly two bits.\footnote{Optional video: BitLemon, \href{https://youtu.be/UbDIoNY9E0w?t=472}{\emph{How CPU Branch Prediction Works}} (07:52, two-bit counter; 09:09, history-based overview).}
 The four counter states are commonly interpreted as strongly not taken, weakly not taken, weakly taken, and strongly taken.
 Prediction comes from the high-order tendency of the counter, while update moves the counter only one step toward the actual outcome.
 This hysteresis avoids overreacting to one unusual branch result.

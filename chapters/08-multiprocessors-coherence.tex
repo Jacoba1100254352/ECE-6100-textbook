@@ -205,7 +205,7 @@ The remainder of this chapter develops the classic snooping approach because it 
 
 
 \section{Snooping Coherence and the MSI Protocol}\label{sec:mp-msi}
-A classic starting point for snooping coherence is the \textit{MSI} protocol.
+A classic starting point for snooping coherence is the \textit{MSI} protocol.\footnote{Further reading: Vijay Nagarajan, Daniel J. Sorin, Mark D. Hill, and David A. Wood, \href{https://pages.cs.wisc.edu/~markhill/papers/primer2020_2nd_edition.pdf}{\emph{A Primer on Memory Consistency and Cache Coherence}}, second edition, Chapters 7--8. The worked snooping and directory protocols provide a longer treatment of state, messages, and transient behavior.}
 Each cached block is marked as \textit{modified (M)}, \textit{shared (S)}, or \textit{invalid (I)}.
 The meaning of those states is summarized in Table~\ref{tab:mp-msi-state-meanings}.
 \begin{table}[t]
@@ -730,7 +730,7 @@ Figure~\ref{fig:false-sharing-block} isolates the placement problem.
 \input{figures/false-sharing-block}
 
 False sharing can cause \textit{coherence misses}, often grouped informally as a ``fourth C'' beyond compulsory, capacity, and conflict misses.
-True sharing can cause coherence misses too; the distinguishing feature of false sharing is that different variables unnecessarily share one coherence block.
+True sharing can cause coherence misses too; the distinguishing feature of false sharing is that different variables unnecessarily share one coherence block.\footnote{Optional video: BitLemon, \href{https://youtu.be/YXkfmyb0_eA?t=258}{\emph{Cache Miss Types Explained (The 4 C's)}} (04:18, coherence misses; 05:34, true/false sharing).}
 The cure is usually structural rather than algorithmic: avoid placing variables with very different sharing patterns into the same cache block.
 Read-only data, migratory lock-protected data, and heavily read-write shared synchronization variables are best separated when layout control is available.
 In trace-based reasoning, the symptom is usually easy to spot: when two variables share one block, writes to one variable increase invalidations, transfers, and misses for the other even though the source program did not truly share both variables semantically.

@@ -72,8 +72,9 @@ Completed in the first editorial pass
   book and the 16-page answer sheet. It found two near-empty spillover pages;
   tighter chapter conclusions and question wording remove their cause without
   dropping questions, changing exercise assumptions, or shrinking the type.
-  That pagination-only increment reduced the book to 164 pages. The current
-  recording-expanded book is 171 pages, without isolated spillover question pages.
+  That pagination-only increment reduced the book to 164 pages. The subsequent
+  recording-expanded edition has 171 pages; the online-supplement edition has
+  173 pages, without isolated spillover question pages.
 - Corrections distinguish buffering from speculation, equal-work from equal-time
   rate averaging, atomicity from ordering, reservation failure from interference,
   dynamic from guided scheduling, and unitary gates from measurement/reset.
@@ -130,7 +131,7 @@ Detailed reading and audit pass
   versus equal-time averaging, and conditional miss-ratio conventions.
 - Independent checks reproduce the 20 J versus 25 J comparison, energy-delay
   products, and all 65,536 low-byte input pairs for the packed-lane example.
-  The latest 171-page book and 16-page answer sheet pass PDF structural checks
+  The latest 173-page book and 16-page answer sheet pass PDF structural checks
   and build without warnings. New figures, formula spacing, chapter-one questions,
   glossary entries, and source references have received changed-page visual QA.
 - The cache-geometry drawing passes capacity/index checks and 768 address
@@ -151,15 +152,16 @@ Detailed reading and audit pass
 - All 123 chapter questions and the 10 advanced true/false prompts have matching
   answers, for 133 total pairs. The current book and
   answer sheet build without warnings; revised figures and source pages have
-  been rendered and inspected. Final whole-book layout verification covers
-  all 171 textbook pages and all 16 answer-sheet pages.
+  been rendered and inspected. The v1.0.0 whole-book layout verification covers
+  all 171 textbook pages and all 16 answer-sheet pages; the online-supplement
+  update has additional rendered checks at its new references and reflowed pages.
 - All four one-bit Boolean functions reproduce the expanded quantum derivation;
   a one-query exact classical decision is ambiguous for either queried input.
   Ordered two-waiter traces reproduce the lock example, including every case
   in which both preliminary loads see zero. New diagrams and source pages have
   been enlarged and inspected after the latest warning-free build.
 
-Final recording-selection and layout pass
+v1.0.0 recording-selection and layout pass
 - All 72 complete automatic transcript drafts have been read contextually.
   Coverage entries match all 72 source segments and completion markers.
   This is not word-perfect audio verification; automatic text is not authority
@@ -178,9 +180,28 @@ Final recording-selection and layout pass
   LaTeX warnings or overfull/underfull boxes. Independent model checks and all
   133 exercise/answer pairs pass after the final source changes.
 
+Online supplements, October 16, 2026
+- Reviewed the 25-video BitLemon channel catalog and retrieved creator-provided
+  descriptions, publication metadata, and chapter markers for 17 relevant videos.
+  This was a catalog/description review, not a claim to have watched every video.
+- Added 21 video links beside the matching concepts, including cache technology,
+  layout, misses, replacement, writes, virtual addressing, paging, prediction,
+  Tomasulo scheduling, false sharing, and the optional C++ cache simulator.
+  All start times agree with the creator's published chapter/description markers.
+- Added six written or lesson resources from LLNL, Texas Instruments, the
+  memory-consistency/coherence Primer authors, OSTEP's authors, Caltech, and
+  IBM Quantum. They cover topics beyond the selected visual introductions.
+- All 27 distinct supplemental targets are present as PDF URI actions. New
+  footnotes and adjacent page flow have been rendered and inspected. The short
+  Chapter 1 question block stays together, and the Chapter 5 introduction stays
+  with its first question. Exercise wording and the answer sheet are unchanged.
+- The 173-page book and 16-page answer sheet build without LaTeX warnings and
+  pass structural, paper-boundary, cross-reference, and 133-pair exercise checks.
+  Resource retrieval records and QA renders remain outside the public checkout.
+
 Distribution benchmark
-The paired 171-page book and 16-page answer sheet are ready for the
-textbook-v1.0.0 milestone. Release assets include both PDFs and SHA256SUMS.
+The paired 173-page book and 16-page answer sheet are ready for the
+textbook-v1.1.0 milestone. Release assets include both PDFs and SHA256SUMS.
 Remote commit/tag alignment and downloaded asset hashes are separate
 publication checks, not consequences inferred from a successful local build.
 

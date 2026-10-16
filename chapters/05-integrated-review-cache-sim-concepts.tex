@@ -128,7 +128,7 @@ The resulting placement rule is:
 
 
 \section{Cache Simulation Conceptual Model}\label{sec:auto-050}
-The cache simulation framework models hierarchy behavior at the level of addresses, tags, and policy events rather than payload data values.
+The cache simulation framework models hierarchy behavior at the level of addresses, tags, and policy events rather than payload data values.\footnote{Optional coding companion: BitLemon, \href{https://youtu.be/ss-PDXKKjH8?t=300}{\emph{Cache Simulator in C++: Building a Basic Framework}} (05:00, cache structures). Its implementation is a separate model; compare event definitions before transferring counts between simulators.}
 A common parameterization is (Eq.~\eqref{eq:auto-049}):
 \begin{equation}\label{eq:auto-049}
     (C_1,B,S_1,C_2,S_2,\{\text{MIP,LIP}\},\{\text{None,+1,Markov,Hybrid}\},r).
@@ -171,7 +171,7 @@ This is why prefetch usefulness is not judged by one counter alone; both benefit
 
 
 \section{Statistics and AAT Interpretation}\label{sec:auto-053}
-Typical hierarchy statistics include access counts, hit/miss counts, hit/miss ratios, writeback counts, and prefetch effectiveness counters.
+Typical hierarchy statistics include access counts, hit/miss counts, hit/miss ratios, writeback counts, and prefetch effectiveness counters.\footnote{Optional coding companion: BitLemon, \href{https://youtu.be/y9xDHGzSAyg?t=80}{\emph{Cache Simulator in C++: Measuring Cache Hit Rate}} (01:20, access/hit counters; 03:40, sequential test).}
 In two-level analysis (Eq.~\eqref{eq:auto-050}):
 \begin{equation}\label{eq:auto-050}
     AAT_{L1}=HT_{L1}+MR_{L1}\cdot MP_{L1},\qquad MP_{L1}=AAT_{L2}.
@@ -207,7 +207,7 @@ Appendix~\ref{ch:formula-compendium} collects the formulas once those modeling c
 
 \section{Practice Questions}\label{sec:ch5-practice}
 The following questions reinforce the integrated ideas of Chapter 5 and are intended for self-checking after the summary.
-\begin{enumerate}
+\begin{enumerate}[beginpenalty=10000]
     \item A hierarchy reports the following parameters:
     \[
         HT_{L1}=1,\quad MR_{L1}=0.10,\quad HT_{L2}=7,\quad MR_{L2,read}=0.20,\quad \text{DRAM\_TIME}=80.
